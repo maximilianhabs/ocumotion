@@ -1,7 +1,8 @@
 # Projektregeln mac-vision
 
 Lokales Tracking und Gestensteuerung mit der internen Kamera des MacBook Pro M1.
-Konzept: `docs/KONZEPT.md`. Stand und Etappen: `docs/ROADMAP.md`. Messprotokoll: `docs/MESSUNGEN.md`.
+Konzept: `docs/KONZEPT.md`, Augen: `docs/KONZEPT_AUGEN.md`. Stand und Etappen: `docs/ROADMAP.md`.
+Messprotokoll: `docs/MESSUNGEN.md`. Alle Fundstellen, auch außerhalb des Repos: `docs/FUNDSTELLEN.md`.
 Vorbild: `~/Code/Programme Claude Code/homeserver/services/vision-lab/`. Module dort kopieren, nicht verknüpfen.
 
 - **Nie ein Bild oder Video auf Platte.** Frames nur im RAM. Kontrollbilder am Sitzungsende löschen, auch im Scratchpad.
@@ -13,6 +14,7 @@ Vorbild: `~/Code/Programme Claude Code/homeserver/services/vision-lab/`. Module 
 - **Jede Messung bekommt einen Gütewert.** Ohne Gütewert keine Kennzahl.
 - **Gesten:** Scharfschalten, Haltezeit, Hysterese und Sperrzeit gelten immer. Aktionen nur aus der Freigabeliste; nichts, was löscht, sendet oder bestätigt.
 - **Keine Emotionserkennung, keine Diagnose, keine Personenerkennung.**
+- **Augen:** Messgröße ist die Irismitte relativ zum Kopf, nicht die Pupille. Augenausschnitte nie speichern. Ohne Güte je Bild keine Augenkurve.
 - **Python:** `python3` im PATH ist die FSL-Python, nicht verwenden. venv: `/opt/homebrew/bin/python3.13 -m venv .venv`.
 - **Erkennung im eigenen Thread,** nie in der Kameraschleife. Zeitstempel vom Bild übernehmen.
 - UI-Sprache Deutsch, Zahlen mit deutschem Komma.

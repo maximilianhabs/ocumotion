@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Vision Test</title>
+<style>
+  :root {
+    --bg: #f5f5f4; --panel: #ffffff; --text: #1c1917; --muted: #78716c;
+    --line: #e7e5e4; --accent: #0f766e; --warn: #b45309; --stage: #1c1917;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --panel: #292524; --text: #f5f5f4; --muted: #a8a29e;
+      --line: #44403c; --accent: #2dd4bf; --warn: #fbbf24; --stage: #0c0a09;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px;
+         max-width: 1320px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 0; }
+  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .stage { position: relative; aspect-ratio: 16 / 9; background: var(--stage);
+           border-radius: 10px; overflow: hidden; }
+  .stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%;
+           object-fit: contain; transform: scaleX(-1); }
+  #hint { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
+          color: #d6d3d1; text-align: center; }
+  #hint[hidden] { display: none; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 12px 14px; margin-bottom: 12px; }
+  section:last-child { margin-bottom: 0; }
+  h2 { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 8px;
+       text-transform: uppercase; letter-spacing: .04em; }
+  label { display: block; margin: 5px 0; }
+  select, button { font: inherit; color: inherit; }
+  select { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
+           border-radius: 6px; margin-bottom: 6px; }
+  button { width: 100%; padding: 8px; border: 0; border-radius: 6px; background: var(--accent);
+           color: var(--panel); font-weight: 600; cursor: pointer; }
+  button.stop { background: var(--warn); }
+  dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+  .big { font-size: 26px; font-weight: 700; color: var(--accent); min-height: 38px; }
+  #status { color: var(--muted); font-size: 13px; margin-top: 6px; min-height: 19px; }
+  #status.warn { color: var(--warn); }
+  footer { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mac Vision Test</h1>
+    <p>Hand, Gesten, Gesicht und Körper mit MediaPipe, alles im Browser dieses Mac.</p>
+  </header>
+
+  <div>
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="hint">Auf „Kamera starten“ klicken und die Freigabe erlauben.</div>
+    </div>
+  </div>
+
+  <aside>
+    <section>
+      <h2>Steuerung</h2>
+      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
+      <select id="resolution" aria-label="Auflösung">
+        <option value="1280x720">1280×720</option>
+        <option value="640x480">640×480</option>
+      </select>
+      <select id="fpsWanted" aria-label="Bildrate">
+        <option value="30">30 fps</option>
+        <option value="60">60 fps (nur iPhone)</option>
+      </select>
+      <select id="delegate" aria-label="Rechenweg">
+        <option value="GPU">GPU</option>
+        <option value="CPU">CPU</option>
+      </select>
+      <label><input type="checkbox" id="useHand" checked> Hand und Gesten</label>
+      <label><input type="checkbox" id="useFace"> Gesicht</label>
+      <label><input type="checkbox" id="usePose"> Körper</label>
+      <button id="toggle">Kamera starten</button>
+      <div id="status" role="status"></div>
+    </section>
+
+    <section>
+      <h2>Messwerte (letzte 3 s)</h2>
+      <dl>
+        <dt>Kamera</dt><dd id="mCam">–</dd>
+        <dt>Analysen/s</dt><dd id="mRate">–</dd>
+        <dt>Analysen/s mit Treffer</dt><dd id="mHit">–</dd>
+        <dt>Messgrenze (Rate ÷ 4)</dt><dd id="mLimit">–</dd>
+        <dt>Hand</dt><dd id="mHand">–</dd>
+        <dt>Gesicht</dt><dd id="mFace">–</dd>
+        <dt>Körper</dt><dd id="mPose">–</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Geste</h2>
+      <div class="big" id="gesture">–</div>
+      <dl id="hands"></dl>
+    </section>
+
+    <section>
+      <h2>Gesicht</h2>
+      <dl>
+        <dt>Lidschläge</dt><dd id="blinks">0</dd>
+        <dt>Auge links / rechts</dt><dd id="eyes">–</dd>
+        <dt>Lächeln links / rechts</dt><dd id="smile">–</dd>
+      </dl>
+    </section>
+  </aside>
+
+  <footer>
+    Bilder bleiben im Browser und werden weder gespeichert noch gesendet. Programmcode und Modelle
+    werden beim Laden aus dem Netz geholt. Messgrenze gilt für Analysen mit Treffer.
+  </footer>
+</main>
+
+<script type="module">
+import { FilesetResolver, GestureRecognizer, FaceLandmarker, PoseLandmarker }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
+
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
+const MODELS = "https://storage.googleapis.com/mediapipe-models";
+const WINDOW_MS = 3000;
+const BLINK_ON = 0.5;
+const BLINK_OFF = 0.3;
+const GESTURES = {
+  Closed_Fist: "Faust ✊", Open_Palm: "Offene Hand ✋", Pointing_Up: "Zeigefinger ☝️",
+  Thumb_Down: "Daumen runter 👎", Thumb_Up: "Daumen hoch 👍", Victory: "Victory ✌️",
+  ILoveYou: "I love you 🤟",
+};
+
+const $ = (id) => document.getElementById(id);
+const video = $("video");
+const canvas = $("overlay");
+const ctx = canvas.getContext("2d");
+
+const tasks = { hand: null, face: null, pose: null };
+const samples = { hand: [], face: [], pose: [] };
+let fileset = null;
+let stream = null;
+let running = false;
+let loadGeneration = 0;
+let frameTimes = [];
+let analysisTimes = [];
+let hitTimes = [];
+let lastPresented = null;
+let blinkClosed = false;
+let blinks = 0;
+
+function setStatus(text, warn = false) {
+  $("status").textContent = text;
+  $("status").classList.toggle("warn", warn);
+}
+
+async function createTask(kind) {
+  fileset ??= await FilesetResolver.forVisionTasks(WASM);
+  const delegate = $("delegate").value;
+  const base = (path) => ({ baseOptions: { modelAssetPath: `${MODELS}/${path}`, delegate },
+                            runningMode: "VIDEO" });
+  if (kind === "hand") {
+    return GestureRecognizer.createFromOptions(fileset, {
+      ...base("gesture_recognizer/gesture_recognizer/float16/latest/gesture_recognizer.task"),
+      numHands: 2,
+    });
+  }
+  if (kind === "face") {
+    return FaceLandmarker.createFromOptions(fileset, {
+      ...base("face_landmarker/face_landmarker/float16/latest/face_landmarker.task"),
+      numFaces: 1, outputFaceBlendshapes: true,
+    });
+  }
+  return PoseLandmarker.createFromOptions(fileset, {
+    ...base("pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task"),
+    numPoses: 1,
+  });
+}
+
+const wanted = () => ({ hand: $("useHand").checked, face: $("useFace").checked,
+                        pose: $("usePose").checked });
+
+async function syncTasks() {
+  const generation = ++loadGeneration;
+  for (const [kind, on] of Object.entries(wanted())) {
+    if (on && !tasks[kind]) {
+      setStatus(`Lade Modell ${kind} …`);
+      try {
+        const task = await createTask(kind);
+        if (generation !== loadGeneration) { task.close(); return; }
+        tasks[kind] = task;
+      } catch (error) {
+        setStatus(`Modell ${kind} ließ sich nicht laden: ${error.message}`, true);
+        return;
+      }
+    } else if (!on && tasks[kind]) {
+      tasks[kind].close();
+      tasks[kind] = null;
+      samples[kind] = [];
+    }
+  }
+  setStatus(running ? "Läuft." : "Modelle bereit.");
+}
+
+function closeAllTasks() {
+  for (const kind of Object.keys(tasks)) {
+    tasks[kind]?.close();
+    tasks[kind] = null;
+    samples[kind] = [];
+  }
+}
+
+function drawLines(points, connections, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (const { start, end } of connections) {
+    ctx.moveTo(points[start].x * canvas.width, points[start].y * canvas.height);
+    ctx.lineTo(points[end].x * canvas.width, points[end].y * canvas.height);
+  }
+  ctx.stroke();
+}
+
+function drawPoints(points, color, size) {
+  ctx.fillStyle = color;
+  for (const point of points) {
+    ctx.fillRect(point.x * canvas.width - size / 2, point.y * canvas.height - size / 2, size, size);
+  }
+}
+
+// MediaPipe erwartet gespiegelte Bilder; unser Bild ist ungespiegelt, also Seiten tauschen.
+const handName = (label) => (label === "Left" ? "rechte Hand" : "linke Hand");
+
+function showHands(result) {
+  const lines = result.landmarks.map((_, i) => {
+    const side = handName(result.handedness[i]?.[0]?.categoryName);
+    const gesture = result.gestures[i]?.[0];
+    const name = GESTURES[gesture?.categoryName] ?? "keine";
+    return `<dt>${side}</dt><dd>${name} ${gesture ? Math.round(gesture.score * 100) + " %" : ""}</dd>`;
+  });
+  $("hands").innerHTML = lines.join("");
+  const best = result.gestures.flat().filter((g) => GESTURES[g.categoryName])
+    .sort((a, b) => b.score - a.score)[0];
+  $("gesture").textContent = best ? GESTURES[best.categoryName] : "–";
+}
+
+function showFace(result) {
+  const shapes = result.faceBlendshapes?.[0]?.categories;
+  if (!shapes) return;
+  const score = (name) => shapes.find((s) => s.categoryName === name)?.score ?? 0;
+  // Blendshapes zaehlen aus Sicht der Person, das passt zur Anzeige als links/rechts der Person.
+  const eyeLeft = score("eyeBlinkLeft");
+  const eyeRight = score("eyeBlinkRight");
+  const closed = (eyeLeft + eyeRight) / 2;
+  if (!blinkClosed && closed > BLINK_ON) {
+    blinkClosed = true;
+    blinks += 1;
+  } else if (blinkClosed && closed < BLINK_OFF) {
+    blinkClosed = false;
+  }
+  $("blinks").textContent = blinks;
+  $("eyes").textContent = `${eyeLeft.toFixed(2)} / ${eyeRight.toFixed(2)}`.replaceAll(".", ",");
+  $("smile").textContent =
+    `${score("mouthSmileLeft").toFixed(2)} / ${score("mouthSmileRight").toFixed(2)}`.replaceAll(".", ",");
+}
+
+function timed(kind, run) {
+  const started = performance.now();
+  const result = run();
+  samples[kind].push({ at: started, ms: performance.now() - started });
+  return result;
+}
+
+function analyse(now) {
+  const stamp = Math.round(performance.now());
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let ran = false;
+  let hit = false;
+
+  if (tasks.pose) {
+    ran = true;
+    const result = timed("pose", () => tasks.pose.detectForVideo(video, stamp));
+    for (const points of result.landmarks) {
+      hit = true;
+      drawLines(points, PoseLandmarker.POSE_CONNECTIONS, "#a78bfa");
+      drawPoints(points, "#ddd6fe", 6);
+    }
+  }
+  if (tasks.face) {
+    ran = true;
+    const result = timed("face", () => tasks.face.detectForVideo(video, stamp));
+    for (const points of result.faceLandmarks) {
+      hit = true;
+      drawPoints(points, "#fbbf24", 2);
+    }
+    showFace(result);
+  }
+  if (tasks.hand) {
+    ran = true;
+    const result = timed("hand", () => tasks.hand.recognizeForVideo(video, stamp));
+    for (const points of result.landmarks) {
+      hit = true;
+      drawLines(points, GestureRecognizer.HAND_CONNECTIONS, "#2dd4bf");
+      drawPoints(points, "#ccfbf1", 7);
+    }
+    showHands(result);
+  }
+
+  if (ran) analysisTimes.push(now);
+  if (hit) hitTimes.push(now);
+}
+
+function onFrame(now, metadata) {
+  if (!running) return;
+  // presentedFrames zaehlt auch Bilder, die wir wegen laufender Analyse nie gesehen haben.
+  if (lastPresented !== null) {
+    const fresh = metadata.presentedFrames - lastPresented;
+    for (let i = 0; i < fresh; i += 1) frameTimes.push(now);
+  }
+  lastPresented = metadata.presentedFrames;
+  analyse(now);
+  video.requestVideoFrameCallback(onFrame);
+}
+
+const comma = (value, digits = 1) => value.toFixed(digits).replace(".", ",");
+
+function renderStats() {
+  if (!running) return;
+  const now = performance.now();
+  const recent = (times) => times.filter((t) => now - t <= WINDOW_MS);
+  frameTimes = recent(frameTimes);
+  analysisTimes = recent(analysisTimes);
+  hitTimes = recent(hitTimes);
+  const perSecond = (times) => times.length / (WINDOW_MS / 1000);
+  const hitRate = perSecond(hitTimes);
+  $("mCam").textContent = `${comma(perSecond(frameTimes))} fps`;
+  $("mRate").textContent = comma(perSecond(analysisTimes));
+  $("mHit").textContent = comma(hitRate);
+  $("mLimit").textContent = hitRate > 0 ? `${comma(hitRate / 4)} Hz` : "–";
+  for (const [kind, id] of [["hand", "mHand"], ["face", "mFace"], ["pose", "mPose"]]) {
+    samples[kind] = samples[kind].filter((s) => now - s.at <= WINDOW_MS);
+    const list = samples[kind];
+    $(id).textContent = list.length
+      ? `${comma(list.reduce((sum, s) => sum + s.ms, 0) / list.length)} ms` : "–";
+  }
+}
+
+async function start() {
+  const [width, height] = $("resolution").value.split("x").map(Number);
+  const deviceId = $("camera").value;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { width: { ideal: width }, height: { ideal: height },
+               frameRate: { ideal: Number($("fpsWanted").value) },
+               ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
+    });
+  } catch (error) {
+    setStatus(`Kamera nicht verfügbar: ${error.message}`, true);
+    return;
+  }
+  video.srcObject = stream;
+  await video.play();
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  $("hint").hidden = true;
+  running = true;
+  lastPresented = null;
+  frameTimes = [];
+  analysisTimes = [];
+  hitTimes = [];
+  $("toggle").textContent = "Kamera stoppen";
+  $("toggle").classList.add("stop");
+  await listCameras();
+  await syncTasks();
+  video.requestVideoFrameCallback(onFrame);
+}
+
+function stop() {
+  running = false;
+  stream?.getTracks().forEach((track) => track.stop());
+  stream = null;
+  video.srcObject = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  $("hint").hidden = false;
+  $("toggle").textContent = "Kamera starten";
+  $("toggle").classList.remove("stop");
+  setStatus("Kamera aus.");
+}
+
+async function listCameras() {
+  const select = $("camera");
+  const current = select.value;
+  const devices = (await navigator.mediaDevices.enumerateDevices())
+    .filter((device) => device.kind === "videoinput" && device.label);
+  if (!devices.length) return;
+  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)));
+  if (current) select.value = current;
+}
+
+$("toggle").addEventListener("click", () => (running ? stop() : start()));
+for (const id of ["useHand", "useFace", "usePose"]) {
+  $(id).addEventListener("change", () => { if (running) syncTasks(); });
+}
+$("delegate").addEventListener("change", () => {
+  closeAllTasks();
+  if (running) syncTasks();
+});
+for (const id of ["camera", "resolution", "fpsWanted"]) {
+  $(id).addEventListener("change", async () => {
+    if (!running) return;
+    stop();
+    await start();
+  });
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && running) setStatus("Tab verdeckt: Messwerte hier nicht verwerten.", true);
+  else if (running) setStatus("Läuft.");
+});
+window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
+setInterval(renderStats, 500);
+</script>
+</body>
+</html>
