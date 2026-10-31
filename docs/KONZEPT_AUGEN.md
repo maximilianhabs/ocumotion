@@ -1,8 +1,8 @@
 # Mac Vision — Konzept Augen, Blickrichtung, Nystagmus
 
-Stand 31.10.2026. Nichts davon ist gebaut oder am Auge gemessen. Kameradaten aus
-Abschnitt 1 sind ausgelesen, alle Winkel und Rauschwerte sind Rechnungen unter genannten
-Annahmen. Grundlage ist `KONZEPT-okulomotorik.md` im Vision Lab, angepasst an diese Kamera.
+Stand 31.10.2026, nach externem Review überarbeitet. Nichts davon ist gebaut oder am Auge
+gemessen. Kameradaten aus Abschnitt 1 sind ausgelesen, alle Winkel und Rauschwerte sind
+Rechnungen unter genannten Annahmen. Grundlage ist `KONZEPT-okulomotorik.md` im Vision Lab, angepasst an diese Kamera.
 
 ## Kurzantwort
 
@@ -12,7 +12,7 @@ Annahmen. Grundlage ist `KONZEPT-okulomotorik.md` im Vision Lab, angepasst an di
 | Blick links, Mitte, rechts | sehr wahrscheinlich ja |
 | Mittelpunkt der **Iris** | ja, das ist die eigentliche Messgröße |
 | Mittelpunkt der **Pupille** direkt | nur bei hellen Augen, bei dunklen vermutlich nicht |
-| Deutlicher Nystagmus: Richtung und Frequenz | plausibel bis etwa 7,5 Hz, Nachweis steht aus |
+| Deutlicher horizontaler Rucknystagmus: Richtung und Frequenz | plausibel, Nachweis steht aus |
 | Feiner Nystagmus unter etwa 2° | vermutlich nicht |
 | Pupillometrie, Torsion, schnelle Phase | nein |
 
@@ -20,12 +20,15 @@ Annahmen. Grundlage ist `KONZEPT-okulomotorik.md` im Vision Lab, angepasst an di
 Pupillenmitte, weil beide nah beieinander liegen und der Rand zwischen Iris und weißer
 Lederhaut bei jeder Augenfarbe sichtbar ist.
 
+**Erster Prüfgegenstand:** horizontale Augenposition bei stabilisiertem Kopf. Alles
+Weitere hängt davon ab, ob diese eine Messgröße trägt.
+
 ## 1. Was die Kamera vorgibt
 
 | Eigenschaft | Wert | Folge |
 |---|---|---|
 | Modi | 1280×720 und 640×480, fest 30 fps | nur 720p kommt infrage |
-| Bildabstand | 33,3 ms | Grenze 7,5 Hz nach der Regel Analyserate ÷ 4 |
+| Bildabstand | 33,3 ms | vorläufige Auswertungsobergrenze 7,5 Hz, siehe Abschnitt 3 |
 | Belichtung, Fokus, Weißabgleich | System meldet keine Steuerung | Belichtung kann springen, jedes Bild braucht eine Helligkeitsprüfung |
 | Bildwinkel | System meldet 0, also unbekannt | muss mit Lineal gemessen werden |
 | Infrarot | nicht nutzbar, vermutlich Sperrfilter (ungeprüft) | Pupille kann nicht wie in der klinischen VOG freigestellt werden |
@@ -51,23 +54,35 @@ ungeprüft. Bei 40 cm wird der Abstand zur klinischen Genauigkeit von etwa 0,5°
 Die Annahme 0,3–0,5 px ist vorsichtiger als im Vision Lab, weil dieses Bild stärker
 verarbeitet sein dürfte.
 
-**Der Irisdurchmesser ist das Lineal.** Er wird in jedem Bild mitgemessen und ergibt mm je
-Bildpunkt ohne bekannten Abstand oder Bildwinkel. Der Fehler durch die individuelle
-Irisgröße bleibt einige Prozent und betrifft nur den Maßstab, nicht Frequenz oder Richtung.
+**Der Irisdurchmesser ist das Lineal.** Er wird in jedem Bild mitgemessen und macht die
+Messung weitgehend unabhängig von Abstand und Bildwinkel.
+
+**Primäre Messgrößen sind Bildpunkte und die normierte Irisverschiebung, nicht Grad.** Die
+Umrechnung über einen festen Drehradius vernachlässigt perspektivische Verkürzung,
+individuelle Augengeometrie, Lidverdeckung und Kopfdrehung. Die Spalte „Grad je Bildpunkt“
+ist deshalb nur eine Größenabschätzung. Gradwerte gibt es erst nach einer persönlichen
+Blickzielkalibrierung, geprüft an eigenen, dafür nicht verwendeten Zielpunkten.
 
 ## 3. Zeit: was 30 Hz hergibt
+
+**7,5 Hz ist eine vorläufige Auswertungsobergrenze, keine nachgewiesene Messgrenze.** Die
+Regel Analyserate ÷ 4 stammt aus der Kalibrierung im Vision Lab. Ob eine Frequenz darunter
+messbar ist, hängt zusätzlich von Belichtung, Ausfällen, Modellglättung, Signalform,
+Amplitude und Rauschen ab. Bewegungen oberhalb der Grenze können außerdem als langsamere
+erscheinen (Aliasing); sie nicht auszugeben, verhindert das nicht.
 
 | Größe | Bereich | Bei 30 Hz |
 |---|---|---|
 | Blickrichtung, Blickwechsel | statisch | gut |
 | Blickfolge | 0,2–1 Hz | gut |
-| Nystagmus-Schlagfrequenz | 1–5 Hz | 30 bis 6 Bilder je Schlag, brauchbar |
-| Langsame Phase als Mittelwert | 2–100 °/s | erreichbar, siehe unten |
+| Nystagmus-Schlagfrequenz | 1–5 Hz | 30 bis 6 Bilder je Schlag, plausibel |
+| Langsame Phase als Mittelwert | 2–100 °/s | möglich, siehe unten |
 | Langsame Phase je Einzelschlag | 2–100 °/s | zu ungenau |
 | Schnelle Phase | 20–50 ms | ein Sprung, nur Zeitpunkt und Richtung |
 | Sakkaden-Spitzengeschwindigkeit | 300–500 °/s | nicht messbar |
 
-Geschwindigkeit der langsamen Phase bei 0,5° Rauschen, Steigung aus einer Geraden:
+Theoretische Abschätzung für die Geschwindigkeit der langsamen Phase bei 0,5° unabhängigem
+Rauschen, Steigung aus einer Geraden:
 
 | Dauer | Bilder | je Schlag | Mittel aus 60 Schlägen |
 |---|---|---|---|
@@ -75,9 +90,11 @@ Geschwindigkeit der langsamen Phase bei 0,5° Rauschen, Steigung aus einer Gerad
 | 200 ms | 6 | ±3,6 °/s | ±0,5 °/s |
 | 300 ms | 9 | ±1,9 °/s | ±0,25 °/s |
 
-Die Auffälligkeitsschwelle liegt bei 2–4 °/s. **Nur der Mittelwert über viele Schläge ist
-tragfähig**, und nur, wenn das Rauschen nicht mit dem Signal zusammenhängt. Eine Messung
-dauert deshalb mindestens 30 Sekunden.
+Die Auffälligkeitsschwelle liegt bei 2–4 °/s. **Ein Mittelwert über viele Schläge könnte
+unter geprüften Voraussetzungen ausreichend präzise werden.** Glättung, Kopfdrift, falscher
+Maßstab und falsche Phasengrenzen verschwinden durch mehr Schläge nicht. Jeder Wert nennt
+deshalb Zahl und Dauer der gültigen Phasen, ihre Streuung und die Ausschlussgründe. Eine
+Messung dauert mindestens 30 Sekunden.
 
 Das iPhone mit 60 fps verbessert die Werte etwa um den Faktor 1,4 bis 2 und hebt die
 Grenze auf 15 Hz. Es bleibt die Rückfalloption, falls die interne Kamera scheitert.
@@ -91,11 +108,14 @@ Grenze auf 15 Hz. Es bleibt die Rückfalloption, falls die interne Kamera scheit
 - **Kopfbezug:** Gemessen wird die Irismitte relativ zu Lidwinkeln und weiteren
   kopffesten Punkten, nie die Bildposition.
 - **Kinnstütze für Nystagmus:** Bücherstapel oder Stütze. Für links/rechts unnötig.
-- **Bezugspunkte glätten:** Der Kopf bewegt sich auf der Stütze langsam, also dürfen die
-  Bezugspunkte zeitlich geglättet werden. Das senkt ihr Rauschen, ohne das Augensignal
-  zu dämpfen. Ohne diesen Schritt kann das Rauschen der Lidwinkel die Messung beherrschen.
-- **Kopfspur:** Die Kopfbewegung wird als eigene Zeitreihe gespeichert. Schwingt der Kopf
-  in derselben Frequenz wie das Auge, gilt die Messung als Kopfartefakt.
+- **Kopfbewegung erfassen statt herausrechnen:** Translation und Drehung werden als eigene
+  Zeitreihen gespeichert. Bei zu viel Bewegung lautet das Ergebnis „nicht auswertbar“.
+- **Keine Glättung des Kopfbezugs in der ersten Version:** Ein geglätteter Bezug läuft
+  einer Kopfbewegung hinterher und erzeugt so selbst eine scheinbare Augenbewegung.
+  Glättung kommt nur infrage, wenn der Kopf-Störtest zeigt, dass sie kein Signal erzeugt.
+- **Gleiche Frequenz ist kein Artefaktbeweis:** Echte kompensatorische Augenbewegungen
+  sind an Kopfbewegungen gekoppelt. Die Kopfspur ist ein Warnhinweis für die Bewertung,
+  keine automatische Zuordnung.
 
 ### 4.2 Pupille gegen Iris
 
@@ -133,25 +153,35 @@ Markierungen neben dem Rechner.
   │
   ├─ Face Landmarker: Augenbereiche, Lidwinkel, 10 Irispunkte, Kopfhaltung
   │
-  ├─ Irisrand je Auge im Originalbild:
-  │    Strahlen von der Irismitte, seitliche Bögen, Kante subpixelgenau,
-  │    robuste Kreisanpassung (RANSAC), Radius aus dem Median
+  ├─ Irisrand je Auge im Originalbild, nur kleine Augenausschnitte:
+  │    seitliche Kanten über mehrere Zeilen, Lider und Reflexe maskiert,
+  │    zuerst Mitte aus gegenüberliegenden Randpunkten, dann robuste Kreisanpassung im Vergleich
   │
   ├─ Augenposition = Irismitte − geglätteter Kopfbezug, in Grad über das Iris-Lineal
   │
-  ├─ Güte je Bild: Kanten-Anteil, Lidöffnung, Helligkeitssprung, Kopfgeschwindigkeit
+  ├─ Güte je Bild: Kontrast, Randabdeckung, Lidöffnung, Stabilität, Kopfbewegung, Zeitlücken
   │
-  └─ Auswertung: Lidschläge entfernen, Lomb-Scargle, Phasen, Richtung, Vergleich beider Augen
+  └─ Auswertung: Lidschläge entfernen, Phasenform prüfen, Richtung, Vergleich beider Augen
 ```
 
-**Warum nicht nur MediaPipe?** Die Irispunkte sind eine Modellschätzung und könnten kleine
-Bewegungen glätten. Sie sind der schnelle Einstieg, die eigene Randanpassung ist der
-Messweg. Ob sie besser ist, entscheidet A1.
+**Warum nicht nur MediaPipe?** Laut Google wird bei `numFaces: 1` zeitlich geglättet, und
+genau so ist die Testseite eingestellt. Ein ruhiges Signal beweist daher keine Präzision,
+es kann auch kleine reale Bewegungen unterdrücken. Die eigene Randanpassung ist ein
+Vergleichskandidat, noch nicht der bessere Weg: Aus kurzen seitlichen Bögen kann ein Kreis
+einen scheinbar präzisen, aber geometrisch schwachen Mittelpunkt liefern. A1 entscheidet.
+
+**Güte:** Merkmale und Ablehnungsgründe bleiben erhalten. Ein Wert von 0 bis 100 ist ohne
+Validierung keine Wahrscheinlichkeit. Ungültige Bilder ergeben Lücken, keine gehaltenen Werte;
+Lidschläge werden mit Randbereich ausgeschlossen, lange Lücken nicht interpoliert.
 
 **Warum im Browser?** Die Messung läuft immer im Vordergrund, die Drosselung verdeckter
 Tabs stört hier also nicht. Die Testseite läuft bereits, der Face Landmarker ist darin
 vorhanden und die Randanpassung geht ohne Bibliothek direkt auf den Canvas-Pixeln.
-A0 bis A3 brauchen keine Installation. Ein Umzug nach Python bleibt später möglich.
+A0 bis A4 brauchen keine Installation. Ein Umzug nach Python bleibt später möglich. Vor
+belastbaren Messungen wandert die Analyse in einen Web Worker, weil die Erkennung sonst den
+Hauptthread blockiert. Die Testseite nutzt bisher `requestVideoFrameCallback`, der an der
+Darstellung hängt. Vorgesehen ist `MediaStreamTrackProcessor`, der in einem ersten Test ohne
+sichtbares Fenster weiterlieferte. Details stehen in `IMPLEMENTIERUNGSNOTIZ_CODEX.md`.
 
 **Lichtbedingungen:** Frontal und diffus, Bildschirm hell, keine Fenster oder Lampen als
 Spiegelung im Auge, ohne Brille, Video-Effekte von macOS aus.
@@ -163,26 +193,42 @@ Jede Stufe hat eine Schwelle. Wird sie verfehlt, folgt keine weitere Stufe.
 | Stufe | Inhalt | Weiter, wenn |
 |---|---|---|
 | A0 | Lineal im Bild, Bildschärfe bei 25–50 cm, Belichtungsverhalten | Iris mindestens 30 px und scharf |
-| A1 | Ruhiger Blick, 30 s: Rauschen je Verfahren, Sichtbarkeit der Pupille | Rauschen höchstens 0,5°, sonst iPhone prüfen |
-| A2 | Künstliches Auge auf Canvas mit bekannter Bewegung | Ruhe ergibt 0; Frequenz und Richtung stimmen |
-| A3 | Bildschirmziele: Blickpunkte, Sakkaden, Blickfolge 0,25–1 Hz, Kopf-Störtest | Winkelfehler unter 2°, Kopfbewegung kein Scheinnystagmus |
-| A4 | Optokinetischer Nystagmus mit Streifen auf dem Bildschirm | Schlagrichtung in beiden Reizrichtungen korrekt |
-| A5 | Nystagmus-Auswertung mit Grenzen und Güteangabe | Nachweisgrenze gemessen und dokumentiert |
-| A6 | Optional: Vergleich mit EyeSeeCam oder VOG | Abweichung bekannt |
+| A1 | Augenmodus: horizontale Rohkurve mit Gültigkeit; künstliches Auge im RAM mit Stillstand, Sinus, Sägezahn, Kopfversatz, Verdeckung, Kontrastwechsel | Ruhe ergibt 0; Frequenz, Richtung und Amplitude stimmen; Fehlalarme gezählt |
+| A2 | Ruhiger Blick und bekannte Bewegung, je Verfahren | Rauschen höchstens 0,5° gleichwertig, bekannte Bewegung bleibt erhalten |
+| A3 | Physisches Testobjekt vor der Kamera | Kamera erhält bekannte Bewegung, Dämpfung ist beziffert |
+| A4 | Bildschirmziele mit Kalibrierung und getrennten Prüfzielen, Kopf-Störtest | Winkelfehler unter 2°, die Korrektur erzeugt kein Scheinsignal |
+| A5 | Optokinetischer Nystagmus, horizontale Reize | Schlagrichtung in beiden Reizrichtungen korrekt |
+| A6 | Früher VOG- oder EyeSeeCam-Vergleich an wenigen Gesunden | Maßstab und Geschwindigkeit bekannt |
+| A7 | Nystagmus-Auswertung mit Grenzen und Güteangabe | Nachweisbarkeit gemessen und dokumentiert |
 
-A4 ist der Kerntest: Optokinetischer Nystagmus lässt sich bei Gesunden gezielt auslösen,
-und seine Richtung ergibt sich aus dem Reiz. Das ist ein echter Nystagmus mit bekannter
-Antwort. Die Verlässlichkeit bei echten Patientenbefunden belegt er noch nicht.
+Das künstliche Auge kommt bewusst zuerst: Es trennt Softwarefehler von Grenzen der Kamera,
+kann deren Eignung aber nicht belegen, weil es sie umgeht. Dafür gibt es A3.
+
+A2 beantwortet zwei getrennte Fragen: Wie stark schwankt das Signal bei ruhigem Blick, und
+wie viel einer bekannten Bewegung bleibt erhalten? Die erste allein kann Glättung nicht von
+Präzision unterscheiden. Scheitert die interne Kamera hier, wird das iPhone geprüft.
+
+A5 ist ein Funktionstest: Der optokinetische Nystagmus lässt sich bei Gesunden gezielt
+auslösen, seine Richtung ergibt sich aus dem Reiz. Die Streifengeschwindigkeit ist aber
+keine Referenz für die erreichte Augengeschwindigkeit. Quantitative Werte in Grad und °/s
+brauchen deshalb A6. Die Verlässlichkeit bei Patientenbefunden belegt keine dieser Stufen.
 
 ## 7. Ausgabe
 
+Zunächst wird nur horizontaler Rucknystagmus untersucht. Pendelförmige Bewegungen brauchen
+eine eigene Beschreibung. Eine dominante Frequenz zeigt nur eine periodische Bewegung; sie
+belegt weder Rucknystagmus noch Schlagrichtung. Dafür braucht es Phasenform, Rückstellbewegungen,
+Wiederholbarkeit und den Ausschluss von Artefakten.
+
 Eine Messung endet immer in einem von drei Ergebnissen:
 
-- **Nystagmus nachweisbar:** Schlagrichtung, Frequenz, mittlere langsame Phase, beide Augen.
-- **Kein Nystagmus über der Nachweisgrenze:** mit dieser Grenze in Grad, nie als „kein Nystagmus“.
+- **Rucknystagmus nachweisbar:** Schlagrichtung, Frequenz, mittlere langsame Phase mit Zahl und
+  Streuung der gültigen Phasen, beide Augen.
+- **Kein Nystagmus über der Nachweisgrenze:** Die Grenze nennt Amplitude, Frequenz oder
+  Geschwindigkeit der langsamen Phase und die Messqualität, nie schlicht „kein Nystagmus“.
 - **Nicht auswertbar:** mit Grund, etwa Lidschläge, Kopfbewegung oder Licht.
 
-Die Grenze aus Abschnitt 3 gilt auch hier: Frequenzen über 7,5 Hz werden nicht ausgegeben.
+Frequenzen über der vorläufigen Obergrenze aus Abschnitt 3 werden nicht ausgegeben.
 Eine Kreisanpassung liefert immer einen Kreis, auch auf einem geschlossenen Lid. Ohne
 Güte je Bild entsteht eine Kurve, die wie ein Nystagmus aussieht und keiner ist.
 
@@ -192,20 +238,20 @@ Güte je Bild entsteht eine Kurve, die wie ein Nystagmus aussieht und keiner ist
   auch nicht zur Fehlersuche. Gespeichert werden nur Zeitreihen und Kennwerte.
 - **Kein Medizinprodukt.** Die Ausgabe ist ein Forschungsbefund und ersetzt weder Untersuchung
   noch VOG.
-- **Patientenmessungen** erst nach bestandenem A5, mit Einwilligung und pseudonymisiert.
-  Die Stufen A0 bis A5 laufen an gesunden Freiwilligen.
+- **Patientenmessungen** erst nach bestandenem A7, mit Einwilligung und pseudonymisiert.
+  Die Stufen A0 bis A7 laufen an gesunden Freiwilligen.
 - **Reize:** Bewegte Streifen können Übelkeit oder Schwindel auslösen, also kurz halten und
   jederzeit abbrechbar machen.
 
 ## 9. Literaturlage
 
-Die Angaben stammen aus Suchergebnissen. Die Originale ließen sich nicht öffnen und wurden
-nicht gelesen. Vor jeder Weiterverwendung gegenlesen.
+Geprüft ist bisher nur der Abstract von EyePhone. Alle anderen Angaben stammen aus
+Suchergebnissen; diese Originale wurden nicht gelesen. Vor jeder Weiterverwendung gegenlesen.
 
 | Quelle | Ergebnis laut Suche | Bedeutung |
 |---|---|---|
-| [ConVNG, J Neurol 2022](https://link.springer.com/10.1007/s00415-022-11493-1) | Smartphone, 10 Personen, OKN; Genauigkeit vergleichbar mit VOG, präziser als MediaPipe, unpräziser als VOG | stützt den eigenen Detektor und A4 |
-| EyePhone, JAHA 2023 | Smartphone gegen VOG, 10 Personen, AUC 0,87 bei 2 °/s | ungefähre Erwartung, Stichprobe klein |
+| [ConVNG, J Neurol 2022](https://link.springer.com/10.1007/s00415-022-11493-1) | Smartphone, 10 Personen, OKN; Genauigkeit vergleichbar mit VOG, präziser als MediaPipe, unpräziser als VOG | stützt den eigenen Detektor und A5 |
+| [EyePhone, JAHA 2024](https://pubmed.ncbi.nlm.nih.gov/38226513/) | Smartphone gegen VOG, 10 Gesunde, induzierter OKN, Kalibrierung; AUC 0,87 bei 2 °/s, r = 0,98 horizontal | Vorbild für A5 und A6; belegt nichts für diese Webcam |
 | [VertiGo, 2020](https://doaj.org/article/21a74a904d6544c983004605869b7bc2) | Webcam, kalorischer Nystagmus, Genauigkeit 59,64 % | Warnung: Webcam-Erfolg ist nicht selbstverständlich |
 | [Sci Rep 2023](https://www.nature.com/articles/s41598-023-40796-0) | dunkle Iriden im sichtbaren Licht schwer trennbar | stützt die Entscheidung für den Irisrand |
 | [IEEE Access 2024](https://doaj.org/article/21ad3ac72299486a9497a31f1eb60713) | Face Mesh mit 5-Punkt-Kalibrierung, etwa 1,1–1,3°; Zuordnung unsicher | Erwartung für Blickrichtung nach Kalibrierung |

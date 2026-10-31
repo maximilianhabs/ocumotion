@@ -38,3 +38,21 @@ GPU-Wahl auf der CPU, die Blendshapes ebenfalls.
 Testseite im normalen Browser mit echter Kamera: läuft und funktioniert laut Nutzer
 „prinzipiell sehr gut“. Das ist ein Eindruck, keine Messung. Analysen/s mit Hand im Bild,
 Bildrate bei wenig Licht und die Seitenzuordnung der Hände sind weiter offen.
+
+## 31.10.2026 — Prüfung der überarbeiteten Testseite
+
+Mit künstlichem Canvas-Video statt Kamera, ohne erkennbare Hand oder Gesicht. Bestätigt sind nur
+Abläufe, keine Leistungswerte: Dreifachklick ergibt einen Start, Neustart und Stopp beenden alle
+Videospuren, nach dem Stopp sind die Anzeigen leer. Die Zeitbasis war dabei `mediaTime`; ob die
+echte Kamera `captureTime` liefert, ist offen. Modellwechsel lief ohne Fehler.
+
+Bei ausgeblendetem Browserfenster blieben alle Bild-Callbacks aus, auch in einem unabhängigen
+Zähler, obwohl die Seite als sichtbar galt und das Testvideo weiterlief. Die Erkennung läuft also
+nur, solange das Fenster dargestellt wird. Die Seite meldet das nach 1,5 s und beendet das
+Messsegment. Die Regel Analyserate ÷ 4 gilt hier als vorläufige Obergrenze.
+
+## 31.10.2026 — Bildquelle unabhängig von der Darstellung
+
+Chromium 152, Testvideo 30 Bilder/s, Browserfenster ausgeblendet: `MediaStreamTrackProcessor`
+im Hauptthread lieferte 61 Bilder in 2 s, Zeitstempel streng steigend. Im Worker ist die Klasse
+nicht verfügbar. Mit echter Kamera, normalem Chrome und Safari noch ungeprüft.

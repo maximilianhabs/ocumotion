@@ -45,6 +45,11 @@
   dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; }
   dt { color: var(--muted); }
   dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;
+          font-variant-numeric: tabular-nums; }
+  th, td { padding: 2px 0 2px 6px; text-align: right; font-weight: 600; }
+  th:first-child { padding-left: 0; text-align: left; }
+  thead th, tbody th { color: var(--muted); font-weight: 500; }
   .big { font-size: 26px; font-weight: 700; color: var(--accent); min-height: 38px; }
   #status { color: var(--muted); font-size: 13px; margin-top: 6px; min-height: 19px; }
   #status.warn { color: var(--warn); }
@@ -93,14 +98,20 @@
     <section>
       <h2>Messwerte (letzte 3 s)</h2>
       <dl>
-        <dt>Kamera</dt><dd id="mCam">–</dd>
+        <dt>Ausgehandelt</dt><dd id="mMode">–</dd>
+        <dt>Bilder dargestellt/s</dt><dd id="mCam">–</dd>
         <dt>Analysen/s</dt><dd id="mRate">–</dd>
-        <dt>Analysen/s mit Treffer</dt><dd id="mHit">–</dd>
-        <dt>Messgrenze (Rate ÷ 4)</dt><dd id="mLimit">–</dd>
-        <dt>Hand</dt><dd id="mHand">–</dd>
-        <dt>Gesicht</dt><dd id="mFace">–</dd>
-        <dt>Körper</dt><dd id="mPose">–</dd>
+        <dt>Doppelte Bildzeiten</dt><dd id="mDup">–</dd>
+        <dt>Zeitbasis</dt><dd id="mClock">–</dd>
       </dl>
+      <table>
+        <thead><tr><th>Modell</th><th>Treffer/s</th><th>÷ 4</th><th>Dauer</th><th>Lücke</th></tr></thead>
+        <tbody>
+          <tr data-kind="hand"><th>Hand</th><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr data-kind="face"><th>Gesicht</th><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr data-kind="pose"><th>Körper</th><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section>
@@ -121,7 +132,9 @@
 
   <footer>
     Bilder bleiben im Browser und werden weder gespeichert noch gesendet. Programmcode und Modelle
-    werden beim Laden aus dem Netz geholt. Messgrenze gilt für Analysen mit Treffer.
+    werden beim Laden aus dem Netz geholt. „÷ 4“ ist eine vorläufige Obergrenze in Hz, keine
+    nachgewiesene Messgrenze. „Bilder dargestellt“ belegt nicht die Rate des Sensors. „Lücke“ ist
+    die längste Zeit ohne Treffer im Fenster.
   </footer>
 </main>
 
@@ -132,6 +145,8 @@ import { FilesetResolver, GestureRecognizer, FaceLandmarker, PoseLandmarker }
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
 const MODELS = "https://storage.googleapis.com/mediapipe-models";
 const WINDOW_MS = 3000;
+const STALL_MS = 1500;
+const WARMUP_MS = 1000;
 const BLINK_ON = 0.5;
 const BLINK_OFF = 0.3;
 const GESTURES = {
@@ -147,14 +162,25 @@ const ctx = canvas.getContext("2d");
 
 const tasks = { hand: null, face: null, pose: null };
 const samples = { hand: [], face: [], pose: [] };
+const controls = ["toggle", "camera", "resolution", "fpsWanted", "delegate",
+                  "useHand", "useFace", "usePose"];
 let fileset = null;
 let stream = null;
 let running = false;
-let loadGeneration = 0;
+let busy = false;
+let session = 0;
+let frameHandle = null;
+let segmentStart = 0;
 let frameTimes = [];
 let analysisTimes = [];
-let hitTimes = [];
 let lastPresented = null;
+let lastFrameAt = null;
+let lastFrameMs = null;
+let duplicates = 0;
+let stalled = false;
+let clockOffset = null;
+let lastStamp = 0;
+let clockSource = "–";
 let blinkClosed = false;
 let blinks = 0;
 
@@ -190,14 +216,11 @@ const wanted = () => ({ hand: $("useHand").checked, face: $("useFace").checked,
                         pose: $("usePose").checked });
 
 async function syncTasks() {
-  const generation = ++loadGeneration;
   for (const [kind, on] of Object.entries(wanted())) {
     if (on && !tasks[kind]) {
       setStatus(`Lade Modell ${kind} …`);
       try {
-        const task = await createTask(kind);
-        if (generation !== loadGeneration) { task.close(); return; }
-        tasks[kind] = task;
+        tasks[kind] = await createTask(kind);
       } catch (error) {
         setStatus(`Modell ${kind} ließ sich nicht laden: ${error.message}`, true);
         return;
@@ -205,10 +228,24 @@ async function syncTasks() {
     } else if (!on && tasks[kind]) {
       tasks[kind].close();
       tasks[kind] = null;
-      samples[kind] = [];
     }
   }
+  resetSegment();
   setStatus(running ? "Läuft." : "Modelle bereit.");
+}
+
+// Ein Messsegment endet bei jedem Wechsel; Werte davor duerfen nicht einfliessen.
+function resetSegment() {
+  segmentStart = performance.now() + WARMUP_MS;
+  duplicates = 0;
+  frameTimes = [];
+  analysisTimes = [];
+  for (const kind of Object.keys(samples)) samples[kind] = [];
+  blinks = 0;
+  blinkClosed = false;
+  clearHands();
+  clearFace();
+  $("blinks").textContent = "0";
 }
 
 function closeAllTasks() {
@@ -217,6 +254,27 @@ function closeAllTasks() {
     tasks[kind] = null;
     samples[kind] = [];
   }
+}
+
+function clearHands() {
+  $("hands").replaceChildren();
+  $("gesture").textContent = "–";
+}
+
+function clearFace() {
+  $("eyes").textContent = "–";
+  $("smile").textContent = "–";
+}
+
+function clearRates() {
+  for (const id of ["mCam", "mRate", "mDup"]) $(id).textContent = "–";
+  for (const cell of document.querySelectorAll("tr[data-kind] td")) cell.textContent = "–";
+}
+
+function clearStats() {
+  clearRates();
+  $("mMode").textContent = "–";
+  $("mClock").textContent = "–";
 }
 
 function drawLines(points, connections, color) {
@@ -255,7 +313,11 @@ function showHands(result) {
 
 function showFace(result) {
   const shapes = result.faceBlendshapes?.[0]?.categories;
-  if (!shapes) return;
+  if (!shapes) {
+    blinkClosed = false;
+    clearFace();
+    return;
+  }
   const score = (name) => shapes.find((s) => s.categoryName === name)?.score ?? 0;
   // Blendshapes zaehlen aus Sicht der Person, das passt zur Anzeige als links/rechts der Person.
   const eyeLeft = score("eyeBlinkLeft");
@@ -273,42 +335,52 @@ function showFace(result) {
     `${score("mouthSmileLeft").toFixed(2)} / ${score("mouthSmileRight").toFixed(2)}`.replaceAll(".", ",");
 }
 
-function timed(kind, run) {
+function timed(kind, run, isHit) {
   const started = performance.now();
   const result = run();
-  samples[kind].push({ at: started, ms: performance.now() - started });
+  samples[kind].push({ at: started, ms: performance.now() - started, hit: isHit(result) });
   return result;
 }
 
-function analyse(now) {
-  const stamp = Math.round(performance.now());
+// Bildzeit statt Aufrufzeit. captureTime ist laut MDN fuer WebRTC beschrieben,
+// deshalb wird die tatsaechlich genutzte Quelle angezeigt.
+function frameClock(metadata) {
+  if (metadata.captureTime > 0) return { ms: metadata.captureTime, source: "captureTime" };
+  return { ms: metadata.mediaTime * 1000, source: "mediaTime" };
+}
+
+// MediaPipe verlangt streng steigende Zeitstempel, auch ueber Neustarts hinweg.
+function taskStamp(frameMs) {
+  clockOffset ??= lastStamp + 1000 - frameMs;
+  lastStamp = Math.max(lastStamp + 1, Math.round(frameMs + clockOffset));
+  return lastStamp;
+}
+
+function analyse(now, stamp) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   let ran = false;
-  let hit = false;
 
   if (tasks.pose) {
     ran = true;
-    const result = timed("pose", () => tasks.pose.detectForVideo(video, stamp));
+    const result = timed("pose", () => tasks.pose.detectForVideo(video, stamp),
+                         (r) => r.landmarks.length > 0);
     for (const points of result.landmarks) {
-      hit = true;
       drawLines(points, PoseLandmarker.POSE_CONNECTIONS, "#a78bfa");
       drawPoints(points, "#ddd6fe", 6);
     }
   }
   if (tasks.face) {
     ran = true;
-    const result = timed("face", () => tasks.face.detectForVideo(video, stamp));
-    for (const points of result.faceLandmarks) {
-      hit = true;
-      drawPoints(points, "#fbbf24", 2);
-    }
+    const result = timed("face", () => tasks.face.detectForVideo(video, stamp),
+                         (r) => r.faceLandmarks.length > 0);
+    for (const points of result.faceLandmarks) drawPoints(points, "#fbbf24", 2);
     showFace(result);
   }
   if (tasks.hand) {
     ran = true;
-    const result = timed("hand", () => tasks.hand.recognizeForVideo(video, stamp));
+    const result = timed("hand", () => tasks.hand.recognizeForVideo(video, stamp),
+                         (r) => r.landmarks.length > 0);
     for (const points of result.landmarks) {
-      hit = true;
       drawLines(points, GestureRecognizer.HAND_CONNECTIONS, "#2dd4bf");
       drawPoints(points, "#ccfbf1", 7);
     }
@@ -316,42 +388,100 @@ function analyse(now) {
   }
 
   if (ran) analysisTimes.push(now);
-  if (hit) hitTimes.push(now);
 }
 
-function onFrame(now, metadata) {
-  if (!running) return;
+function requestFrame(id) {
+  frameHandle = video.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
+}
+
+function onFrame(id, now, metadata) {
+  if (id !== session) return;
+  lastFrameAt = now;
+  if (stalled) {
+    stalled = false;
+    resetSegment();
+    setStatus("Läuft. Neues Messsegment.");
+  }
   // presentedFrames zaehlt auch Bilder, die wir wegen laufender Analyse nie gesehen haben.
   if (lastPresented !== null) {
     const fresh = metadata.presentedFrames - lastPresented;
     for (let i = 0; i < fresh; i += 1) frameTimes.push(now);
   }
   lastPresented = metadata.presentedFrames;
-  analyse(now);
-  video.requestVideoFrameCallback(onFrame);
+  const clock = frameClock(metadata);
+  clockSource = clock.source;
+  // Ein Bild mit gleicher oder aelterer Bildzeit bringt keine neue Messung.
+  if (lastFrameMs !== null && clock.ms <= lastFrameMs) {
+    duplicates += 1;
+    requestFrame(id);
+    return;
+  }
+  lastFrameMs = clock.ms;
+  try {
+    analyse(now, taskStamp(clock.ms));
+  } catch (error) {
+    stop();
+    setStatus(`Analyse abgebrochen: ${error.message}`, true);
+    return;
+  }
+  requestFrame(id);
 }
 
 const comma = (value, digits = 1) => value.toFixed(digits).replace(".", ",");
 
+function longestGap(hitTimes, from, to) {
+  let gap = 0;
+  let previous = from;
+  for (const at of [...hitTimes, to]) {
+    gap = Math.max(gap, at - previous);
+    previous = at;
+  }
+  return gap;
+}
+
 function renderStats() {
   if (!running) return;
   const now = performance.now();
-  const recent = (times) => times.filter((t) => now - t <= WINDOW_MS);
+  // Bildcallbacks haengen an der Darstellung und bleiben aus, wenn das Fenster verdeckt ist.
+  if (!stalled && lastFrameAt !== null && now - lastFrameAt > STALL_MS) {
+    stalled = true;
+    resetSegment();
+    setStatus("Keine Bilder: Fenster verdeckt? Messsegment beendet.", true);
+  }
+  if (now < segmentStart) {
+    clearRates();
+    return;
+  }
+  const from = Math.max(now - WINDOW_MS, segmentStart);
+  const seconds = Math.max((now - from) / 1000, 0.001);
+  const recent = (times) => times.filter((t) => t >= from);
   frameTimes = recent(frameTimes);
   analysisTimes = recent(analysisTimes);
-  hitTimes = recent(hitTimes);
-  const perSecond = (times) => times.length / (WINDOW_MS / 1000);
-  const hitRate = perSecond(hitTimes);
-  $("mCam").textContent = `${comma(perSecond(frameTimes))} fps`;
-  $("mRate").textContent = comma(perSecond(analysisTimes));
-  $("mHit").textContent = comma(hitRate);
-  $("mLimit").textContent = hitRate > 0 ? `${comma(hitRate / 4)} Hz` : "–";
-  for (const [kind, id] of [["hand", "mHand"], ["face", "mFace"], ["pose", "mPose"]]) {
-    samples[kind] = samples[kind].filter((s) => now - s.at <= WINDOW_MS);
+  $("mCam").textContent = comma(frameTimes.length / seconds);
+  $("mRate").textContent = comma(analysisTimes.length / seconds);
+  $("mClock").textContent = clockSource;
+  $("mDup").textContent = duplicates;
+  for (const row of document.querySelectorAll("tr[data-kind]")) {
+    const kind = row.dataset.kind;
+    samples[kind] = samples[kind].filter((sample) => sample.at >= from);
     const list = samples[kind];
-    $(id).textContent = list.length
-      ? `${comma(list.reduce((sum, s) => sum + s.ms, 0) / list.length)} ms` : "–";
+    const [, hit, limit, duration, gap] = row.cells;
+    if (!list.length) {
+      for (const cell of [hit, limit, duration, gap]) cell.textContent = "–";
+      continue;
+    }
+    const hits = list.filter((sample) => sample.hit).map((sample) => sample.at);
+    const rate = hits.length / seconds;
+    hit.textContent = comma(rate);
+    limit.textContent = rate > 0 ? comma(rate / 4) : "–";
+    duration.textContent = `${comma(list.reduce((sum, s) => sum + s.ms, 0) / list.length)} ms`;
+    gap.textContent = `${comma(longestGap(hits, from, now) / 1000)} s`;
   }
+}
+
+function showNegotiatedMode() {
+  const { width, height, frameRate } = stream.getVideoTracks()[0].getSettings();
+  $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0)} fps`;
 }
 
 async function start() {
@@ -364,33 +494,48 @@ async function start() {
                frameRate: { ideal: Number($("fpsWanted").value) },
                ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
     });
+    video.srcObject = stream;
+    await video.play();
   } catch (error) {
+    stop();
     setStatus(`Kamera nicht verfügbar: ${error.message}`, true);
     return;
   }
-  video.srcObject = stream;
-  await video.play();
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   $("hint").hidden = true;
   running = true;
+  session += 1;
   lastPresented = null;
-  frameTimes = [];
-  analysisTimes = [];
-  hitTimes = [];
+  lastFrameAt = null;
+  lastFrameMs = null;
+  stalled = false;
+  clockOffset = null;
   $("toggle").textContent = "Kamera stoppen";
   $("toggle").classList.add("stop");
+  stream.getVideoTracks()[0].addEventListener("ended", () => {
+    if (!running) return;
+    stop();
+    setStatus("Kamera getrennt. Messung beendet.", true);
+  });
+  showNegotiatedMode();
   await listCameras();
   await syncTasks();
-  video.requestVideoFrameCallback(onFrame);
+  lastFrameAt = performance.now();
+  requestFrame(session);
 }
 
 function stop() {
   running = false;
+  session += 1;
+  if (frameHandle !== null) video.cancelVideoFrameCallback(frameHandle);
+  frameHandle = null;
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
   video.srcObject = null;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  resetSegment();
+  clearStats();
   $("hint").hidden = false;
   $("toggle").textContent = "Kamera starten";
   $("toggle").classList.remove("stop");
@@ -407,24 +552,37 @@ async function listCameras() {
   if (current) select.value = current;
 }
 
-$("toggle").addEventListener("click", () => (running ? stop() : start()));
-for (const id of ["useHand", "useFace", "usePose"]) {
-  $(id).addEventListener("change", () => { if (running) syncTasks(); });
+// Steuerelemente bleiben gesperrt, bis ein Vorgang fertig ist; so ueberlappt kein Neustart.
+async function exclusive(action) {
+  if (busy) return;
+  busy = true;
+  for (const id of controls) $(id).disabled = true;
+  try {
+    await action();
+  } finally {
+    busy = false;
+    for (const id of controls) $(id).disabled = false;
+  }
 }
-$("delegate").addEventListener("change", () => {
+
+$("toggle").addEventListener("click", () => exclusive(running ? stop : start));
+for (const id of ["useHand", "useFace", "usePose"]) {
+  $(id).addEventListener("change", () => { if (running) exclusive(syncTasks); });
+}
+$("delegate").addEventListener("change", () => exclusive(async () => {
   closeAllTasks();
-  if (running) syncTasks();
-});
+  if (running) await syncTasks();
+}));
 for (const id of ["camera", "resolution", "fpsWanted"]) {
-  $(id).addEventListener("change", async () => {
-    if (!running) return;
-    stop();
-    await start();
+  $(id).addEventListener("change", () => {
+    if (running) exclusive(async () => { stop(); await start(); });
   });
 }
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && running) setStatus("Tab verdeckt: Messwerte hier nicht verwerten.", true);
-  else if (running) setStatus("Läuft.");
+  if (!running) return;
+  resetSegment();
+  if (document.hidden) setStatus("Tab verdeckt: Messsegment beendet.", true);
+  else setStatus("Läuft. Neues Messsegment.");
 });
 window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
 setInterval(renderStats, 500);

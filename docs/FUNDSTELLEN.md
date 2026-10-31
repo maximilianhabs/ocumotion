@@ -15,7 +15,8 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `CLAUDE.md` | verbindliche Projektregeln |
 | `README.md` | Überblick und Startbefehle |
 | `docs/KONZEPT.md` | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
-| `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A6 |
+| `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A7 |
+| `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | technischer Bauplan für den Messplatz, mit Prüfvermerk und Abweichungen |
 | `docs/ROADMAP.md` | Etappen und aktueller Stand |
 | `docs/MESSUNGEN.md` | alle Messergebnisse |
 | `testseite/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
@@ -48,9 +49,9 @@ Diese Projekte liefern Vorarbeit, gehören aber nicht zu Mac Vision.
 ## Offen
 
 - Python-Abhängigkeiten: Der Nutzer hat am 31.10.2026 „Noch nicht“ gesagt. Nicht ohne neue Freigabe installieren.
-- Die Stufen A0 bis A3 brauchen keine Installation.
-- Die Literatur in `KONZEPT_AUGEN.md` Abschnitt 9 ist nicht im Original gelesen.
-- Keine medizinische Nutzung und keine Patientenmessung vor bestandenem A5.
+- Die Stufen A0 bis A4 brauchen keine Installation.
+- Die Literatur in `KONZEPT_AUGEN.md` Abschnitt 9 ist bis auf einen Abstract nicht im Original gelesen.
+- Keine medizinische Nutzung und keine Patientenmessung vor bestandenem A7.
 
 ## Nicht ins Repo
 

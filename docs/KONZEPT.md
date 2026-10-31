@@ -41,13 +41,15 @@ Bild und die Frage, ob MediaPipe in Python auf dem Mac die GPU nutzt.
 |---|---|---|
 | Engpass | Rechenleistung (N150, vier Kerne, keine GPU) | **Kamera** (30 fps, 720p, Weitwinkel) |
 | Modelle | immer nur eines gleichzeitig | vermutlich mehrere, in E2 zu messen |
-| Messgrenze | 5,0 Hz bei 20,1 Analysen/s | höchstens **7,5 Hz** bei 30 fps intern, höchstens 15 Hz mit iPhone |
+| Vorläufige Obergrenze | 5,0 Hz bei 20,1 Analysen/s | höchstens **7,5 Hz** bei 30 fps intern, höchstens 15 Hz mit iPhone |
 | Betrieb | Dienst im Docker-Container | Prozess im Vordergrund, nur bei Bedarf |
 | Kamera | feste Position, frei wählbar | im Deckel: Winkel und Bildausschnitt ändern sich |
 
-Die Messgrenze folgt der Kalibrierung vom 29.08.: belastbar ist nur, was unter einem
-Viertel der Analyserate liegt. Die Regel gilt hier zunächst als Annahme und wird in E6
-gegen den Taktgeber neu geprüft.
+Die Obergrenze folgt der Kalibrierung vom 29.08. im Vision Lab: ein Viertel der
+Analyserate. Hier ist sie eine Arbeitsregel, keine nachgewiesene Messgrenze. Darunter ist
+eine Frequenz nicht automatisch messbar, und schnellere Bewegungen können als langsamere
+erscheinen. E6 ermittelt gegen den Taktgeber, in welchem Frequenz- und Amplitudenbereich
+welche Fehler entstehen, auch die Häufigkeit falscher Spitzen bei Stillstand.
 
 ## 4. Architekturentscheidung
 
@@ -79,7 +81,7 @@ Detector (eigener Thread, zieht die Kamera nicht herunter)
   └──► Bewegung, Güte, Speicher  → SQLite in data/
 ```
 
-Zeitstempel kommen vom Bild, nicht vom Analysezeitpunkt. Die Auswertung rechnet auf den
+Bildzeit, Analysebeginn und Analyseende werden getrennt geführt. Die Auswertung rechnet auf den
 echten Zeitpunkten (Lomb-Scargle wie in `tools/frequenzanalyse.py`), nicht auf einem
 angenommenen festen Raster.
 
@@ -116,16 +118,23 @@ am Kinn kratzt, darf nichts auslösen. Daher gelten diese Regeln von Anfang an:
   löscht, sendet oder bestätigt, ist per Geste erreichbar.
 - **Not-Aus:** Eine Tastenkombination beendet die Steuerung sofort.
 
+**Abnahme:** Null Fehlauslöser in zehn Minuten sind nur ein erster Test; die obere
+95-%-Grenze liegt dann noch bei rund 18 Ereignissen je Stunde. Später zählen längere Läufe
+in Alltagssituationen (Tippen, Sprechen, Trinken, Gesicht berühren, zweite Person, wechselndes
+Licht), außerdem verpasste Aktionen, Reaktionszeit und unbeabsichtigtes Scharfschalten. Eigene
+Gesten werden mit Beispielen aus getrennten Durchgängen trainiert und geprüft.
+
 Erster Aktionssatz: Wiedergabe/Pause, Lautstärke, Vor/Zurück, Fenster oder Schreibtisch
 wechseln. Aktionen am System brauchen unter macOS die Bedienungshilfen-Freigabe. Sie
 kommen deshalb erst in E5, nachdem die Fehlauslöserate in der App gemessen wurde.
 
 ## 8. Analyse: was diese Kamera kann
 
-Die Tabelle gilt nur, wenn die Analyse die volle Kamerarate hält. Sie ist die
-Obergrenze, kein Versprechen.
+Die Tabelle gilt nur, wenn die Analyse die volle Kamerarate hält. Sie zeigt die
+vorläufige Obergrenze, kein Versprechen. Glättung ist je Ziel neu zu entscheiden: Sie
+stabilisiert Gesten, kann aber Tremor und kleine Augenbewegungen abschwächen.
 
-| Vorgang | Frequenz | Intern (bis 7,5 Hz) | iPhone 60 fps (bis 15 Hz) |
+| Vorgang | Frequenz | Intern (Obergrenze 7,5 Hz) | iPhone 60 fps (Obergrenze 15 Hz) |
 |---|---|---|---|
 | Blinzelrate, Mimikwechsel, Hypomimie | unter 1 Hz | ja | ja |
 | Gesichtsasymmetrie | statisch | ja, Modelldämpfung erst prüfen | ja, dito |
@@ -169,13 +178,21 @@ Module werden bei Bedarf kopiert und angepasst, kein gemeinsames Paket.
 - **Keine Gesichtserkennung als Identität.** Weitere Personen im Bild werden nicht
   zugeordnet oder gespeichert.
 
+## 10a. Reproduzierbarkeit
+
+Die Testseite lädt Code und Laufzeit in fester Version, die Modelle aber als `latest`. Vor
+belastbaren Messungen werden Laufzeit und Modelle lokal bereitgestellt, mit Version und
+Prüfsumme festgehalten und ohne Netzwerk getestet. Jede Messung verweist auf Softwarestand,
+Modellstand, Kameraeinstellungen und Kalibrierung. Weil es keine Rohvideos gibt, tragen
+synthetische Testfälle sowie Zeitreihen mit Güte und Ausschlussgründen die Fehlersuche.
+
 ## 11. Offene Fragen und Fallen
 
 | Frage | Klärung |
 |---|---|
-| Hält Python 30 Analysen/s mit Hand im Bild? | E1, **mit** Hand messen; im Vision Lab halbierte sich die Rate |
+| Hält Python 30 Analysen/s mit Hand im Bild? | E1, **mit** Hand und je Modell getrennt messen; im Vision Lab halbierte sich die Rate |
 | Nutzt MediaPipe in Python auf dem Mac die GPU? | E1, Rate und Auslastung vergleichen |
-| Sinkt die Bildrate bei wenig Licht unter 30 fps? | E1, trotz fest gemeldeter 30 fps tatsächlich messen |
+| Sinkt die Bildrate bei wenig Licht unter 30 fps? | E1, trotz fest gemeldeter 30 fps messen; „Bilder dargestellt“ belegt die Sensorrate nicht, wiederholte Bilder sind gesondert zu prüfen |
 | Wem gehört die Kamerafreigabe, wenn die Claude-App startet? | E1, sonst aus dem Terminal starten |
 | Werden links und rechts vertauscht? | E1, MediaPipe erwartet gespiegelte Bilder |
 | Passt `opencv-contrib-python` aus den MediaPipe-Abhängigkeiten zu unserem Aufbau? | E1, beim Einrichten |
