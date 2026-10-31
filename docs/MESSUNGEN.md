@@ -70,3 +70,11 @@ mit Testvideo und simuliertem Vollbild: 12 Ziele symmetrisch platziert, Erkennun
 Vollbild-Fläche aktiv, Ende ohne Gesicht mit „nicht bestanden“ und ohne Gradanzeige. Echtes Vollbild
 und die Kalibrierung mit echtem Gesicht sind ungeprüft. Antwortet das Vollbild nicht, gibt ein
 Zeitlimit die Bedienung nach 2 s wieder frei.
+
+## 31.10.2026 — Korrektur nach zweitem Review
+
+`make test`: 28 von 28 bestanden, darunter die nachgestellten Gegenproben: 10° Fehler in der jeweils
+anderen Achse, vertikale Unruhe, schwankende Einzelwerte, Lücken, geringer Gültigkeitsanteil und
+Seitendifferenz. Mit Testvideo und simuliertem Vollbild geprüft: Abbruch durch Vollbildende, durch
+das Sichtbarkeitsereignis und durch Kamerastopp sowie ein nicht antwortendes Vollbild. Nichts lief
+danach weiter, alle Videospuren endeten. Der Zweig „bestanden“ braucht ein echtes Gesicht.

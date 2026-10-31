@@ -147,8 +147,11 @@
         <dt>Ergebnis</dt><dd id="cState">keine</dd>
         <dt>Prüffehler rechts h / v</dt><dd id="cRechts">–</dd>
         <dt>Prüffehler links h / v</dt><dd id="cLinks">–</dd>
-        <dt>Unruhe rechts / links</dt><dd id="cNoise">–</dd>
-        <dt>Gewicht rechts / links</dt><dd id="cWeight">–</dd>
+        <dt>Unruhe h, r / l</dt><dd id="cNoiseH">–</dd>
+        <dt>Unruhe v, r / l</dt><dd id="cNoiseV">–</dd>
+        <dt>Größter Zielfehler r / l</dt><dd id="cMax">–</dd>
+        <dt>Gewicht h, r / l</dt><dd id="cWeightH">–</dd>
+        <dt>Gewicht v, r / l</dt><dd id="cWeightV">–</dd>
         <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
         <dt>Seitendifferenz</dt><dd id="mDiff">–</dd>
       </dl>
@@ -212,6 +215,7 @@ const video = $("video");
 const overlay = $("overlay");
 const ctx = overlay.getContext("2d");
 const controls = ["toggle", "camera", "smoothing", "distance"];
+const calControls = ["camera", "smoothing", "distance", "calibrate", "zero"];
 
 let fileset = null;
 let landmarker = null;
@@ -235,6 +239,7 @@ let zeroSet = false;
 let samples = [];
 let calibration = null;
 let calRun = 0;
+let calibrating = false;
 let collecting = null;
 
 const comma = (value, digits = 2) => value.toFixed(digits).replace(".", ",");
@@ -354,8 +359,8 @@ function drawCurve(id, keys) {
     context.stroke();
   }
   if (!samples.length) return;
-  const newest = samples.at(-1).at;
-  const xOf = (at) => width - ((newest - at) / CURVE_MS) * width;
+  const newest = samples.at(-1).frameMs;
+  const xOf = (frameMs) => width - ((newest - frameMs) / CURVE_MS) * width;
   for (const [key, token, thickness] of keys) {
     context.strokeStyle = style.getPropertyValue(token);
     context.lineWidth = thickness * dpr;
@@ -368,8 +373,8 @@ function drawCurve(id, keys) {
         continue;
       }
       const y = yOf(Math.max(-range, Math.min(range, value)));
-      if (open) context.lineTo(xOf(sample.at), y);
-      else context.moveTo(xOf(sample.at), y);
+      if (open) context.lineTo(xOf(sample.frameMs), y);
+      else context.moveTo(xOf(sample.frameMs), y);
       open = true;
     }
     context.stroke();
@@ -383,7 +388,7 @@ function drawCurves() {
 
 function applyValues(sample, raw) {
   if (calibration) {
-    const degrees = (side) => (raw[side] && calibration[side].weight > 0
+    const degrees = (side) => (raw[side] && calibration[side].passed
       ? toDegrees(calibration[side].model, raw[side].x, raw[side].y) : null);
     const right = degrees("rechts");
     const left = degrees("links");
@@ -394,6 +399,7 @@ function applyValues(sample, raw) {
     sample.vLinks = left?.v ?? null;
     sample.mean = fused?.h ?? null;
     sample.vMean = fused?.v ?? null;
+    sample.disagree = fused?.disagree ?? false;
     return;
   }
   const relative = (side) => (raw[side]
@@ -411,14 +417,15 @@ function applyValues(sample, raw) {
   }
 }
 
-function recordFrame(now, faces, ms) {
-  const sample = { at: now, ms, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
-                   vMean: null, head: null, irisPx: null, headPoint: null, raw: null, reasons: [] };
+function recordFrame(timing, faces) {
+  const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
+                   vMean: null, head: null, irisPx: null, headPoint: null, raw: null, disagree: false,
+                   reasons: [] };
   if (faces.length !== 1) {
     sample.reasons.push(faces.length ? "zweite Person" : "kein Gesicht");
     previousHead = null;
     samples.push(sample);
-    collecting?.samples.push({ rechts: null, links: null, irisPx: null, head: null });
+    collecting?.samples.push({ t: timing.frameMs, rechts: null, links: null, irisPx: null, head: null });
     return;
   }
   const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead);
@@ -434,14 +441,15 @@ function recordFrame(now, faces, ms) {
   }
   applyValues(sample, sample.raw);
   sample.reasons = [...new Set([...frame.rechts.reasons, ...frame.links.reasons])];
+  if (sample.disagree) sample.reasons.push("Seitendifferenz");
   samples.push(sample);
-  collecting?.samples.push({ ...sample.raw, irisPx: frame.irisPx, head: frame.head });
+  collecting?.samples.push({ t: timing.frameMs, ...sample.raw, irisPx: frame.irisPx, head: frame.head });
 }
 
-function analyse(now, stamp) {
-  const started = performance.now();
+function analyse(callbackMs, frameMs, stamp) {
+  const analysisStart = performance.now();
   const result = landmarker.detectForVideo(video, stamp);
-  const ms = performance.now() - started;
+  const analysisEnd = performance.now();
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   const faces = result.faceLandmarks;
   if (faces.length === 1) {
@@ -453,8 +461,8 @@ function analyse(now, stamp) {
     drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
     drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
   }
-  recordFrame(now, faces, ms);
-  samples = samples.filter((sample) => now - sample.at <= CURVE_MS);
+  recordFrame({ at: callbackMs, frameMs, analysisStart, analysisEnd, ms: analysisEnd - analysisStart }, faces);
+  samples = samples.filter((sample) => frameMs - sample.frameMs <= CURVE_MS);
   if (!collecting) drawCurves();
 }
 
@@ -479,7 +487,7 @@ function onFrame(id, now, metadata) {
   }
   lastFrameMs = clock.ms;
   try {
-    analyse(now, taskStamp(clock.ms));
+    analyse(now, clock.ms, taskStamp(clock.ms));
   } catch (error) {
     stop();
     setStatus(`Analyse abgebrochen: ${error.message}`, true);
@@ -523,17 +531,46 @@ function setCalibration(next) {
   drawCurves();
 }
 
+function invalidateCalibration(state) {
+  if (calibration) setCalibration(null);
+  $("cState").textContent = state;
+}
+
+function endCalibrating() {
+  calibrating = false;
+  $("cal").hidden = true;
+  collecting = null;
+  for (const id of calControls) $(id).disabled = !running;
+}
+
+// Gemeinsamer Abbruch fuer Esc, verdecktes Fenster, Bildstillstand und Stopp.
+function abortCalibration(message) {
+  if (!calibrating) return;
+  calRun += 1;
+  endCalibrating();
+  if (document.fullscreenElement) document.exitFullscreen();
+  invalidateCalibration("abgebrochen");
+  setStatus(message, true);
+}
+
 function showCalibration(result) {
+  const pair = (read) => `${read(result.rechts)} / ${read(result.links)}`;
+  const degrees = (value, digits = 1) => (value === null ? "–" : `${comma(value, digits)}°`);
   const eyeText = (eye) => (eye.errorH === null
     ? (eye.reason ?? "–")
-    : `${comma(eye.errorH, 1)}° / ${comma(eye.errorV, 1)}°`);
+    : `${comma(eye.errorH, 1)}° / ${comma(eye.errorV, 1)}°${eye.passed ? "" : `, ${eye.reason}`}`);
   $("cRechts").textContent = eyeText(result.rechts);
   $("cLinks").textContent = eyeText(result.links);
-  const noise = (eye) => (eye.noise === null ? "–" : `${comma(eye.noise, 2)}°`);
-  $("cNoise").textContent = `${noise(result.rechts)} / ${noise(result.links)}`;
-  const total = result.rechts.weight + result.links.weight;
-  const share = (eye) => (total > 0 ? `${Math.round((eye.weight / total) * 100)} %` : "–");
-  $("cWeight").textContent = `${share(result.rechts)} / ${share(result.links)}`;
+  $("cMax").textContent = pair((eye) => degrees(eye.maxError));
+  $("cNoiseH").textContent = pair((eye) => degrees(eye.noiseH, 2));
+  $("cNoiseV").textContent = pair((eye) => degrees(eye.noiseV, 2));
+  const share = (key) => {
+    const total = result.rechts[key] + result.links[key];
+    const part = (eye) => (total > 0 ? `${Math.round((eye[key] / total) * 100)} %` : "–");
+    return `${part(result.rechts)} / ${part(result.links)}`;
+  };
+  $("cWeightH").textContent = share("weightH");
+  $("cWeightV").textContent = share("weightV");
   if (!result.passed) $("cState").textContent = "nicht bestanden";
   else {
     const both = result.rechts.passed && result.links.passed;
@@ -551,22 +588,29 @@ function placeDot(target) {
 }
 
 async function runCalibration() {
+  if (busy || calibrating || !running) return;
   const id = ++calRun;
-  const active = () => id === calRun && running && document.fullscreenElement !== null;
+  const active = () => id === calRun;
+  calibrating = true;
+  for (const control of calControls) $(control).disabled = true;
+  invalidateCalibration("läuft");
   try {
     await Promise.race([
       document.documentElement.requestFullscreen(),
       wait(FULLSCREEN_TIMEOUT_MS).then(() => { throw new Error("keine Antwort"); }),
     ]);
   } catch (error) {
+    if (!active()) return;
+    endCalibrating();
+    invalidateCalibration("keine");
     setStatus(`Vollbild nicht möglich: ${error.message}`, true);
     return;
   }
   await wait(300);
+  if (!active()) return;
   // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
   if (Math.abs(window.innerWidth - window.screen.width) > 2) {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    setStatus("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.", true);
+    abortCalibration("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.");
     return;
   }
   $("cal").hidden = false;
@@ -575,34 +619,28 @@ async function runCalibration() {
   await wait(CAL_LEAD_MS);
   const entries = [];
   for (const [index, target] of STEPS.entries()) {
-    if (!active()) break;
+    if (!active()) return;
     placeDot(target);
     $("calText").textContent = `Punkt ${index + 1} von ${STEPS.length}`;
     await wait(CAL_SETTLE_MS);
+    if (!active()) return;
     const entry = { target, samples: [] };
     collecting = entry;
     await wait(CAL_COLLECT_MS);
+    if (!active()) return;
     collecting = null;
     entries.push(entry);
   }
-  const complete = active() && entries.length === STEPS.length;
-  $("cal").hidden = true;
+  endCalibrating();
   if (document.fullscreenElement) await document.exitFullscreen();
-  if (!running) return;
-  if (!complete) {
-    setStatus("Kalibrierung abgebrochen.", true);
-    return;
-  }
   const measured = entries.flatMap((entry) => entry.samples).filter((sample) => sample.head);
-  const irisList = measured.map((sample) => sample.irisPx);
   const result = calibrate(entries);
   showCalibration(result);
-  if (!result.passed || !irisList.length) {
-    setCalibration(null);
+  if (!result.passed || !measured.length) {
     setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
     return;
   }
-  result.irisPx = median(irisList);
+  result.irisPx = median(measured.map((sample) => sample.irisPx));
   result.head = { x: median(measured.map((s) => s.head.x)), y: median(measured.map((s) => s.head.y)) };
   setCalibration(result);
   setStatus("Kalibriert. Kurve in Grad.");
@@ -615,6 +653,7 @@ function renderStats() {
     stalled = true;
     resetSegment();
     setStatus("Keine Bilder: Fenster verdeckt? Messsegment beendet.", true);
+    abortCalibration("Keine Bilder: Kalibrierung abgebrochen.");
   }
   if (now < segmentStart) {
     clearRates();
@@ -650,7 +689,8 @@ function renderStats() {
   $("mPos").textContent = `${value(last.rechts)} / ${value(last.links)}`;
   if (calibration) {
     const h = latest.length ? median(latest.map((sample) => sample.mean)) : null;
-    const v = latest.length ? median(latest.map((sample) => sample.vMean)) : null;
+    const heights = latest.map((sample) => sample.vMean).filter((value) => value !== null);
+    const v = heights.length ? median(heights) : null;
     const side = direction(h, DIRECTION_DEGREES);
     let label = "–";
     if (side !== null) {
@@ -670,9 +710,8 @@ function renderStats() {
       const moved = Math.hypot(headX - calibration.head.x, headY - calibration.head.y) / iris;
       $("cDrift").textContent = `${change > 0 ? "näher " : "weiter "}${comma(Math.abs(change) * 100, 0)} %`;
       if (Math.abs(change) > MAX_DISTANCE_DRIFT || moved > MAX_HEAD_DRIFT) {
-        setStatus("Kopf hat sich bewegt: Grad unsicher, bitte neu kalibrieren.", true);
-      } else if ($("status").classList.contains("warn")) {
-        setStatus("Kalibriert. Kurve in Grad.");
+        invalidateCalibration("ungültig, Kopf bewegt");
+        setStatus("Kopf hat sich bewegt: Kalibrierung ungültig, bitte neu kalibrieren.", true);
       }
     }
   } else {
@@ -730,11 +769,8 @@ async function start() {
 function stop() {
   running = false;
   session += 1;
-  calRun += 1;
-  collecting = null;
-  $("cal").hidden = true;
-  if (document.fullscreenElement) document.exitFullscreen();
-  setCalibration(null);
+  abortCalibration("Kamera gestoppt.");
+  invalidateCalibration("keine");
   if (frameHandle !== null) video.cancelVideoFrameCallback(frameHandle);
   frameHandle = null;
   stream?.getTracks().forEach((track) => track.stop());
@@ -781,12 +817,13 @@ async function exclusive(action) {
 
 $("toggle").addEventListener("click", () => exclusive(running ? stop : start));
 $("zero").addEventListener("click", setZero);
-$("calibrate").addEventListener("click", () => exclusive(runCalibration));
+$("calibrate").addEventListener("click", runCalibration);
 document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement) $("cal").hidden = true;
+  if (!document.fullscreenElement) abortCalibration("Vollbild beendet: Kalibrierung abgebrochen.");
 });
 $("smoothing").addEventListener("change", () => exclusive(async () => {
   closeLandmarker();
+  invalidateCalibration("verworfen, Modell gewechselt");
   if (!running) return;
   setStatus("Lade Modell …");
   try {
@@ -805,8 +842,9 @@ $("camera").addEventListener("change", () => {
 document.addEventListener("visibilitychange", () => {
   if (!running) return;
   resetSegment();
+  abortCalibration("Fenster verdeckt: Kalibrierung abgebrochen.");
   if (document.hidden) setStatus("Tab verdeckt: Messsegment beendet.", true);
-  else setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
+  else if (!calibration) setStatus("Läuft. Neues Messsegment.");
 });
 window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
 window.addEventListener("resize", drawCurves);

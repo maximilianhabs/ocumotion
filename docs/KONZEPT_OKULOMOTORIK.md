@@ -20,23 +20,34 @@ Abstand nicht; die Person misst ihn einmal von Hand.
 vertikal, die Iris liegt rechnerisch bei 27–36 Bildpunkten. Das ist ein Kompromiss aus Auflösung
 und Reichweite und muss noch gegen die reale Bildschärfe geprüft werden. Auch 30 und 50 cm sind wählbar.
 
-**Ablauf:** rund 50 s im Vollbild auf hellem Grund. Je Ziel 1,2 s Einschwingen, dann 2,8 s
+**Ablauf:** rund eine Minute im Vollbild auf hellem Grund. Je Ziel 1,2 s Einschwingen, dann 2,8 s
 Datensammlung.
 
 | Rolle | Ziele |
 |---|---|
 | Anpassung | Mitte, rechts 15°, Mitte, links 15°, Mitte, oben 10°, Mitte, unten 10° |
-| Prüfung | rechts 7°, links 7°, oben 5°, unten 5° |
+| Prüfung | rechts 7°, links 7°, oben 5°, unten 5°, rechts oben, links unten |
 
 **Modell je Auge:** `Grad = c0 + c1·x + c2·y`, getrennt für horizontal und vertikal, als kleinste
 Quadrate über den Median je Ziel. Prüfziele gehen nicht in die Anpassung ein.
 
-**Bestanden:** Prüffehler horizontal höchstens 2°, vertikal höchstens 3°, je Ziel mindestens
-10 gültige Bilder. Das wird je Auge entschieden. Besteht keines, bleibt die Anzeige ohne Grad.
+**Bestanden:** Das wird je Auge entschieden. Alle Schwellen sind experimentell. An jedem Prüfziel
+zählen beide Achsen, auch die erwartete Nullkomponente.
 
-**Gültigkeit:** Die Kalibrierung liegt nur im Arbeitsspeicher und endet mit dem Stopp. Weicht die
-Irisbreite um mehr als 8 % ab oder wandert der Kopf um mehr als einen Irisdurchmesser, warnt die
-Seite. Der Bezug „Irisbreite × gemessener Abstand“ kann später den Abstand laufend schätzen.
+| Prüfung | Schwelle |
+|---|---|
+| Prüffehler RMS horizontal / vertikal | höchstens 2° / 3° |
+| Größter Fehler an einem Ziel | höchstens 4° |
+| Streuung am unruhigsten Ziel horizontal / vertikal | höchstens 1,5° / 2,5° |
+| Anteil gültiger Bilder | mindestens 70 %, je Ziel mindestens 10 Bilder |
+| Längste Lücke an einem Ziel | höchstens 600 ms |
+
+Besteht keines der Augen, bleibt die Anzeige ohne Grad.
+
+**Gültigkeit:** Die Kalibrierung liegt nur im Arbeitsspeicher und endet mit dem Stopp. Sie verfällt
+beim Modellwechsel und wenn die Irisbreite im 3-s-Median um mehr als 8 % abweicht oder der Kopf um
+mehr als einen Irisdurchmesser wandert. Esc, verdecktes Fenster, Bildstillstand und Kamerastopp
+brechen den Lauf sofort ab; Kamerastopp bleibt jederzeit möglich. Der Bezug „Irisbreite × gemessener Abstand“ kann später den Abstand laufend schätzen.
 
 **Grenzen:** Die Abbildung ist linear und gilt für ±15°. Für den Blick darüber hinaus braucht es
 Ziele außerhalb des Bildschirms oder ein Augenmodell. Ein falscher Abstand oder Bildschirmwert
@@ -45,10 +56,11 @@ Prüfziele damit berechnet sind. Den wahren Maßstab klärt erst der VOG-Verglei
 
 ## 3. Zusammenführung beider Augen
 
-**Stufe 1, gebaut: gewichteter Mittelwert.** Gewicht je Auge: `1 / (Unruhe² + Prüffehler²)`.
-Das genauere Auge zählt mehr, ein durchgefallenes zählt nicht, bei Ausfall trägt das andere
+**Stufe 1, gebaut: gewichteter Mittelwert, je Achse getrennt.** Gewicht je Auge und Achse:
+`1 / (Unruhe² + Prüffehler²)`. Das ist eine Heuristik, keine validierte Unsicherheit. Das genauere Auge zählt mehr, ein durchgefallenes zählt nicht, bei Ausfall trägt das andere
 allein. Durch die Kalibrierung liegen beide auf derselben Gradskala, ein Augenwechsel springt also
-kaum. Die Seitendifferenz wird angezeigt.
+kaum. Weichen beide Augen auf einer Achse um mehr als 3° (vorläufig) ab, bleibt dort der Mittelwert
+leer, beide Einzelkurven laufen weiter, und die Ursache wird nicht gedeutet.
 
 **Stufe 2, geplant: Bildgüte je Frame.** Lidöffnung, Randabdeckung und Kontrast verändern das
 Gewicht laufend.
@@ -65,7 +77,7 @@ Ohne Referenz gibt es kein Lernziel, und ein Modell würde Kurven glätten oder 
 - Keine Glättung, die Sakkaden oder schnelle Phasen abschwächt.
 - Der Mittelwert setzt gleichsinnige Augen voraus. Das stimmt bei Normalbefund und vielen
   Nystagmen, nicht aber bei internukleärer Ophthalmoplegie, Paresen oder dissoziiertem Nystagmus.
-  Dort würde er den Befund verdecken. Bei großer Seitendifferenz gilt deshalb Einzelaugenauswertung.
+  Unter der Schwelle von 3° kann er solche Unterschiede weiterhin verdecken.
 
 ## 4. Okulomotorik-Untersuchung (Plan)
 
@@ -85,6 +97,9 @@ Reiz am Bildschirm, Zeitreihe, Kennwerte, Güte, Bewertung gegen vorläufige Ber
 Gain unter 1 mit Korrektur in Zielrichtung, Hypermetrie Gain über 1 mit Rückkorrektur. Eine
 leichte Hypometrie ist auch beim Gesunden üblich, die Bereiche müssen also aus Normdaten kommen.
 
+**Zeitmessung:** Latenzen brauchen zusätzlich den tatsächlichen Darstellungszeitpunkt des Reizes.
+Die Zeitreihe führt Bildzeit, Callback-Zeit, Analysebeginn und -ende getrennt, den Reizzeitpunkt noch nicht.
+
 **Blickfolgebewertung:** Aufholsakkaden werden über Geschwindigkeitssprünge erkannt und aus der
 glatten Komponente entfernt. Gain = Augengeschwindigkeit ÷ Zielgeschwindigkeit.
 
@@ -98,7 +113,8 @@ bisher, also braucht es Vergleichsdaten Gesunder je Altersgruppe.
 
 ## 5. Reihenfolge
 
-1. Kalibrierung mit echtem Gesicht prüfen, Prüffehler und Unruhe protokollieren.
+1. Kalibrierung mit echtem Gesicht prüfen, Prüffehler und Unruhe protokollieren, Wiederholbarkeit
+   über mehrere Läufe messen, Schwellen an diesen Daten festlegen.
 2. Worker, unabhängige Bildquelle und eigene Irisrandanalyse (`IMPLEMENTIERUNGSNOTIZ_CODEX.md`).
 3. Künstliches Auge und Kopf-Störtest, jetzt auch mit Sakkaden und Blickfolge.
 4. Blickfolge langsam: einfachste Prüfung mit bekanntem Sollsignal.

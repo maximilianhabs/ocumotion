@@ -34,7 +34,7 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/augen.html` | Augenseite: Erkennung, Kurven, Kalibrierablauf |
 | `testseite/augen-logik.js` | Augenposition x und y aus den Gesichtspunkten |
 | `testseite/kalibrierung-logik.js` | Ziele, Modellanpassung, Bewertung, gewichteter Mittelwert |
-| `testseite/*.test.mjs` | 20 Logiktests mit konstruierten Daten |
+| `testseite/*.test.mjs` | 28 Logiktests mit konstruierten Daten |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 
 ## Bitte besonders prüfen
@@ -42,16 +42,17 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 1. **Geometrie:** Vorzeichen von x und y, Winkel-zu-Pixel-Rechnung, Zuordnung der Landmarken-Indizes.
 2. **Kalibrierung:** Ist das lineare Modell mit acht Anpassungszielen (fünf verschiedene Orte) sinnvoll?
    Sind Prüfziele sauber getrennt? Trägt die Maßstabsaussage in Abschnitt 2 des Hauptdokuments?
-3. **Gewichtung:** Ist `1 / (Unruhe² + Prüffehler²)` mit nur je zwei Prüfzielen je Achse belastbar?
-   Der Fehler wird als horizontaler Wert genutzt; ist das vertretbar?
-4. **Zustände:** Abbruch, Stopp, Kamerawechsel, Modellwechsel und Stillstand während der Kalibrierung
-   in `augen.html`, auch das Sammeln in `collecting`.
+3. **Gewichtung und Schwellen:** Trägt `1 / (Unruhe² + Prüffehler²)` je Achse mit nur sechs Prüfzielen?
+   Sind die experimentellen Schwellen für einen ersten Test sinnvoll gesetzt?
+4. **Zustände:** `abortCalibration`, `calRun`, `collecting` und das Verfallen der Kalibrierung in `augen.html`.
 5. **Zeitbasis und Hauptthread:** Bildzeit, Blockierung durch die Erkennung, Verhalten bei verdecktem Fenster.
 6. **Untersuchungsplan:** Sind die Kennwerte fachlich richtig, und ist 30 Hz für Gain und Latenz ehrlich bewertet?
 
 ## Bekannte Lücken
 
 - Kalibrierung und Gradanzeige sind **mit echtem Gesicht noch nicht gelaufen**, nur mit Logiktests und Testvideo.
+  Echtes Vollbild und der Zweig „bestanden“ in der Oberfläche sind deshalb ungeprüft.
+- Das zweite Review ist eingearbeitet. Offen daraus: Wiederholungsläufe und Reizzeitpunkt.
 - Der Nutzer hat die erste Augenseite ohne Kalibrierung getestet: funktioniert laut Rückmeldung „super“, Zahlen fehlen.
 - `augen.html` nutzt MediaPipe-Irispunkte mit Modellglättung als Standard. Die eigene Irisrandanalyse fehlt.
 - Worker, Offline-Betrieb und festgelegte Modellversion fehlen. Die Untersuchungen aus Abschnitt 4 sind nicht gebaut.

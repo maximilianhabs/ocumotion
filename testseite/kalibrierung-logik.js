@@ -6,8 +6,15 @@
 
 export const SCREEN_WIDTH_CM = 28.6;
 export const MIN_SAMPLES = 10;
+// Alle Schwellen sind experimentell und noch nicht an Daten validiert.
 export const MAX_ERROR_H = 2;
 export const MAX_ERROR_V = 3;
+export const MAX_POINT_ERROR = 4;
+export const MAX_NOISE_H = 1.5;
+export const MAX_NOISE_V = 2.5;
+export const MIN_VALID_SHARE = 0.7;
+export const MAX_GAP_MS = 600;
+export const MAX_SIDE_DIFFERENCE = 3;
 const MIN_NOISE = 0.05;
 
 const step = (name, h, v, role) => ({ name, h, v, role });
@@ -25,6 +32,8 @@ export const STEPS = [
   step("Prüfung links 7°", -7, 0, "check"),
   step("Prüfung oben 5°", 0, 5, "check"),
   step("Prüfung unten 5°", 0, -5, "check"),
+  step("Prüfung rechts oben", 7, 5, "check"),
+  step("Prüfung links unten", -7, -5, "check"),
 ];
 
 const radians = (degrees) => (degrees * Math.PI) / 180;
@@ -92,7 +101,8 @@ const rootMeanSquare = (values) =>
   Math.sqrt(values.reduce((sum, value) => sum + value * value, 0) / values.length);
 
 function stepPoint(entry, side) {
-  const valid = entry.samples.map((sample) => sample[side]).filter(Boolean);
+  const valid = entry.samples.filter((sample) => sample[side])
+    .map((sample) => ({ ...sample[side], t: sample.t }));
   if (valid.length < MIN_SAMPLES) return { ...entry.target, samples: valid, usable: false };
   return {
     ...entry.target,
@@ -103,10 +113,20 @@ function stepPoint(entry, side) {
   };
 }
 
-function failure(reason, validShare) {
-  return { passed: false, reason, validShare, model: null, errorH: null, errorV: null, noise: null, weight: 0 };
+function longestGap(samples) {
+  let gap = 0;
+  for (let i = 1; i < samples.length; i += 1) gap = Math.max(gap, samples[i].t - samples[i - 1].t);
+  return gap;
 }
 
+function failure(reason, validShare) {
+  return { passed: false, reason, validShare, model: null, errorH: null, errorV: null, maxError: null,
+           noiseH: null, noiseV: null, longestGap: null, weightH: 0, weightV: 0 };
+}
+
+const weightFor = (noise, error) => 1 / (Math.max(noise, MIN_NOISE) ** 2 + error ** 2);
+
+// An jedem Pruefziel zaehlen beide Achsen, auch die erwartete Nullkomponente.
 export function evaluateEye(entries, side) {
   const total = entries.reduce((sum, entry) => sum + entry.samples.length, 0);
   const valid = entries.reduce((sum, entry) => sum + entry.samples.filter((s) => s[side]).length, 0);
@@ -122,28 +142,34 @@ export function evaluateEye(entries, side) {
   if (!h || !v) return failure("Ziele liefern kein eindeutiges Modell", validShare);
   const model = { h, v };
 
-  const errorsH = [];
-  const errorsV = [];
-  for (const point of checks) {
+  const errors = checks.map((point) => {
     const estimate = toDegrees(model, point.x, point.y);
-    if (point.h !== 0) errorsH.push(estimate.h - point.h);
-    if (point.v !== 0) errorsV.push(estimate.v - point.v);
-  }
-  const errorH = rootMeanSquare(errorsH);
-  const errorV = rootMeanSquare(errorsV);
-  const noise = median(points.map((point) =>
-    spread(point.samples.map((sample) => toDegrees(model, sample.x, sample.y).h))));
-  const passed = errorH <= MAX_ERROR_H && errorV <= MAX_ERROR_V;
-  const variance = Math.max(noise, MIN_NOISE) ** 2 + errorH ** 2;
+    return { h: estimate.h - point.h, v: estimate.v - point.v };
+  });
+  const errorH = rootMeanSquare(errors.map((error) => error.h));
+  const errorV = rootMeanSquare(errors.map((error) => error.v));
+  const maxError = Math.max(...errors.map((error) => Math.hypot(error.h, error.v)));
+
+  const spreads = points.map((point) => {
+    const degrees = point.samples.map((sample) => toDegrees(model, sample.x, sample.y));
+    return { h: spread(degrees.map((d) => d.h)), v: spread(degrees.map((d) => d.v)) };
+  });
+  const noiseH = median(spreads.map((value) => value.h));
+  const noiseV = median(spreads.map((value) => value.v));
+  const worstH = Math.max(...spreads.map((value) => value.h));
+  const worstV = Math.max(...spreads.map((value) => value.v));
+  const gap = Math.max(...points.map((point) => longestGap(point.samples)));
+
+  let reason = null;
+  if (validShare < MIN_VALID_SHARE) reason = "zu wenige gültige Bilder";
+  else if (gap > MAX_GAP_MS) reason = "Tracking-Lücke";
+  else if (worstH > MAX_NOISE_H || worstV > MAX_NOISE_V) reason = "Einzelwerte zu unruhig";
+  else if (errorH > MAX_ERROR_H || errorV > MAX_ERROR_V || maxError > MAX_POINT_ERROR) reason = "Prüffehler zu groß";
+  const passed = reason === null;
   return {
-    passed,
-    reason: passed ? null : "Prüffehler zu groß",
-    validShare,
-    model,
-    errorH,
-    errorV,
-    noise,
-    weight: passed ? 1 / variance : 0,
+    passed, reason, validShare, model, errorH, errorV, maxError, noiseH, noiseV, longestGap: gap,
+    weightH: passed ? weightFor(noiseH, errorH) : 0,
+    weightV: passed ? weightFor(noiseV, errorV) : 0,
   };
 }
 
@@ -152,18 +178,27 @@ export function calibrate(entries) {
   const links = evaluateEye(entries, "links");
   const passed = rechts.passed || links.passed;
   let best = null;
-  if (passed) best = rechts.weight >= links.weight ? "rechts" : "links";
+  if (passed) best = rechts.weightH + rechts.weightV >= links.weightH + links.weightV ? "rechts" : "links";
   return { rechts, links, passed, best };
 }
 
-// Mittelwert nach gemessener Guete. Faellt ein Auge aus, zaehlt das andere allein.
-export function fuse(rechts, links, calibration) {
-  const parts = [[rechts, calibration.rechts.weight], [links, calibration.links.weight]]
-    .filter(([estimate, weight]) => estimate && weight > 0);
-  if (!parts.length) return null;
+// Mittelwert nach gemessener Guete, je Achse getrennt. Die Gewichte sind Heuristik, keine
+// validierten Unsicherheiten. Faellt ein Auge aus, zaehlt das andere allein. Bei grosser
+// Seitendifferenz bleibt die Achse leer; die Ursache wird nicht gedeutet.
+function fuseAxis(rechts, links, weightRechts, weightLinks) {
+  const parts = [[rechts, weightRechts], [links, weightLinks]]
+    .filter(([value, weight]) => value !== null && value !== undefined && weight > 0);
+  if (!parts.length) return { value: null, disagree: false };
+  if (parts.length === 2 && Math.abs(parts[0][0] - parts[1][0]) > MAX_SIDE_DIFFERENCE) {
+    return { value: null, disagree: true };
+  }
   const total = parts.reduce((sum, [, weight]) => sum + weight, 0);
-  return {
-    h: parts.reduce((sum, [estimate, weight]) => sum + estimate.h * weight, 0) / total,
-    v: parts.reduce((sum, [estimate, weight]) => sum + estimate.v * weight, 0) / total,
-  };
+  return { value: parts.reduce((sum, [value, weight]) => sum + value * weight, 0) / total, disagree: false };
+}
+
+export function fuse(rechts, links, calibration) {
+  const h = fuseAxis(rechts?.h, links?.h, calibration.rechts.weightH, calibration.links.weightH);
+  const v = fuseAxis(rechts?.v, links?.v, calibration.rechts.weightV, calibration.links.weightV);
+  if (h.value === null && v.value === null && !h.disagree && !v.disagree) return null;
+  return { h: h.value, v: v.value, disagree: h.disagree || v.disagree };
 }
