@@ -5,8 +5,10 @@
 
 import { calibrate, median } from "./kalibrierung-logik.js";
 import { analyseRun, toSeries } from "./guetetest-logik.js";
+import { analyseNystagmus, analyseSaccadeMetrics, analyseSmoothPursuit, analyseSwj, judgeNystagmus, judgePursuit,
+         judgeSaccades, judgeSwj, LIMITS, STATUS, withoutLidEvents } from "./befund-logik.js";
 
-export const REPORT_VERSION = "bericht-1";
+export const REPORT_VERSION = "bericht-2";
 const SPAN_GAP_MS = 150;
 const LID_LOW_SHARE = 0.75;
 const ENDPOINT_SETTLE_MS = 600;
@@ -14,8 +16,7 @@ const ENDPOINT_MAX_MS = 1800;
 const MIN_ENDPOINT_POINTS = 3;
 
 export const NOT_EXAMINED = [
-  "Nystagmus: keine automatische Erkennung vorhanden",
-  "Exzentrisches Blickhalten",
+  "Blickhalten über den Bildschirmrand hinaus",
   "Vertikale Blickfolge",
   "Fixationsausschaltung",
   "Torsion",
@@ -41,6 +42,7 @@ function phases(run) {
   return [
     ...span("Kalibrierung", (run.calibration ?? []).flatMap((entry) => entry.samples)),
     ...span("Ruhe", run.fixation?.samples),
+    ...(run.gaze ?? []).flatMap((entry) => span(`Blick ${entry.target.name}`, entry.samples)),
     ...span("Neue Ziele", run.accuracy?.samples),
     ...(run.pursuit ?? []).flatMap((entry) => span(`Folge ${entry.run.name}`, entry.samples)),
     ...span("Sprünge", run.saccades?.samples),
@@ -51,6 +53,7 @@ function eventRows(run, meta) {
   const samples = [
     ...(run.calibration ?? []).flatMap((entry) => entry.samples),
     ...(run.fixation?.samples ?? []),
+    ...(run.gaze ?? []).flatMap((entry) => entry.samples),
     ...(run.accuracy?.samples ?? []),
     ...(run.pursuit ?? []).flatMap((entry) => entry.samples),
     ...(run.saccades?.samples ?? []),
@@ -104,6 +107,79 @@ function saccadeEndpoints(jumps, points) {
   });
 }
 
+const WORST = [STATUS.abnormal, STATUS.border, STATUS.normal, STATUS.unknown];
+const worstOf = (items) => WORST.find((status) => items.some((item) => item.status === status)) ?? STATUS.unknown;
+
+function eyesOf(series) {
+  return { rechts: series.rechts, links: series.links };
+}
+
+function gazeFindings(run, calibration, lidSpans) {
+  const releasedH = Boolean(calibration.mittel?.passedH);
+  const releasedV = Boolean(calibration.mittel?.passedV);
+  return (run.gaze ?? []).map((entry) => {
+    const series = toSeries(entry.samples, calibration);
+    const points = withoutLidEvents(series.mittel, lidSpans);
+    return {
+      name: entry.target.name,
+      angle: Math.max(Math.abs(entry.target.h), Math.abs(entry.target.v)),
+      horizontal: judgeNystagmus(analyseNystagmus(points, "h", eyesOf(series)), "h", releasedH),
+      vertical: judgeNystagmus(analyseNystagmus(points, "v", eyesOf(series)), "v", releasedV),
+    };
+  });
+}
+
+function findings(run, calibration, summary, timeline) {
+  const releasedH = Boolean(calibration.mittel?.passedH);
+  const releasedV = Boolean(calibration.mittel?.passedV);
+  const lidSpans = timeline.rows.find((row) => row.name.startsWith("Lidsenkung"))?.spans ?? [];
+  const rest = toSeries(run.fixation.samples, calibration);
+  const restPoints = withoutLidEvents(rest.mittel, lidSpans);
+  const spontaneous = {
+    horizontal: judgeNystagmus(analyseNystagmus(restPoints, "h", eyesOf(rest)), "h", releasedH),
+    vertical: judgeNystagmus(analyseNystagmus(restPoints, "v", eyesOf(rest)), "v", releasedV),
+  };
+  const gaze = gazeFindings(run, calibration, lidSpans);
+  const beats = gaze.flatMap((cell) => [cell.horizontal, cell.vertical]).filter((item) => item.status !== STATUS.normal && item.status !== STATUS.unknown);
+  const verticalBeat = (word) => {
+    const places = gaze.filter((cell) => cell.vertical.text.includes(word)).map((cell) => cell.name);
+    if (spontaneous.vertical.text.includes(word)) places.unshift("Primärposition");
+    return places;
+  };
+  const swj = judgeSwj(analyseSwj(restPoints, eyesOf(rest)), releasedH);
+  const pursuit = run.pursuit.map((entry) => {
+    const series = toSeries(entry.samples, calibration);
+    return {
+      name: entry.run.name,
+      frequency: entry.run.frequency,
+      ...judgePursuit(analyseSmoothPursuit(series.mittel, entry.run, entry.startTime, eyesOf(series)), releasedH),
+    };
+  });
+  const saccadeSeries = toSeries(run.saccades.samples, calibration);
+  const metrics = analyseSaccadeMetrics(saccadeSeries.mittel, run.saccades.jumps);
+  const saccades = [
+    judgeSaccades("Rechts", metrics.rechts, releasedH),
+    judgeSaccades("Links", metrics.links, releasedH),
+    judgeSaccades("Oben", metrics.oben, summary.usableV),
+    judgeSaccades("Unten", metrics.unten, summary.usableV),
+  ];
+  return {
+    spontaneous: { ...spontaneous, status: worstOf([spontaneous.horizontal, spontaneous.vertical]) },
+    gaze,
+    gazeStatus: gaze.length ? worstOf(gaze.flatMap((cell) => [cell.horizontal, cell.vertical])) : STATUS.unknown,
+    gazeExamined: gaze.length > 0,
+    gazeHits: beats.length,
+    downbeat: verticalBeat("Downbeat"),
+    upbeat: verticalBeat("Upbeat"),
+    swj,
+    pursuit,
+    pursuitStatus: worstOf(pursuit),
+    saccades,
+    saccadeStatus: worstOf(saccades),
+    limits: LIMITS,
+  };
+}
+
 function section(id, title, status, extra = {}) {
   return { id, title, status, ...extra };
 }
@@ -135,6 +211,7 @@ export function buildReport(data) {
       stats: analysis.pursuit[entry.run.name]?.mittel ?? null,
     };
   });
+  const timeline = { phases: phases(run), rows: eventRows(run, meta) };
   const status = (usable, hasData) => {
     if (!hasData) return "nicht auswertbar";
     return usable ? "horizontal nutzbar" : "eingeschränkt";
@@ -160,7 +237,8 @@ export function buildReport(data) {
       }),
       section("pursuit", "Blickfolge", status(summary.usableH, pursuit.some((entry) => entry.stats)), { runs: pursuit }),
     ],
-    timeline: { phases: phases(run), rows: eventRows(run, meta) },
+    timeline,
+    findings: findings(run, calibration, summary, timeline),
     notExamined: NOT_EXAMINED,
   };
 }

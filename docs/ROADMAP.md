@@ -20,7 +20,8 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
 
-**Nächster Schritt:** Gütetest mit echtem Gesicht und gespeicherter Datei, siehe `KONZEPT_GUETETEST.md`.
+**Nächster Schritt:** OKN-Test H40 mit echten Augen, siehe `KONZEPT_OKN_MODUS.md`, und Gütetest mit Blickhalten,
+siehe `KONZEPT_GUETETEST.md`.
 Der visuelle Bericht liegt unter `testseite/bericht.html`, Zielbild in `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`.
 Danach die einmalige Kameramessung, siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 2b, und der Vergleich mit dem
 iPhone als Kamera, siehe `KONZEPT_UEBERTRAGBARKEIT.md`.

@@ -232,32 +232,40 @@ export function evaluateEye(entries, side) {
   };
 }
 
-export function calibrate(entries) {
+// Mittelpunkt beider Augen. Einzelaugen zeigen seitenabhaengige Fehler, die sich hier aufheben.
+export function midpoint(rechts, links) {
+  if (!rechts || !links) return null;
+  return { x: (rechts.x + links.x) / 2, y: (rechts.y + links.y) / 2 };
+}
+
+export function calibrate(rawEntries) {
+  const entries = rawEntries.map((entry) => ({
+    ...entry,
+    samples: entry.samples.map((sample) => ({ ...sample, mittel: midpoint(sample.rechts, sample.links) })),
+  }));
   const rechts = evaluateEye(entries, "rechts");
   const links = evaluateEye(entries, "links");
-  const passed = rechts.passed || links.passed;
+  const mittel = evaluateEye(entries, "mittel");
+  const passed = rechts.passed || links.passed || mittel.passed;
   let best = null;
   if (passed) best = rechts.weightH + rechts.weightV >= links.weightH + links.weightV ? "rechts" : "links";
-  return { rechts, links, passed, best };
+  return { rechts, links, mittel, passed, best };
 }
 
-// Mittelwert nach gemessener Guete, je Achse getrennt. Die Gewichte sind Heuristik, keine
-// validierten Unsicherheiten. Faellt ein Auge aus, zaehlt das andere allein. Bei grosser
-// Seitendifferenz bleibt die Achse leer; die Ursache wird nicht gedeutet.
-function fuseAxis(rechts, links, weightRechts, weightLinks) {
-  const parts = [[rechts, weightRechts], [links, weightLinks]]
-    .filter(([value, weight]) => value !== null && value !== undefined && weight > 0);
-  if (!parts.length) return { value: null, disagree: false };
-  if (parts.length === 2 && Math.abs(parts[0][0] - parts[1][0]) > MAX_SIDE_DIFFERENCE) {
-    return { value: null, disagree: true };
+// Hauptmessung: Mittelpunkt mit eigenem Modell. Fehlt ein Auge, zaehlt das andere mit seinem Modell.
+// Eine grosse Seitendifferenz wird markiert; die Einzelaugen sind dafuer zu unsicher, um zu sperren.
+export function combineEyes(rawRechts, rawLinks, calibration) {
+  const estimate = (side, point) => {
+    const eye = calibration[side];
+    return point && eye?.model ? toDegrees(eye.model, point.x, point.y) : null;
+  };
+  const right = estimate("rechts", rawRechts);
+  const left = estimate("links", rawLinks);
+  const both = estimate("mittel", midpoint(rawRechts, rawLinks));
+  if (!both) {
+    const single = right ?? left;
+    return single ? { h: single.h, v: single.v, disagree: false } : null;
   }
-  const total = parts.reduce((sum, [, weight]) => sum + weight, 0);
-  return { value: parts.reduce((sum, [value, weight]) => sum + value * weight, 0) / total, disagree: false };
-}
-
-export function fuse(rechts, links, calibration) {
-  const h = fuseAxis(rechts?.h, links?.h, calibration.rechts.weightH, calibration.links.weightH);
-  const v = fuseAxis(rechts?.v, links?.v, calibration.rechts.weightV, calibration.links.weightV);
-  if (h.value === null && v.value === null && !h.disagree && !v.disagree) return null;
-  return { h: h.value, v: v.value, disagree: h.disagree || v.disagree };
+  const apart = (key) => Boolean(right && left) && Math.abs(right[key] - left[key]) > MAX_SIDE_DIFFERENCE;
+  return { h: both.h, v: both.v, disagree: apart("h") || apart("v") };
 }

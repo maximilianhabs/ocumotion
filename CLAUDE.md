@@ -13,8 +13,8 @@ Vorbild: `~/Code/Programme Claude Code/homeserver/services/vision-lab/`. Module 
 - **Vorläufige Obergrenze:** Analyserate ÷ 4, nicht Nyquist. Keine Frequenzen darüber ausgeben. Sie ist keine nachgewiesene Messgrenze und schützt nicht vor Aliasing.
 - **Jede Messung bekommt einen Gütewert.** Ohne Gütewert keine Kennzahl.
 - **Gesten:** Scharfschalten, Haltezeit, Hysterese und Sperrzeit gelten immer. Aktionen nur aus der Freigabeliste; nichts, was löscht, sendet oder bestätigt.
-- **Keine Emotionserkennung, keine Diagnose, keine Personenerkennung.**
-- **Augen:** Messgröße ist die Irismitte relativ zum Kopf, nicht die Pupille. Primär Bildpunkte und normierte Irisverschiebung, Grad nur nach geprüfter Kalibrierung. Augenausschnitte nie speichern. Ohne Güte je Bild keine Augenkurve. Rohspuren beider Augen bleiben immer sichtbar; keine Glättung, die Sakkaden oder schnelle Phasen abschwächt.
+- **Keine Emotionserkennung, keine Diagnose, keine Personenerkennung.** Der Bericht ordnet Messwerte gegen benannte Grenzen ein; jede Grenze nennt ihre Herkunft, Arbeitsgrenzen heißen so. Kein Normalband ohne Quelle.
+- **Augen:** Messgröße ist die Irismitte relativ zum Kopf, nicht die Pupille. Hauptmessung ist der Mittelpunkt beider Augen, Einzelaugen sind Kontrolle. Primär Bildpunkte und normierte Irisverschiebung, Grad nur nach geprüfter Kalibrierung. Augenausschnitte nie speichern. Ohne Güte je Bild keine Augenkurve. Rohspuren beider Augen bleiben immer sichtbar; keine Glättung, die Sakkaden oder schnelle Phasen abschwächt.
 - **Python:** `python3` im PATH ist die FSL-Python, nicht verwenden. venv: `/opt/homebrew/bin/python3.13 -m venv .venv`.
 - **Erkennung im eigenen Thread,** nie in der Kameraschleife. Bildzeit, Analysebeginn und -ende getrennt führen. Treffer je Modell zählen.
 - UI-Sprache Deutsch, Zahlen mit deutschem Komma.

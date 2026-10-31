@@ -4,7 +4,7 @@
 // und bewertet keine Person. Alle Bewertungsgrenzen sind experimentell.
 // Zeiten in Millisekunden auf der Uhr von performance.now().
 
-import { fitPlane, fuse, hasEnoughData, median, medianFilter, spread, toDegrees } from "./kalibrierung-logik.js";
+import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, spread, toDegrees } from "./kalibrierung-logik.js";
 
 export const FIXATION_MS = 20000;
 export const TARGET_SETTLE_MS = 1200;
@@ -20,6 +20,17 @@ export const ACCURACY_TARGETS = [
   { name: "links unten", h: -10, v: -7 },
 ];
 
+// Blick halten. Die Winkel sind durch den Bildschirm begrenzt und bleiben unter den klinisch üblichen.
+export const GAZE_HOLDS = [
+  { name: "rechts", h: 15, v: 0 },
+  { name: "links", h: -15, v: 0 },
+  { name: "oben", h: 0, v: 10 },
+  { name: "unten", h: 0, v: -10 },
+];
+export const GAZE_SETTLE_MS = 1000;
+export const GAZE_HOLD_MS = 7000;
+export const GAZE_RETURN_MS = 2000;
+
 export const PURSUIT_RUNS = [
   { name: "langsam", amplitude: 10, frequency: 0.25, durationMs: 16000 },
   { name: "schnell", amplitude: 10, frequency: 0.5, durationMs: 8000 },
@@ -28,6 +39,7 @@ export const PURSUIT_RUNS = [
 export const SACCADE_JUMPS = [
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: -10 },
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: 0 },
+  { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: -8 },
   { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: 0 },
 ];
 export const SACCADE_MIN_MS = 1200;
@@ -46,29 +58,25 @@ export const CHANNELS = ["rechts", "links", "mittel"];
 
 const present = (points, key) => points.filter((point) => point[key] !== null);
 
-// Eine Reihe je Auge und die Zusammenfuehrung. Filter und fuse() sind dieselben wie live.
-// Besteht keine Achse, zaehlen beide Augen gleich; der Bericht traegt das als Kennzeichen.
+// Eine Reihe je Auge und die Hauptmessung. Filter und Zusammenfuehrung sind dieselben wie live.
 export function toSeries(samples, calibration, { filter = true } = {}) {
-  const weights = (eye) => (calibration.passed
-    ? { weightH: eye.weightH, weightV: eye.weightV }
-    : { weightH: eye.model ? 1 : 0, weightV: eye.model ? 1 : 0 });
-  const effective = { rechts: weights(calibration.rechts), links: weights(calibration.links) };
   const series = { rechts: [], links: [], mittel: [] };
-  const eyeSeries = (side) => {
-    const model = calibration[side].model;
-    if (!model) return new Map();
+  const eyePoints = (side) => {
     const points = samples.filter((sample) => sample[side])
       .map((sample) => ({ time: sample.time, ...sample[side] }));
-    const used = filter ? medianFilter(points, ["x", "y"]) : points;
-    return new Map(used.map((point) => [point.time, { time: point.time, ...toDegrees(model, point.x, point.y) }]));
+    return new Map((filter ? medianFilter(points, ["x", "y"]) : points).map((point) => [point.time, point]));
   };
-  const right = eyeSeries("rechts");
-  const left = eyeSeries("links");
-  series.rechts = [...right.values()];
-  series.links = [...left.values()];
+  const right = eyePoints("rechts");
+  const left = eyePoints("links");
+  const degrees = (side, map) => {
+    const model = calibration[side]?.model;
+    return model ? [...map.values()].map((p) => ({ time: p.time, ...toDegrees(model, p.x, p.y) })) : [];
+  };
+  series.rechts = degrees("rechts", right);
+  series.links = degrees("links", left);
   for (const sample of samples) {
-    const fused = fuse(right.get(sample.time), left.get(sample.time), effective);
-    if (fused) series.mittel.push({ time: sample.time, h: fused.h, v: fused.v, disagree: fused.disagree });
+    const combined = combineEyes(right.get(sample.time), left.get(sample.time), calibration);
+    if (combined) series.mittel.push({ time: sample.time, ...combined });
   }
   return series;
 }
@@ -311,8 +319,8 @@ export function analyseRun(run, calibration) {
       analysePursuit(pursuitSeries[index][channel], entry.run, entry.startTime));
   });
   const report = {
-    calibration: { passed: calibration.passed, passedH: calibration.rechts.passedH || calibration.links.passedH,
-                   passedV: calibration.rechts.passedV || calibration.links.passedV },
+    calibration: { passed: calibration.passed, passedH: Boolean(calibration.mittel?.passedH),
+                   passedV: Boolean(calibration.mittel?.passedV) },
     fixation: perChannel((c) => analyseFixation(fixationSeries[c], run.fixation.samples.length)),
     differenceNoise: differenceNoise(toSeries(run.fixation.samples, calibration, { filter: false })),
     accuracy: perChannel((c) => analyseTargets(run.accuracy.windows, accuracySeries[c])),

@@ -118,7 +118,40 @@ für den gemessenen Abstand, solange sie nicht gegen ihn belegt ist.
 brauchen eine Einrichtung, bei der ein A4-Blatt an den Bildschirm gehalten und ein Rechteck auf dieselbe
 Größe gezogen wird. Das geht ohne Kamera. Ohne sie wären dort alle Gradwerte falsch.
 
+## 2c. Muss immer kalibriert werden?
+
+Antwort aus vier eigenen Läufen, Fehler an neuen Zielen als RMS in Grad:
+
+| Vorgehen | Horizontal | Vertikal |
+|---|---|---|
+| Eigene Kalibrierung im selben Lauf | 0,7–1,9 | 1,3–3,5 |
+| Kalibrierung eines anderen Laufs | 1,1–4,4 | 1,2–8,1 |
+| Fremde Kalibrierung plus Nullabgleich an einem Punkt | 1,1–4,5 | 1,2–6,6 |
+
+**Ohne neue Kalibrierung wird es also deutlich schlechter und unberechenbar.** Ein Nullabgleich hilft kaum, weil
+sich der Maßstab mit Sitzposition und Abstand ändert, nicht nur der Nullpunkt. Daraus folgen drei Stufen:
+
+| Frage | Nötig | Warum |
+|---|---|---|
+| Gibt es Rucke, welche Richtung, welcher Rhythmus? SWJ? Glatt oder sakkadiert? | keine Gradkalibrierung, nur grober Maßstab | Muster und Zeitverlauf hängen nicht am Grad; ungefähre Amplitude genügt |
+| Kurzes Screening, horizontal | Schnellkalibrierung, Mitte, rechts, links, rund 10 s | in der Simulation mit 0,8 s je Punkt nah an der langen Variante |
+| Grad, °/s, Sakkaden-Metrik, Up- und Downbeat-Stärke | volle Kalibrierung | Metrik heißt Vergleich mit dem Ziel; ein Maßstabsfehler sieht aus wie Hypo- oder Hypermetrie |
+
+Sinnvoll wäre später, eine gespeicherte Kalibrierung nur zu prüfen statt zu wiederholen: zwei Punkte, und nur bei
+Abweichung folgt die volle Kalibrierung. Das ist nicht gebaut.
+
+## 2d. Hauptmessung: Mittel beider Augen
+
+Vier Läufe zeigten: Einzelaugen messen seitenabhängig falsch. Die horizontale Sakkaden-Endlage lag bei 0,84–1,26, je
+nachdem, welches Auge zählte. Die Kalibrierung auf den Mittelpunkt beider Augen bestand in allen vier Läufen, mit
+Endlage 0,93–1,16 und der geringsten oder gleich geringen Ruhe-Streuung. Seitdem ist der Mittelpunkt mit eigenem Modell die Hauptmessung.
+Einzelaugen bleiben als Kontrolle und als Bestätigung für Ereignisse. Eine Seitendifferenz sperrt nichts mehr,
+sie wird markiert. Die Einzelaugen sind für eine Sperre zu unsicher.
+
 ## 3. Zusammenführung beider Augen
+
+**Hinweis:** Der Abschnitt beschreibt den älteren gewichteten Mittelwert. Er ist durch 2d ersetzt und bleibt als
+Begründung für die Stufen 2 bis 4 stehen.
 
 **Stufe 1, gebaut: gewichteter Mittelwert, je Achse getrennt.** Gewicht je Auge und Achse:
 `1 / (Unruhe² + Prüffehler²)`. Das ist eine Heuristik, keine validierte Unsicherheit. Das genauere Auge zählt mehr, ein durchgefallenes zählt nicht, bei Ausfall trägt das andere

@@ -19,25 +19,31 @@
   p { margin: 3px 0; }
   .muted { color: var(--muted); font-size: 11px; }
   .banner { border: 1.5px solid var(--warn); color: var(--warn); padding: 4px 8px; margin: 6px 0; font-weight: 600; }
-  .lines { margin: 8px 0; padding-left: 16px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .wide { grid-column: 1 / -1; }
-  .span-two { grid-column: span 2; }
-  .card { border: 1px solid var(--line); border-radius: 6px; padding: 7px; break-inside: avoid; }
-  .card.grey { background: var(--grey); }
-  .card.hatched { background: repeating-linear-gradient(45deg, var(--page), var(--page) 5px, var(--grey) 5px, var(--grey) 9px); }
-  .tag { float: right; font-size: 10px; color: var(--muted); }
   svg { display: block; width: 100%; height: auto; }
   dl { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin: 4px 0 0; font-size: 11px; }
   dt { color: var(--muted); }
   dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
   ul { margin: 2px 0; padding-left: 15px; }
   .review { min-height: 18mm; }
+  .chip { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
+          border: 1.5px solid; white-space: nowrap; }
+  .chip.unauffaellig { background: #dcfce7; color: #166534; border-color: #166534; }
+  .chip.grenzwertig { background: #fef3c7; color: #92400e; border-color: #92400e; border-style: dashed; }
+  .chip.auffaellig { background: #fee2e2; color: #991b1b; border-color: #991b1b; border-width: 2.5px; }
+  .chip.nicht { background: var(--grey); color: var(--muted); border-color: var(--muted); border-style: dotted; }
+  .finding { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-top: 8px; break-inside: avoid; }
+  .finding > header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .finding h2 { margin: 0; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 12px; align-items: start; }
+  .row { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  .row .chip { flex: none; min-width: 100px; text-align: center; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 3px 4px; text-align: left; vertical-align: top; }
+  .limit { font-size: 11px; color: var(--muted); margin-top: 4px; }
   #load { max-width: 210mm; margin: 16px auto; padding: 0 12mm; }
   @media screen and (max-width: 720px) {
     main { padding: 16px; }
-    .grid { grid-template-columns: minmax(0, 1fr); }
-    .grid > * { grid-column: 1 !important; }
+    .split { grid-template-columns: minmax(0, 1fr); }
   }
   @media print {
     body { background: none; }
@@ -106,18 +112,6 @@ function targetChart(section) {
     <path d="M${width / 2} 0V${height}M0 ${height / 2}H${width}" stroke="${COLOR.line}"/>${marks}</svg>`;
 }
 
-function saccadeChart(section) {
-  const size = 150;
-  const range = 14;
-  const at = (value) => size / 2 + (value / range) * (size / 2);
-  const marks = section.endpoints.map((p) => (p.axis === "h"
-    ? `<circle cx="${at(p.target)}" cy="${at(-p.end).toFixed(1)}" r="3.2" fill="none" stroke="${COLOR.mean}"/>`
-    : `<rect x="${at(p.target) - 3}" y="${(at(-p.end) - 3).toFixed(1)}" width="6" height="6" fill="none" stroke="${COLOR.left}"/>`)).join("");
-  return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Ziel gegen Endlage, Diagonale ist die Sollgerade">
-    <rect width="${size}" height="${size}" fill="none" stroke="${COLOR.line}"/>
-    <line x1="0" y1="${size}" x2="${size}" y2="0" stroke="${COLOR.target}" stroke-dasharray="4 3"/>${marks}</svg>`;
-}
-
 function pursuitChart(entry) {
   const width = 600;
   const height = 80;
@@ -163,53 +157,88 @@ function eventChart(timeline) {
 
 const facts = (rows) => `<dl>${rows.map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
 
-function card(section, body) {
-  const hatched = section.status === "nicht auswertbar" ? " hatched" : "";
-  return `<section class="card${hatched}"><span class="tag">${escapeHtml(section.status)}</span>
-    <h2>${escapeHtml(section.title)}</h2>${body}</section>`;
+const chipClass = { "unauffällig": "unauffaellig", "grenzwertig": "grenzwertig", "auffällig": "auffaellig", "nicht beurteilbar": "nicht" };
+const chip = (status) => `<span class="chip ${chipClass[status]}">${escapeHtml(status)}</span>`;
+const line = (status, text) => `<div class="row">${chip(status)}<span>${escapeHtml(text)}</span></div>`;
+
+function finding(number_, title, status, body) {
+  return `<section class="finding"><header><h2>${number_}. ${escapeHtml(title)}</h2>${chip(status)}</header>${body}</section>`;
+}
+
+function beatLine(name, places, examined) {
+  if (!examined) return line("nicht beurteilbar", `${name}: in diesem Lauf nicht untersucht.`);
+  if (!places.length) return line("unauffällig", `${name}: nein, in den untersuchten Positionen kein Hinweis.`);
+  return line("auffällig", `${name}: Hinweis in ${places.join(", ")}.`);
+}
+
+function gazeTable(findings) {
+  if (!findings.gazeExamined) return `<p class="muted">Dieser Lauf enthält noch kein Blickhalten. Neue Testläufe erfassen rechts, links, oben und unten.</p>`;
+  const rows = findings.gaze.map((cell) => `<tr><th>${escapeHtml(cell.name)} ${cell.angle}°</th>
+    <td>${chip(cell.horizontal.status)} ${escapeHtml(cell.horizontal.text)}</td>
+    <td>${chip(cell.vertical.status)} ${escapeHtml(cell.vertical.text)}</td></tr>`).join("");
+  return `<table><thead><tr><th>Blick</th><th>Horizontal</th><th>Vertikal</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function render(data) {
   const report = buildReport(data);
   const [fixation, targets, saccades, pursuit] = report.sections;
-  const { meta, calibration, summary } = report;
-  const eye = (item) => (item.errorH === null ? item.reason
+  const { meta, calibration, summary, findings } = report;
+  const { limits } = findings;
+  const eye = (item) => (!item ? "in dieser Datei nicht berechnet" : item.errorH === null ? item.reason
     : `${number(item.errorH)}° / ${number(item.errorV)}°${item.reason ? `, ${item.reason}` : ""}`);
-  const pursuitCards = pursuit.runs.map((entry) => `<div>
-    <p class="muted">${escapeHtml(entry.name)}: ${number(entry.run.frequency, 2)} Hz, ±${entry.run.amplitude}°.
-    Amplitudenverhältnis ${number(entry.stats?.gain, 2)}, Phasenversatz ${number(entry.stats?.lagMs, 0)} ms, enthält Verarbeitungszeit.</p>
-    ${pursuitChart(entry)}</div>`).join("");
+  const pursuitBlocks = pursuit.runs.map((entry, index) => {
+    const judged = findings.pursuit[index];
+    return `<div>${line(judged.status, `${entry.name}, ${number(entry.run.frequency, 2)} Hz: ${judged.text}`)}${pursuitChart(entry)}</div>`;
+  }).join("");
   const main = document.getElementById("report");
   main.innerHTML = `
-    <h1>Okulomotorischer Gütebericht</h1>
-    <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} · ${escapeHtml(meta?.smoothing ?? "")} ·
-      ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
-    <div class="banner">Entwicklungsdaten eines Forschungsprototyps. Keine Befundaussage, keine Diagnose.</div>
+    <h1>Okulomotorischer Befundbericht</h1>
+    <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} ·
+      ${escapeHtml(meta?.smoothing ?? "")} · ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
+    <div class="banner">Forschungsprototyp. Maschinelle Einordnung gegen vorläufige Grenzen, keine Diagnose, ärztliche Beurteilung erforderlich.</div>
     <h2>${escapeHtml(summary.headline)}</h2>
-    <ul class="lines">${summary.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
     <p class="muted">${escapeHtml(report.condition)}</p>
-    <div class="grid">
-      ${card(fixation, `${fixationChart(fixation)}<p class="muted">Positionsspur, keine Konfidenzellipse.</p>${facts([
-        ["Robust h / v", `${number(fixation.stats?.robustSdH, 2)}° / ${number(fixation.stats?.robustSdV, 2)}°`],
+
+    ${finding(1, "Fixation in Ruhe, Spontannystagmus", findings.spontaneous.status, `<div class="split"><div>
+      ${line(findings.spontaneous.horizontal.status, `Horizontal: ${findings.spontaneous.horizontal.text}`)}
+      ${line(findings.spontaneous.vertical.status, `Vertikal: ${findings.spontaneous.vertical.text}`)}
+      ${facts([
+        ["Ruhe robust h / v", `${number(fixation.stats?.robustSdH, 2)}° / ${number(fixation.stats?.robustSdV, 2)}°`],
         ["Abdeckung h / v", `${percent(fixation.stats?.coverageH)} / ${percent(fixation.stats?.coverageV)}`],
-      ])}`)}
-      ${card(targets, `${targetChart(targets)}<p class="muted">Kreuz Ziel, Punkt Messung.</p>${facts([
-        ["Fehler h / v", `${number(targets.stats?.errorH)}° / ${number(targets.stats?.errorV)}°`],
-        ["Größter Fehler", `${number(targets.stats?.maxError)}°`],
-        ["Ziele", `${targets.targets.length} von ${targets.planned}`],
-      ])}`)}
-      ${card(saccades, `${saccadeChart(saccades)}<p class="muted">Kreis horizontal, Quadrat vertikal. Endlage, nicht erste Landung.</p>${facts([
-        ["Endlage h / v", `${number(saccades.stats?.h?.endGain, 2)} / ${number(saccades.stats?.v?.endGain, 2)}`],
-        ["Latenz h, enthält Verarbeitung", `${number(saccades.stats?.h?.latency, 0)} ms`],
-      ])}`)}
-      <div class="wide">${card(pursuit, `${pursuitCards}<p class="muted">Violett Ziel, blau rechtes Auge, orange gestrichelt linkes Auge, schwarz Mittelwert. Lücken bleiben Lücken.</p>`)}</div>
-      <section class="card wide"><h2>Ablauf und Ereignisse</h2>${eventChart(report.timeline)}</section>
-      <section class="card grey wide"><h2>Nicht untersucht</h2><ul>${report.notExamined.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul></section>
-      <section class="card"><h2>Kalibrierung</h2>${facts([
-        ["Rechts h / v", eye(calibration.rechts)], ["Links h / v", eye(calibration.links)],
-      ])}<p class="muted">Technische Grenzen, keine Normwerte.</p></section>
-      <section class="card review span-two"><h2>Ärztliche Einordnung</h2><p class="muted">Noch offen. Von Hand zu ergänzen.</p></section>
-    </div>`;
+        ["Drift horizontal", `${number(fixation.stats?.driftH, 2)} °/s`],
+      ])}</div>${fixationChart(fixation)}</div>
+      <p class="limit">Unter Fixation; ein unterdrückter Nystagmus bleibt unsichtbar. Grenze: ${escapeHtml(limits.nystagmus.source)}.</p>`)}
+
+    ${finding(2, "Blickrichtung", findings.gazeStatus, `
+      ${line(!findings.gazeExamined ? "nicht beurteilbar" : findings.gazeHits ? "auffällig" : "unauffällig",
+        `Blickrichtungsnystagmus: ${!findings.gazeExamined ? "nicht untersucht" : findings.gazeHits ? "Hinweis, siehe Tabelle" : "nein, bis zum geprüften Winkel"}.`)}
+      ${beatLine("Downbeat", findings.downbeat, findings.gazeExamined)}
+      ${beatLine("Upbeat", findings.upbeat, findings.gazeExamined)}
+      ${gazeTable(findings)}
+      <p class="limit">Der Bildschirm begrenzt die Auslenkung auf rund 15° horizontal und 10° vertikal, das liegt unter den üblichen Prüfwinkeln. Ein Blickrichtungsnystagmus bei stärkerer Auslenkung ist damit nicht ausgeschlossen.</p>`)}
+
+    ${finding(3, "Square-Wave-Jerks", findings.swj.status, `${line(findings.swj.status, findings.swj.text)}
+      <p class="limit">Grenze: ${escapeHtml(limits.swj.source)}. Kandidaten nur, wenn beide Augen springen.</p>`)}
+
+    ${finding(4, "Blickfolge", findings.pursuitStatus, `${pursuitBlocks}
+      <p class="muted">Violett Ziel, blau rechtes Auge, orange gestrichelt linkes Auge, schwarz Mittel. Lücken bleiben Lücken.</p>
+      <p class="limit">Folge-Gain über ${number(limits.pursuit.gainNormal, 1)} und bis ${limits.pursuit.saccadesNormal} Sakkaden je Zyklus gelten als glatt. ${escapeHtml(limits.pursuit.source)}.</p>`)}
+
+    ${finding(5, "Sakkaden und Zielgenauigkeit", findings.saccadeStatus, `<div class="split"><div>
+      ${findings.saccades.map((item) => line(item.status, item.text)).join("")}
+      ${facts([
+        ["Zielfehler neue Ziele h / v", `${number(targets.stats?.errorH)}° / ${number(targets.stats?.errorV)}°`],
+        ["Größter Zielfehler", `${number(targets.stats?.maxError)}°`],
+        ["Latenz horizontal, mit Verarbeitung", `${number(saccades.stats?.h?.latency, 0)} ms`],
+      ])}</div><div>${targetChart(targets)}<p class="muted">Kreuz Ziel, Punkt Messung.</p></div></div>
+      <p class="limit">Metrisch gilt von ${number(limits.saccade.normalLow, 2)} bis ${number(limits.saccade.normalHigh, 2)}. ${escapeHtml(limits.saccade.source)}. Vertikal nur bei freigegebener Vertikale.</p>`)}
+
+    <section class="finding"><header><h2>Messqualität</h2></header>
+      ${summary.lines.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}
+      ${facts([["Prüffehler Mittel h / v", eye(calibration.mittel)], ["Rechtes Auge", eye(calibration.rechts)], ["Linkes Auge", eye(calibration.links)]])}
+      ${eventChart(report.timeline)}</section>
+    <section class="finding"><header><h2>Nicht untersucht</h2>${chip("nicht beurteilbar")}</header><p>${report.notExamined.map(escapeHtml).join(" · ")}</p></section>
+    <section class="finding review"><header><h2>Ärztliche Einordnung</h2></header><p class="muted">Noch offen. Von Hand zu ergänzen.</p></section>`;
   main.hidden = false;
   document.getElementById("message").textContent = "";
 }

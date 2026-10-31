@@ -5,7 +5,7 @@ Gesicht noch nicht gelaufen. Alle Bewertungsgrenzen sind experimentell.
 
 ## Ziel
 
-Ein Start-Button, rund 2,5 Minuten, und danach eine belastbare Antwort: Wie gut misst das Werkzeug
+Ein Start-Button, rund 3,5 Minuten, und danach eine belastbare Antwort: Wie gut misst das Werkzeug
 bei dieser Kamera, diesem Licht und dieser Einstellung? Der Test bewertet das Werkzeug, nicht die
 Person. Er setzt eine unauffällige Okulomotorik der Testperson voraus.
 
@@ -21,11 +21,12 @@ Person. Er setzt eine unauffällige Okulomotorik der Testperson voraus.
 |---|---|---|---|
 | 1 Kalibrierung | 59 s | 8 Anpassungs- und 6 Prüfziele | Abbildung auf Grad, Güte je Auge |
 | 2 Ruhe | 20 s | Punkt ansehen, normal blinzeln | Streuung, Drift, gültige Bilder |
-| 3 Genauigkeit | 18 s | 6 neue Ziele | Fehler an Orten, die nie angepasst wurden |
-| 4 Blickfolge | 24 s | Sinus ±10° mit 0,25 und 0,5 Hz | Gain, Verzögerung, Aufholsakkaden |
-| 5 Sakkaden | 22 s | 12 Sprünge in zufälligem Takt | Gain, Latenz, Erkennungsrate |
+| 3 Blick halten | 40 s | rechts, links, oben, unten je 8 s, dazwischen Mitte | Blickrichtungs-, Up- und Downbeat-Nystagmus |
+| 4 Genauigkeit | 18 s | 6 neue Ziele | Fehler an Orten, die nie angepasst wurden |
+| 5 Blickfolge | 24 s | Sinus ±10° mit 0,25 und 0,5 Hz | Folge-Gain, Sakkaden je Zyklus |
+| 6 Sakkaden | 30 s | 16 Sprünge in zufälligem Takt | erste Landung, Endlage, Metrik je Richtung |
 
-Dazu kommen kurze Ansagen, zusammen rund 2,5 Minuten.
+Dazu kommen kurze Ansagen, zusammen rund 3,5 Minuten.
 
 **Bewusst nicht enthalten:** Kopf-Störtest und Bewegung des Kopfes, denn sie würden die Kalibrierung
 im selben Lauf zerstören. Der Störtest bleibt ein eigener Schritt.

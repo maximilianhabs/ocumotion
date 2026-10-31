@@ -72,7 +72,7 @@ test("Ein vollständiger Lauf ergibt alle Abschnitte mit echten Werten", () => {
 test("Nicht Untersuchtes bleibt immer sichtbar", () => {
   const report = buildReport({ run: fullRun(), meta: META });
   assert.deepEqual(report.notExamined, NOT_EXAMINED);
-  assert.ok(report.notExamined.some((line) => line.startsWith("Nystagmus")));
+  assert.ok(report.notExamined.some((line) => line.startsWith("Torsion")));
   assert.ok(report.condition.includes("visueller Fixation"));
 });
 
@@ -119,4 +119,33 @@ test("Kopfereignisse fehlen bei alten Dateien als unbekannt", () => {
 test("Zeitpunkte werden zu Spannen zusammengefasst", () => {
   assert.deepEqual(toSpans([0, 33, 66, 1000]), [{ from: 0, to: 66 }, { from: 1000, to: 1000 }]);
   assert.deepEqual(toSpans([]), []);
+});
+
+test("Der Befund trennt Abschnitte und meldet fehlendes Blickhalten als nicht untersucht", () => {
+  const { findings } = buildReport({ run: fullRun(), meta: META });
+  assert.equal(findings.spontaneous.horizontal.status, "unauffällig");
+  assert.equal(findings.gazeExamined, false);
+  assert.equal(findings.gazeStatus, "nicht beurteilbar");
+  assert.deepEqual(findings.downbeat, []);
+  assert.equal(findings.pursuit[0].status, "unauffällig");
+});
+
+test("Blickhalten erkennt Downbeat und nennt die Position", () => {
+  const run = fullRun();
+  let clock = 400000;
+  const hold = (name, h, v, beat) => {
+    const list = samples(7000, clock, (time) => {
+      const phase = ((time - clock) % 500) / 500;
+      // Downbeat: langsam nach oben, schnell zurück nach unten.
+      return { h, v: v + (beat ? 6 * (phase - 0.5) : 0) };
+    });
+    clock += 9000;
+    return { target: { name, h, v }, samples: list };
+  };
+  run.gaze = [hold("rechts", 15, 0, false), hold("links", -15, 0, false), hold("oben", 0, 10, false), hold("unten", 0, -10, true)];
+  const { findings } = buildReport({ run, meta: META });
+  assert.equal(findings.gazeExamined, true);
+  assert.deepEqual(findings.downbeat, ["unten"]);
+  assert.deepEqual(findings.upbeat, []);
+  assert.equal(findings.gaze[0].vertical.status, "unauffällig");
 });

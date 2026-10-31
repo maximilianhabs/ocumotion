@@ -4,6 +4,7 @@ data/*
 
 # --- Bild und Video nie versionieren ---
 macvision-guetetest-*.json
+macvision-okn-*.json
 *.mp4
 *.mov
 *.jpg

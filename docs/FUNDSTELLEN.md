@@ -17,6 +17,7 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/KONZEPT.md` | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
 | `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A7 |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild für Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/KONZEPT_OKN_MODUS.md` | Optokinetischer Test H40, mit Prüfvermerk |
 | `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus mit ARKit, Pipeline, nicht begonnen |
 | `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
 | `docs/KONZEPT_GUETETEST.md` | Geführter Gütetest: Ablauf, Daten, Grenzen |
@@ -28,6 +29,8 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `testseite/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
 | `testseite/augen.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
 | `testseite/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
+| `testseite/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
+| `testseite/befund-logik.js` | Ereigniserkennung und Einordnung gegen benannte Grenzen |
 | `testseite/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
 | `testseite/trockenlauf.js` | Simuliertes Gesicht für `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
@@ -69,5 +72,5 @@ Diese Projekte liefern Vorarbeit, gehören aber nicht zu Mac Vision.
 ## Nicht ins Repo
 
 Bilder, Videos, Augenausschnitte, Modelle, Messdaten aus `data/` und exportierte Dateien
-`macvision-guetetest-*.json` aus dem Downloads-Ordner. Commits, Pushes und
+`macvision-guetetest-*.json` und `macvision-okn-*.json` aus dem Downloads-Ordner. Commits, Pushes und
 Installationen nur auf ausdrückliche Ansage des Nutzers.

@@ -30,6 +30,7 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 |---|---|
 | `docs/KONZEPT_OKULOMOTORIK.md` | **Hauptdokument:** Kalibrierung, Zusammenführung, Untersuchungen, Reihenfolge |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/KONZEPT_OKN_MODUS.md` | Optokinetischer Test H40, mit Prüfvermerk |
 | `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus, Pipeline |
 | `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
 | `docs/KONZEPT_AUGEN.md` | Messgrundlagen, Auflösung, Hürden, Stufen A0–A7 |
@@ -44,7 +45,9 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/trockenlauf.js` | Simuliertes Gesicht, `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
 | `testseite/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
-| `testseite/*.test.mjs` | 67 Logiktests mit konstruierten Daten |
+| `testseite/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
+| `testseite/befund-logik.js` | Nystagmus-, SWJ-, Blickfolge- und Sakkaden-Einordnung mit Grenzen |
+| `testseite/*.test.mjs` | Logiktests mit konstruierten Daten, `make test` |
 | `tools/guetetest_auswertung.py` | Vertiefte Auswertung einer Exportdatei |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 

@@ -228,3 +228,29 @@ Die Betriebsart mit 60 fps ist nur mit Testvideo und ohne echte Kamera geprüft.
 ergeben „horizontal nutzbar, vertikal unzuverlässig“. Die Dateien enthalten noch keine Kopfereignisse, Lauf 1
 auch keine Lidwerte; der Bericht zeigt das als „nicht erfasst“. Der Weg über „Bericht ansehen“ nach einem echten
 Lauf und die Druckausgabe sind noch nicht geprüft.
+
+## 31.10.2026 — Vierter Gütetest und Hauptmessung Mittel
+
+Glättung aus, Menüabstand 40 cm, Irisbreite 34,4 Bildpunkte. Mit Einzelaugen-Kalibrierung lief horizontal nur das
+linke Auge, die Sakkaden-Endlage lag bei 1,26, das Mittel beider Augen bei 1,16.
+
+| Lauf | Sakkaden h rechts / links / Mittel | Ruhe SD h rechts / links / Mittel | Prüffehler Mittel h / v |
+|---|---|---|---|
+| 1 | 0,98 / 1,03 / 1,00 | 1,52 / 1,69 / 1,03 | 0,8 / 1,1 |
+| 2 | 0,88 / 1,00 / 0,93 | 0,44 / 0,51 / 0,31 | 1,1 / 1,6 |
+| 3 | 0,84 / 1,16 / 0,97 | 0,74 / 0,86 / 0,52 | 1,0 / 1,3 |
+| 4 | 1,08 / 1,26 / 1,16 | 0,85 / 0,65 / 0,61 | 1,2 / 1,2 |
+
+Kalibrierung eines Laufs auf einen anderen übertragen, RMS an neuen Zielen: eigene 0,7–1,9° h und 1,3–3,5° v, fremde
+1,1–4,4° h und 1,2–8,1° v, fremde mit Nullabgleich 1,1–4,5° h und 1,2–6,6° v.
+
+Befundlogik an den vier Läufen (eine gesunde Testperson, nicht klinisch beurteilt): kein Spontannystagmus gemeldet,
+kein falscher Treffer. Blickfolge-Gain 0,85–1,18. SWJ-Kandidaten mit Bestätigung beider Augen 3, 0, 6 und 9 je
+Minute; 20 s sind dafür kurz. Die Nachweisgrenzen von 1,5° h und 3° v gelten nach dem Medianfilter. Ohne Glättung bleiben Sakkaden in der Blickfolge teils über der Arbeitsgrenze (Lauf 3).
+Ob die Erkennung echten Nystagmus findet, ist nur an konstruierten Signalen geprüft, nie an einem echten Nystagmus.
+
+## 31.10.2026 — OKN-Test H40, Trockenlauf
+
+`make test`: 98 von 98 bestanden, darunter Ruhe, Rauschen, reiner Sinus, Antwort gegen die Reizrichtung und bekannter
+Gain 0,4 bis 1,0. Trockenlauf mit simulierter Augenbewegung von 6 °/s: gemessen 6,1 und 6,0 °/s, Gain 0,76 und 0,75,
+Schlagrichtung jeweils gegen den Reiz, keine Falschmeldung in der Kontrolle. Mit echten Augen noch nicht gelaufen.

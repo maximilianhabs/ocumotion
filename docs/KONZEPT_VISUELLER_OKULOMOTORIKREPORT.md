@@ -13,11 +13,11 @@ Karten für alles Fehlende. Ausgabe als Entwicklungsdaten.
 
 | Thema | Entwurf | Entscheidung | Grund |
 |---|---|---|---|
-| Interpretation | Regelbasierte Hinweise, `interpretation-rules.js` | Nicht in die Software; die ärztliche Einordnung wird von Hand geschrieben | Softwareseitige Hinweise wären bei Patienteneinsatz sehr wahrscheinlich Medizinprodukte-Software; fachlich zu klären |
+| Interpretation | Regelbasierte Hinweise, `interpretation-rules.js` | Ampel gegen benannte Grenzen auf Wunsch des Nutzers gebaut (`befund-logik.js`); keine Zentral-/Peripher-Aussage, ärztliche Einordnung bleibt von Hand | Für Forschung vertretbar. Vor Patienteneinsatz Medizinprodukte-Frage klären |
 | Format | Vektor-PDF | Berichtsseite mit Druckansicht | Keine neue Abhängigkeit |
 | Struktur | Neun Komponenten | Ein Berichtsmodell, eine Ansicht | Schnittstellen entstehen, wenn sie gebraucht werden |
-| Blickfeldkarte | Richtungspfeile | Vorerst nicht | Es gibt keinen Nystagmus-Detektor als Datenquelle |
-| Blickhalten | Teil aller Profile | Als nicht untersucht ausgewiesen, später mit Hinweis auf die Bildschirmgrenze | Bei 40 cm reicht der Bildschirm nur rund ±20° |
+| Blickfeldkarte | Richtungspfeile | Tabelle je Blickposition | Pfeile folgen, wenn echte Befunde vorliegen |
+| Blickhalten | Teil aller Profile | Im Gütetest gebaut, ±15° h und ±10° v, Grenze im Bericht genannt | Bei 40 cm reicht der Bildschirm nur rund ±20° |
 
 **Geprüft:** Die Zeitbudgets ergeben exakt 60, 180 und 360 s. Quelle [1] stimmt mit Titel, Jahr und DOI. Quelle
 [2] ließ sich nicht öffnen und ist ungeprüft. Die Schnellkalibrierung (0,8 s Daten je Punkt) lag an drei

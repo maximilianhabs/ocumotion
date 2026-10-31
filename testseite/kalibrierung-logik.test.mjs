@@ -1,7 +1,7 @@
 // Kalibrierung gegen Augen mit bekannter Abbildung. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calibrate, evaluateEye, fuse, hasEnoughData, MAX_SIDE_DIFFERENCE, medianFilter, sensitivity, STEPS, targetPixels, targetsFit, toDegrees } from "./kalibrierung-logik.js";
+import { calibrate, combineEyes, evaluateEye, hasEnoughData, MAX_SIDE_DIFFERENCE, medianFilter, sensitivity, STEPS, targetPixels, targetsFit, toDegrees } from "./kalibrierung-logik.js";
 
 const near = (actual, expected, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
@@ -58,8 +58,6 @@ test("Ein schlechtes Auge fällt aus, das gute bleibt", () => {
   assert.equal(result.best, "rechts");
   assert.equal(result.links.weightH, 0);
   assert.ok(result.links.weightV > 0);
-  const estimate = fuse({ h: 3, v: 1 }, { h: 30, v: 9 }, result);
-  near(estimate.h, 3);
 });
 
 test("Zu wenige gültige Bilder sind kein Ergebnis", () => {
@@ -78,12 +76,23 @@ test("Geschlossenes Auge am Ziel lässt nur dieses Auge scheitern", () => {
   assert.equal(result.best, "links");
 });
 
-test("Mittelwert gewichtet nach Güte und nutzt bei Ausfall das andere Auge", () => {
-  const calibration = { rechts: { weightH: 3, weightV: 3 }, links: { weightH: 1, weightV: 1 } };
-  near(fuse({ h: 4, v: 0 }, { h: 6, v: 2 }, calibration).h, 4.5);
-  near(fuse({ h: 4, v: 0 }, { h: 6, v: 2 }, calibration).v, 0.5);
-  near(fuse(null, { h: 8, v: 4 }, calibration).h, 8);
-  assert.equal(fuse(null, null, calibration), null);
+test("Das Mittel beider Augen hebt seitenabhängige Fehler auf", () => {
+  // Rechtes Auge bildet nach rechts zu viel ab, linkes zu wenig: wie in den echten Läufen.
+  const skew = (bias) => (h, v) => ({ x: 0.018 * h * (1 + bias * Math.sign(h)), y: 0.0144 * v });
+  const entries = run({ rechts: skew(0.25), links: skew(-0.25) });
+  const result = calibrate(entries);
+  assert.equal(result.mittel.passed, true);
+  near(result.mittel.errorH, 0, 1e-6);
+  assert.ok(result.rechts.errorH > result.mittel.errorH);
+});
+
+test("Hauptmessung nutzt das Mittel und fällt auf ein Auge zurück", () => {
+  const model = { h: [0, 1, 0], v: [0, 0, 1] };
+  const calibration = { rechts: { model }, links: { model }, mittel: { model } };
+  near(combineEyes({ x: 4, y: 0 }, { x: 6, y: 2 }, calibration).h, 5);
+  near(combineEyes({ x: 4, y: 0 }, { x: 6, y: 2 }, calibration).v, 1);
+  near(combineEyes(null, { x: 8, y: 4 }, calibration).h, 8);
+  assert.equal(combineEyes(null, null, calibration), null);
 });
 
 test("Blickziele liegen im bekannten Abstand auf dem Bildschirm", () => {
@@ -189,14 +198,13 @@ test("Empfindlichkeit rechnet Modellverstärkung in Grad je Bildpunkt um", () =>
   assert.equal(sensitivity({ h: [0, 1, 0], v: [0, 0, 1] }, 0), null);
 });
 
-test("Bei großer Seitendifferenz wird der Mittelwert der Achse ausgesetzt", () => {
-  const calibration = { rechts: { weightH: 1, weightV: 1 }, links: { weightH: 1, weightV: 1 } };
-  const apart = fuse({ h: 0, v: 1 }, { h: MAX_SIDE_DIFFERENCE + 1, v: 1.5 }, calibration);
-  assert.equal(apart.h, null);
-  near(apart.v, 1.25);
+test("Große Seitendifferenz wird markiert, die Messung bleibt", () => {
+  const model = { h: [0, 1, 0], v: [0, 0, 1] };
+  const calibration = { rechts: { model }, links: { model }, mittel: { model } };
+  const apart = combineEyes({ x: 0, y: 1 }, { x: MAX_SIDE_DIFFERENCE + 1, y: 1.5 }, calibration);
   assert.equal(apart.disagree, true);
-  assert.equal(fuse({ h: 1, v: 1 }, { h: 1.5, v: 1 }, calibration).disagree, false);
-  near(fuse(null, { h: 20, v: 1 }, calibration).h, 20);
+  near(apart.h, (MAX_SIDE_DIFFERENCE + 1) / 2);
+  assert.equal(combineEyes({ x: 1, y: 1 }, { x: 1.5, y: 1 }, calibration).disagree, false);
 });
 
 test("Medianfilter erhält einen Sprung und entfernt Ausreißer", () => {

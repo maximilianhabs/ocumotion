@@ -16,7 +16,7 @@ const times = (durationMs, start = 0) =>
 // Einheitsmodell: Rohwert = Grad.
 const MODEL = { h: [0, 1, 0], v: [0, 0, 1] };
 const EYE = { model: MODEL, passedH: true, passedV: true, weightH: 1, weightV: 1 };
-const CALIBRATION = { passed: true, rechts: EYE, links: EYE };
+const CALIBRATION = { passed: true, rechts: EYE, links: EYE, mittel: EYE };
 
 function noise(amount) {
   let state = 12345;
@@ -133,7 +133,7 @@ test("Ohne gültige Augenwerte ist das Ergebnis nicht auswertbar", () => {
     pursuit: PURSUIT_RUNS.map((entry) => ({ run: entry, startTime: 0, samples: [] })),
     saccades: { samples: [], jumps: [] },
   };
-  const report = analyseRun(run, { ...CALIBRATION, passed: false, rechts: { ...EYE, passedH: false, passedV: false }, links: { ...EYE, passedH: false, passedV: false } });
+  const report = analyseRun(run, { ...CALIBRATION, passed: false, rechts: { ...EYE, passedH: false, passedV: false }, links: { ...EYE, passedH: false, passedV: false }, mittel: { ...EYE, passedH: false, passedV: false } });
   assert.equal(report.fixation.mittel, null);
   assert.equal(report.grade.summary.headline, "Beide Achsen unzuverlässig");
   assert.ok(report.grade.summary.lines[0].startsWith("Kalibrierung nicht bestanden"));

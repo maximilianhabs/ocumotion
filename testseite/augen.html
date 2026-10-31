@@ -53,6 +53,10 @@
   #cal[hidden] { display: none; }
   #calDot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
             background: #dc2626; box-shadow: 0 0 0 7px #e7e5e4, 0 0 0 9px #1c1917; }
+  #calDot[hidden], #calStripes[hidden] { display: none; }
+  #calStripes { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .okn-line { margin: 6px 0; font-size: 13px; }
+  .okn-line svg { display: block; width: 100%; height: 60px; margin-top: 2px; }
   #calDot::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: #1c1917; }
   #calText { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; font-size: 14px; }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 4px; }
@@ -122,9 +126,17 @@
 
   <aside>
     <section>
-      <h2>Gütetest, rund 2,5 Minuten</h2>
+      <h2>Gütetest, rund 3,5 Minuten</h2>
       <button id="qualityTest" class="primary" disabled>Gütetest starten</button>
+      <button id="oknTest" class="second" disabled>OKN-Test starten, rund 2 Minuten</button>
       <div class="legend">Erst Kamera starten, Abstand messen, dann starten. Kopf aufstützen, nur den Augen folgen.</div>
+    </section>
+    <section id="oknReport" hidden>
+      <h2>Ergebnis OKN-Test</h2>
+      <div class="big" id="oknHead">–</div>
+      <div id="oknLines"></div>
+      <button id="oknSave" class="primary" style="margin-top:10px">Testlauf speichern</button>
+      <div class="legend">Beschreibt die Antwort auf diesen Bildschirmreiz, keine Norm und keine Diagnose. Gespeichert wird nur per Knopf.</div>
     </section>
     <section id="report" hidden>
       <h2>Ergebnis Gütetest</h2>
@@ -190,8 +202,7 @@
         <dt>Unruhe h, r / l</dt><dd id="cNoiseH">–</dd>
         <dt>Unruhe v, r / l</dt><dd id="cNoiseV">–</dd>
         <dt>Größter Zielfehler r / l</dt><dd id="cMax">–</dd>
-        <dt>Gewicht h, r / l</dt><dd id="cWeightH">–</dd>
-        <dt>Gewicht v, r / l</dt><dd id="cWeightV">–</dd>
+        <dt>Prüffehler Mittel h / v</dt><dd id="cMitte">–</dd>
         <dt>Fehlerverstärkung h, r / l</dt><dd id="cSensH">–</dd>
         <dt>Fehlerverstärkung v, r / l</dt><dd id="cSensV">–</dd>
         <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
@@ -225,6 +236,7 @@
 </main>
 
 <div id="cal" hidden>
+  <canvas id="calStripes" hidden></canvas>
   <div id="calDot"></div>
   <p id="calText"></p>
 </div>
@@ -233,10 +245,12 @@
 import { FilesetResolver, FaceLandmarker }
   from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
-import { calibrate, fuse, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
+import { calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
   from "./kalibrierung-logik.js";
-import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
+import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, toSeries, GAZE_HOLD_MS, GAZE_HOLDS, GAZE_RETURN_MS, GAZE_SETTLE_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
          SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
+import { analyseBlock, controlVerdict, directionWord, fieldDegrees, OKN_BLOCKS, OKN_SPEED, OKN_STATE, stripeOn, stripePeriod }
+  from "./okn-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
          medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./positionierung-logik.js";
 
@@ -452,18 +466,18 @@ function drawCurves() {
 
 function applyValues(sample, raw) {
   if (calibration) {
-    const degrees = (side) => (raw[side] && calibration[side].passed
+    const degrees = (side) => (raw[side] && calibration[side].model
       ? toDegrees(calibration[side].model, raw[side].x, raw[side].y) : null);
     const right = degrees("rechts");
     const left = degrees("links");
-    const fused = fuse(right, left, calibration);
+    const combined = combineEyes(raw.rechts, raw.links, calibration);
     sample.rechts = right?.h ?? null;
     sample.links = left?.h ?? null;
     sample.vRechts = right?.v ?? null;
     sample.vLinks = left?.v ?? null;
-    sample.mean = fused?.h ?? null;
-    sample.vMean = fused?.v ?? null;
-    sample.disagree = fused?.disagree ?? false;
+    sample.mean = combined?.h ?? null;
+    sample.vMean = combined?.v ?? null;
+    sample.disagree = combined?.disagree ?? false;
     return;
   }
   const relative = (side) => (raw[side]
@@ -638,6 +652,7 @@ function updateButtons() {
   $("remember").disabled = !running || calibrating || !faceVisible;
   $("calibrate").disabled = !running || calibrating || !reference;
   $("qualityTest").disabled = !running || calibrating || !faceVisible;
+  $("oknTest").disabled = !running || calibrating || !faceVisible;
 }
 
 function clearGuide() {
@@ -740,6 +755,8 @@ function endCalibrating() {
 function abortCalibration(message) {
   if (!calibrating) return;
   calRun += 1;
+  $("calStripes").hidden = true;
+  $("calDot").hidden = false;
   endCalibrating();
   if (document.fullscreenElement) document.exitFullscreen();
   invalidateCalibration("abgebrochen");
@@ -757,13 +774,7 @@ function showCalibration(result) {
   $("cMax").textContent = pair((eye) => degrees(eye.maxError));
   $("cNoiseH").textContent = pair((eye) => degrees(eye.noiseH, 2));
   $("cNoiseV").textContent = pair((eye) => degrees(eye.noiseV, 2));
-  const share = (key) => {
-    const total = result.rechts[key] + result.links[key];
-    const part = (eye) => (total > 0 ? `${Math.round((eye[key] / total) * 100)} %` : "–");
-    return `${part(result.rechts)} / ${part(result.links)}`;
-  };
-  $("cWeightH").textContent = share("weightH");
-  $("cWeightV").textContent = share("weightV");
+  $("cMitte").textContent = eyeText(result.mittel);
   const iris = reference?.irisPx ?? 0;
   const perTenth = (eye, axis) => {
     const value = sensitivity(eye.model, iris)?.[axis];
@@ -772,8 +783,8 @@ function showCalibration(result) {
   $("cSensH").textContent = `${perTenth(result.rechts, "h")} / ${perTenth(result.links, "h")}`;
   $("cSensV").textContent = `${perTenth(result.rechts, "v")} / ${perTenth(result.links, "v")}`;
   const axis = (name, passed) => (passed ? name : `${name} nicht`);
-  const passedH = result.rechts.passedH || result.links.passedH;
-  const passedV = result.rechts.passedV || result.links.passedV;
+  const passedH = result.mittel.passedH;
+  const passedV = result.mittel.passedV;
   $("cState").textContent = result.passed
     ? `bestanden: ${axis("horizontal", passedH)}, ${axis("vertikal", passedV)}`
     : "nicht bestanden";
@@ -903,6 +914,21 @@ async function phaseFixation(id) {
   return id === calRun ? entry : null;
 }
 
+async function phaseGaze(id) {
+  const holds = [];
+  for (const target of GAZE_HOLDS) {
+    $("calText").textContent = `Blick ${target.name} halten`;
+    const part = await collectTarget(id, target, GAZE_SETTLE_MS, GAZE_HOLD_MS);
+    if (!part) return null;
+    holds.push({ target, samples: part.samples });
+    placeDot({ h: 0, v: 0 });
+    $("calText").textContent = "Zurück zur Mitte";
+    await wait(GAZE_RETURN_MS);
+    if (id !== calRun) return null;
+  }
+  return holds;
+}
+
 async function phaseAccuracy(id) {
   const entry = { samples: [], windows: [] };
   for (const [index, target] of ACCURACY_TARGETS.entries()) {
@@ -958,18 +984,20 @@ async function phaseSaccades(id) {
 
 async function testPhases(id) {
   const run = { pursuit: [] };
-  if (!await announce(id, "Teil 2 von 5: Ruhig schauen")) return null;
+  if (!await announce(id, "Teil 2 von 6: Ruhig schauen")) return null;
   run.fixation = await phaseFixation(id);
-  if (!run.fixation || !await announce(id, "Teil 3 von 5: Neue Punkte")) return null;
+  if (!run.fixation || !await announce(id, "Teil 3 von 6: Blick halten")) return null;
+  run.gaze = await phaseGaze(id);
+  if (!run.gaze || !await announce(id, "Teil 4 von 6: Neue Punkte")) return null;
   run.accuracy = await phaseAccuracy(id);
   if (!run.accuracy) return null;
   for (const entry of PURSUIT_RUNS) {
-    if (!await announce(id, `Teil 4 von 5: Punkt ${entry.name} folgen`)) return null;
+    if (!await announce(id, `Teil 5 von 6: Punkt ${entry.name} folgen`)) return null;
     const result = await phasePursuit(id, entry);
     if (!result) return null;
     run.pursuit.push(result);
   }
-  if (!await announce(id, "Teil 5 von 5: Dem springenden Punkt sofort folgen")) return null;
+  if (!await announce(id, "Teil 6 von 6: Dem springenden Punkt sofort folgen")) return null;
   run.saccades = await phaseSaccades(id);
   return run.saccades ? run : null;
 }
@@ -1035,12 +1063,13 @@ function showReport(run, report, result) {
       sensitivity: {
         rechts: sensitivity(result.rechts.model, reference?.irisPx),
         links: sensitivity(result.links.model, reference?.irisPx),
+        mittel: sensitivity(result.mittel.model, reference?.irisPx),
       },
       devicePixelRatio: window.devicePixelRatio,
       screen: `${window.screen.width}×${window.screen.height}`,
       reference,
     },
-    calibration: { rechts: result.rechts, links: result.links, passed: result.passed, best: result.best },
+    calibration: { rechts: result.rechts, links: result.links, mittel: result.mittel, passed: result.passed, best: result.best },
     report,
     run,
     text: [
@@ -1085,6 +1114,188 @@ async function runQualityTest() {
   setStatus("Gütetest fertig.");
 }
 
+const OKN_LIGHT = "#c8c8c8";
+const OKN_DARK = "#303030";
+const OKN_INSTRUCTION = "Verfolgen Sie die vorbeiziehenden Streifen und nehmen Sie danach den nächsten. Kopf ruhig halten.";
+const DRY_BEAT_S = 0.6;
+const DRY_SLOW_SPEED = 6;
+
+// Streifen im Winkelraum: jede Bildspalte bekommt ihren Winkel zur Bildschirmmitte.
+function prepareStripes() {
+  const canvas = $("calStripes");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const distance = Number($("distance").value);
+  const cmPerPx = screenWidthCm() / window.innerWidth;
+  const center = window.innerWidth / 2;
+  const angles = Array.from({ length: Math.ceil(window.innerWidth / 2) }, (_, index) =>
+    Math.atan(((index * 2 + 1 - center) * cmPerPx) / distance) * (180 / Math.PI));
+  return { canvas, context: canvas.getContext("2d"), angles, periodDeg: stripePeriod(fieldDegrees(screenWidthCm(), distance)) };
+}
+
+function drawStripes(stripes, seconds, direction) {
+  const { canvas, context, angles, periodDeg } = stripes;
+  context.fillStyle = OKN_DARK;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = OKN_LIGHT;
+  angles.forEach((theta, index) => {
+    if (stripeOn(theta, seconds, direction, periodDeg)) context.fillRect(index * 2, 0, 2, canvas.height);
+  });
+}
+
+function oknBlock(id, block, stripes) {
+  return new Promise((resolve) => {
+    const moving = block.kind === "moving" || block.kind === "control";
+    $("calStripes").hidden = !moving;
+    $("calDot").hidden = block.kind === "moving" || block.kind === "grey";
+    placeDot({ h: 0, v: 0 });
+    $("calText").textContent = moving ? "" : block.label;
+    const entry = { block: { ...block }, samples: [] };
+    entry.block.from = performance.now();
+    collecting = entry;
+    const step = (now) => {
+      if (id !== calRun) {
+        resolve(null);
+        return;
+      }
+      const elapsed = now - entry.block.from;
+      if (elapsed >= block.durationMs) {
+        collecting = null;
+        entry.block.to = performance.now();
+        $("calStripes").hidden = true;
+        resolve(entry);
+        return;
+      }
+      if (moving) drawStripes(stripes, Math.max(elapsed, 0) / 1000, block.direction);
+      if (DRY_RUN && block.kind === "moving") {
+        const slow = ((elapsed / 1000) % DRY_BEAT_S) * DRY_SLOW_SPEED;
+        currentTarget = { h: block.direction * (slow - (DRY_BEAT_S * DRY_SLOW_SPEED) / 2), v: 0 };
+      }
+      nextPaint(step);
+    };
+    nextPaint(step);
+  });
+}
+
+function traceSvg(points, block) {
+  const usable = points.filter((point) => point.h !== null);
+  if (usable.length < 2) return "";
+  const width = 300;
+  const height = 60;
+  const middle = (block.from + block.to) / 2;
+  const from = middle - 3000;
+  const inside = usable.filter((point) => point.time >= from && point.time <= from + 6000);
+  const center = median(inside.map((point) => point.h));
+  const x = (time) => (((time - from) / 6000) * width).toFixed(1);
+  const y = (value) => (height / 2 - ((value - center) / 12) * (height / 2)).toFixed(1);
+  const parts = [];
+  let current = [];
+  inside.forEach((point, index) => {
+    if (index && point.time - inside[index - 1].time > 100) {
+      parts.push(current);
+      current = [];
+    }
+    current.push(`${x(point.time)},${y(point.h)}`);
+  });
+  parts.push(current);
+  const lines = parts.filter((part) => part.length > 1).map((part) =>
+    `<polyline points="${part.join(" ")}" fill="none" stroke="currentColor" stroke-width="1"/>`).join("");
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Augenposition über 6 Sekunden">${lines}</svg>`;
+}
+
+function showOkn(entries, blocks, result, meta) {
+  const analysed = blocks.map((entry) => {
+    const series = toSeries(entry.samples, result);
+    const raw = toSeries(entry.samples, result, { filter: false }).mittel;
+    const frames = Math.round(entry.block.durationMs / (1000 / 30));
+    return { entry, series, result: analyseBlock(series, raw, entry.block, frames) };
+  }).filter((item) => item.entry.block.kind === "moving" || item.entry.block.kind === "control");
+  const moving = analysed.filter((item) => item.entry.block.kind === "moving").map((item) => item.result);
+  const control = analysed.find((item) => item.entry.block.kind === "control").result;
+  const verdict = controlVerdict(moving, control);
+  const conform = moving.filter((item) => item.state === OKN_STATE.conform).length;
+  $("oknHead").textContent = `${conform} von ${moving.length} Richtungen reizkonform`;
+  const lines = analysed.map(({ entry, series, result: block }) => {
+    const beat = block.beats ? `${block.beats} Schläge nach ${directionWord(block.beatDirection)}, ${comma(block.rate, 1)}/s` : "keine Schläge";
+    const speed = block.spv === null ? "langsame Phase nicht messbar"
+      : `langsame Phase ${comma(block.spv, 1)} °/s, Gain ${comma(block.gain, 2)}, ${block.phases} Phasen${block.quantifiable ? "" : ", zu wenige für einen Wert"}`;
+    return `<div class="okn-line"><strong>${entry.block.label}:</strong> ${block.state}. ${beat}; ${speed}.${traceSvg(series.mittel, entry.block)}</div>`;
+  });
+  lines.push(`<div class="okn-line"><strong>Kontrolle:</strong> ${verdict.text}</div>`);
+  if (!result.passed) lines.push(`<div class="okn-line">Kalibrierung nicht bestanden: Werte in °/s nur als Hinweis.</div>`);
+  $("oknLines").innerHTML = lines.join("");
+  $("oknReport").hidden = false;
+  $("oknReport").scrollIntoView({ block: "start" });
+  runUnsaved = true;
+  $("oknSave").textContent = "Testlauf speichern";
+  lastRun = {
+    kind: "okn",
+    meta,
+    calibration: { rechts: result.rechts, links: result.links, mittel: result.mittel, passed: result.passed },
+    results: analysed.map(({ entry, result: block }) => ({ id: entry.block.id, ...block })),
+    control: verdict,
+    run: { calibration: entries, okn: blocks },
+    text: "",
+  };
+}
+
+async function runOknTest() {
+  if (busy || calibrating || !running) return;
+  const accepted = window.confirm("Der Test zeigt bewegte Streifen. Nicht durchführen bei bekannter Anfallsneigung oder Musterempfindlichkeit. Bei Unwohlsein sofort Esc drücken. Fortfahren?");
+  if (!accepted) return;
+  if (runUnsaved && !window.confirm("Der letzte Testlauf ist noch nicht gespeichert. Trotzdem neu starten?")) return;
+  if (!reference) {
+    rememberPosition();
+    if (!reference) return;
+  }
+  $("oknReport").hidden = true;
+  runUnsaved = false;
+  headEvents = [];
+  const id = ++calRun;
+  if (!await enterFullscreen(id)) return;
+  const entries = await calibrationSequence(id);
+  if (!entries) return;
+  const result = calibrate(entries);
+  if (!result.mittel.model) {
+    await leaveFullscreen();
+    showCalibration(result);
+    setStatus("OKN-Test beendet: Kalibrierung ergab kein Modell.", true);
+    return;
+  }
+  const stripes = prepareStripes();
+  if (!await announce(id, OKN_INSTRUCTION)) return;
+  const blocks = [];
+  for (const block of OKN_BLOCKS) {
+    if (block.kind === "control" && !await announce(id, "Jetzt nur den Punkt ansehen, nicht den Streifen folgen.")) return;
+    const entry = await oknBlock(id, block, stripes);
+    if (!entry) return;
+    blocks.push(entry);
+    currentTarget = { h: 0, v: 0 };
+  }
+  $("calDot").hidden = false;
+  await leaveFullscreen();
+  finishCalibration(entries);
+  const field = fieldDegrees(screenWidthCm(), Number($("distance").value));
+  showOkn(entries, blocks, result, {
+    createdAt: new Date().toISOString(),
+    test: "H40 mit Kontrollblock",
+    instruction: OKN_INSTRUCTION,
+    speedDegPerS: OKN_SPEED,
+    periodDeg: stripes.periodDeg,
+    stripePairs: field / stripes.periodDeg,
+    fieldDeg: field,
+    colors: [OKN_LIGHT, OKN_DARK],
+    smoothing: $("smoothing").selectedOptions[0].textContent,
+    distanceCm: Number($("distance").value),
+    screenWidthCm: screenWidthCm(),
+    mode: $("mMode").textContent,
+    clock: clockSource,
+    headEvents,
+    reference,
+  });
+  setStatus("OKN-Test fertig.");
+}
+
 function copyReport() {
   if (!lastRun) return;
   navigator.clipboard.writeText(lastRun.text)
@@ -1094,14 +1305,15 @@ function copyReport() {
 
 function saveRun() {
   if (!lastRun) return;
-  const { text, ...data } = lastRun;
+  const { text, kind, ...data } = lastRun;
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
-  link.download = `macvision-guetetest-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
+  link.download = `macvision-${kind ?? "guetetest"}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
   link.click();
   URL.revokeObjectURL(link.href);
   runUnsaved = false;
   $("rSave").textContent = "Gespeichert, nochmal speichern";
+  $("oknSave").textContent = "Gespeichert, nochmal speichern";
   setStatus(`Gespeichert in Downloads: ${link.download}`);
 }
 
@@ -1305,6 +1517,8 @@ $("rReport").addEventListener("click", () => {
   window.open("bericht.html", "_blank");
 });
 $("rSave").addEventListener("click", saveRun);
+$("oknTest").addEventListener("click", runOknTest);
+$("oknSave").addEventListener("click", saveRun);
 $("distance").addEventListener("change", geometryChanged);
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement) abortCalibration("Vollbild beendet: Kalibrierung abgebrochen.");
