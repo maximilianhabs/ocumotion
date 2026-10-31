@@ -1,7 +1,8 @@
 # Mac Vision — Konzept Augen, Blickrichtung, Nystagmus
 
-Stand 31.10.2026, nach externem Review überarbeitet. Nichts davon ist gebaut oder am Auge
-gemessen. Kameradaten aus Abschnitt 1 sind ausgelesen, alle Winkel und Rauschwerte sind
+Stand 31.10.2026, nach externem Review überarbeitet. Gebaut ist `testseite/augen.html` mit den
+MediaPipe-Irispunkten, ohne eigene Randanalyse. Am Auge ist noch nichts gemessen. Kalibrierung und
+geplante Untersuchungen stehen in `KONZEPT_OKULOMOTORIK.md`. Kameradaten aus Abschnitt 1 sind ausgelesen, alle Winkel und Rauschwerte sind
 Rechnungen unter genannten Annahmen. Grundlage ist `KONZEPT-okulomotorik.md` im Vision Lab, angepasst an diese Kamera.
 
 ## Kurzantwort

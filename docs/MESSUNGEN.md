@@ -56,3 +56,17 @@ Messsegment. Die Regel Analyserate ÷ 4 gilt hier als vorläufige Obergrenze.
 Chromium 152, Testvideo 30 Bilder/s, Browserfenster ausgeblendet: `MediaStreamTrackProcessor`
 im Hauptthread lieferte 61 Bilder in 2 s, Zeitstempel streng steigend. Im Worker ist die Klasse
 nicht verfügbar. Mit echter Kamera, normalem Chrome und Safari noch ungeprüft.
+
+## 31.10.2026 — Augenseite, Prüfung ohne Auge
+
+`make test`: 10 von 10 Prüfungen der Augenlogik bestanden, mit konstruierten Punkten. Die Seite
+lief mit Testvideo ohne Gesicht fehlerfrei und meldete 0 % gültig mit Grund „kein Gesicht“. Die
+Analyserate dort ist wegen des gedrosselten Fensters kein Messwert. Mit echtem Gesicht ungeprüft.
+
+## 31.10.2026 — Kalibrierablauf, Prüfung ohne Auge
+
+`make test`: 20 von 20 Prüfungen bestanden, mit konstruierten Daten. Im Browser lief der ganze Ablauf
+mit Testvideo und simuliertem Vollbild: 12 Ziele symmetrisch platziert, Erkennung unter der
+Vollbild-Fläche aktiv, Ende ohne Gesicht mit „nicht bestanden“ und ohne Gradanzeige. Echtes Vollbild
+und die Kalibrierung mit echtem Gesicht sind ungeprüft. Antwortet das Vollbild nicht, gibt ein
+Zeitlimit die Bedienung nach 2 s wieder frei.

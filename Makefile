@@ -1,4 +1,8 @@
-.PHONY: kamera kamera-details test-web
+.PHONY: kamera kamera-details test test-web
+
+# Augen- und Kalibrierlogik gegen konstruierte Daten pruefen
+test:
+	node --test testseite/*.test.mjs
 
 # Kameramodi auflisten, ohne die Kamera zu oeffnen
 kamera:

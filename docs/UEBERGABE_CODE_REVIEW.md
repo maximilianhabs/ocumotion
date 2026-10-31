@@ -1,0 +1,63 @@
+# Übergabe zur Code-Überprüfung
+
+Stand 31.10.2026. Für eine andere KI, die Code und Konzepte prüfen soll.
+
+## Projekt
+
+Mac Vision: lokales Tracking mit der 30-fps-Kamera eines MacBook Pro M1. Schwerpunkt ist jetzt ein
+Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausgebaut werden soll.
+
+- Ordner: `/Users/maximilianhabs/Code/mac-vision`
+- GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, `main`). Zeigt `git status` lokale
+  Änderungen, ist der Arbeitsordner maßgeblich.
+- Regeln: `CLAUDE.md`. Testen: `make test`. Start: `make test-web`, dann <http://127.0.0.1:5600/augen.html>.
+
+## Die neuen Ideen
+
+1. **Individuelle Kalibrierung:** Vollbild-Ablauf mit Blickzielen bekannten Winkels bei gemessenem
+   Abstand, empfohlen 40 cm. Mitte, rechts, links, oben, unten, dann separate Prüfziele.
+2. **Zusammenführung beider Augen:** Bewertung je Auge, Mittelwert gewichtet nach gemessener Güte. Ein
+   schlechtes Auge fällt aus. Der gewünschte „KI-Mittelwert“ ist bewusst vorerst statistisch, weil
+   ohne VOG-Referenz kein Lernziel existiert. Lernendes Modell ist Stufe 4.
+3. **Okulomotorik-Untersuchung als Ziel:** Sakkaden (Gain, Hypo-/Hypermetrie, Latenz), Blickfolge
+   langsam und schnell (glatt oder sakkadiert), Primärposition (Spontannystagmus), mit Bewertung.
+
+## Wo was steht
+
+| Datei | Inhalt |
+|---|---|
+| `docs/KONZEPT_OKULOMOTORIK.md` | **Hauptdokument:** Kalibrierung, Zusammenführung, Untersuchungen, Reihenfolge |
+| `docs/KONZEPT_AUGEN.md` | Messgrundlagen, Auflösung, Hürden, Stufen A0–A7 |
+| `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | Bauplan Worker und Bildquelle, mit Prüfvermerk |
+| `docs/ROADMAP.md`, `docs/MESSUNGEN.md` | Stand, Reihenfolge, Messprotokoll |
+| `docs/FUNDSTELLEN.md` | alle Fundstellen, auch außerhalb des Repos |
+| `testseite/augen.html` | Augenseite: Erkennung, Kurven, Kalibrierablauf |
+| `testseite/augen-logik.js` | Augenposition x und y aus den Gesichtspunkten |
+| `testseite/kalibrierung-logik.js` | Ziele, Modellanpassung, Bewertung, gewichteter Mittelwert |
+| `testseite/*.test.mjs` | 20 Logiktests mit konstruierten Daten |
+| `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
+
+## Bitte besonders prüfen
+
+1. **Geometrie:** Vorzeichen von x und y, Winkel-zu-Pixel-Rechnung, Zuordnung der Landmarken-Indizes.
+2. **Kalibrierung:** Ist das lineare Modell mit acht Anpassungszielen (fünf verschiedene Orte) sinnvoll?
+   Sind Prüfziele sauber getrennt? Trägt die Maßstabsaussage in Abschnitt 2 des Hauptdokuments?
+3. **Gewichtung:** Ist `1 / (Unruhe² + Prüffehler²)` mit nur je zwei Prüfzielen je Achse belastbar?
+   Der Fehler wird als horizontaler Wert genutzt; ist das vertretbar?
+4. **Zustände:** Abbruch, Stopp, Kamerawechsel, Modellwechsel und Stillstand während der Kalibrierung
+   in `augen.html`, auch das Sammeln in `collecting`.
+5. **Zeitbasis und Hauptthread:** Bildzeit, Blockierung durch die Erkennung, Verhalten bei verdecktem Fenster.
+6. **Untersuchungsplan:** Sind die Kennwerte fachlich richtig, und ist 30 Hz für Gain und Latenz ehrlich bewertet?
+
+## Bekannte Lücken
+
+- Kalibrierung und Gradanzeige sind **mit echtem Gesicht noch nicht gelaufen**, nur mit Logiktests und Testvideo.
+- Der Nutzer hat die erste Augenseite ohne Kalibrierung getestet: funktioniert laut Rückmeldung „super“, Zahlen fehlen.
+- `augen.html` nutzt MediaPipe-Irispunkte mit Modellglättung als Standard. Die eigene Irisrandanalyse fehlt.
+- Worker, Offline-Betrieb und festgelegte Modellversion fehlen. Die Untersuchungen aus Abschnitt 4 sind nicht gebaut.
+- Literatur ist bis auf einen Abstract nicht im Original gelesen. Normdaten fehlen.
+
+## Regeln für die Prüfung
+
+Nichts installieren, committen oder pushen. Keine Bilder oder Augenausschnitte speichern. Grad erst
+nach bestandener Kalibrierung, keine Diagnose, keine Rohspuren entfernen.

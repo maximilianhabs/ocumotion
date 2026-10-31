@@ -16,10 +16,15 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `README.md` | Überblick und Startbefehle |
 | `docs/KONZEPT.md` | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
 | `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A7 |
+| `docs/KONZEPT_OKULOMOTORIK.md` | Kalibrierung, Zusammenführung beider Augen, geplante Untersuchungen |
+| `docs/UEBERGABE_CODE_REVIEW.md` | Einstieg für eine KI, die Code und Konzepte prüfen soll |
 | `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | technischer Bauplan für den Messplatz, mit Prüfvermerk und Abweichungen |
 | `docs/ROADMAP.md` | Etappen und aktueller Stand |
 | `docs/MESSUNGEN.md` | alle Messergebnisse |
 | `testseite/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
+| `testseite/augen.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
+| `testseite/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
+| `testseite/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
 | `tools/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
 | `tools/kamera_details.swift` | Belichtung, Fokus und Bildwinkel abfragen, `make kamera-details` |
 | `.claude/launch.json` | Startkonfiguration `mac-vision-test`, Port 5600 |

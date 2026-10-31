@@ -1,0 +1,109 @@
+# Mac Vision — Konzept Kalibrierung und Okulomotorik-Untersuchung
+
+Stand 31.10.2026. Baut auf `KONZEPT_AUGEN.md` auf. Gebaut ist nur die Kalibrierung in
+`testseite/augen.html`, mit echtem Gesicht noch unbestätigt. Die Untersuchungen aus Abschnitt 4
+sind Plan. Alle Schwellen sind vorläufig. Forschungsprototyp, keine Diagnose.
+
+## 1. Ziel
+
+Eine geführte Untersuchung am Bildschirm, die Blickrichtung, Sakkaden, Blickfolge und
+Nystagmus in Primärposition misst und mit Unsicherheit bewertet. Grundlage ist eine
+individuelle Kalibrierung in Grad.
+
+## 2. Kalibrierung (gebaut)
+
+**Aufbau:** Bekannt sind Bildschirmbreite (28,6 cm) und Abstand Auge–Bildschirm. Daraus ergibt
+sich für jeden Blickpunkt der Winkel: `Versatz = tan(Winkel) × Abstand`. Die Kamera misst den
+Abstand nicht; die Person misst ihn einmal von Hand.
+
+**Empfohlener Abstand: 40 cm.** Der Bildschirm reicht dort rund ±19,7° horizontal und ±12,6°
+vertikal, die Iris liegt rechnerisch bei 27–36 Bildpunkten. Das ist ein Kompromiss aus Auflösung
+und Reichweite und muss noch gegen die reale Bildschärfe geprüft werden. Auch 30 und 50 cm sind wählbar.
+
+**Ablauf:** rund 50 s im Vollbild auf hellem Grund. Je Ziel 1,2 s Einschwingen, dann 2,8 s
+Datensammlung.
+
+| Rolle | Ziele |
+|---|---|
+| Anpassung | Mitte, rechts 15°, Mitte, links 15°, Mitte, oben 10°, Mitte, unten 10° |
+| Prüfung | rechts 7°, links 7°, oben 5°, unten 5° |
+
+**Modell je Auge:** `Grad = c0 + c1·x + c2·y`, getrennt für horizontal und vertikal, als kleinste
+Quadrate über den Median je Ziel. Prüfziele gehen nicht in die Anpassung ein.
+
+**Bestanden:** Prüffehler horizontal höchstens 2°, vertikal höchstens 3°, je Ziel mindestens
+10 gültige Bilder. Das wird je Auge entschieden. Besteht keines, bleibt die Anzeige ohne Grad.
+
+**Gültigkeit:** Die Kalibrierung liegt nur im Arbeitsspeicher und endet mit dem Stopp. Weicht die
+Irisbreite um mehr als 8 % ab oder wandert der Kopf um mehr als einen Irisdurchmesser, warnt die
+Seite. Der Bezug „Irisbreite × gemessener Abstand“ kann später den Abstand laufend schätzen.
+
+**Grenzen:** Die Abbildung ist linear und gilt für ±15°. Für den Blick darüber hinaus braucht es
+Ziele außerhalb des Bildschirms oder ein Augenmodell. Ein falscher Abstand oder Bildschirmwert
+verschiebt alle Grad um denselben Faktor, ohne dass der Prüffehler das zeigt, weil auch die
+Prüfziele damit berechnet sind. Den wahren Maßstab klärt erst der VOG-Vergleich.
+
+## 3. Zusammenführung beider Augen
+
+**Stufe 1, gebaut: gewichteter Mittelwert.** Gewicht je Auge: `1 / (Unruhe² + Prüffehler²)`.
+Das genauere Auge zählt mehr, ein durchgefallenes zählt nicht, bei Ausfall trägt das andere
+allein. Durch die Kalibrierung liegen beide auf derselben Gradskala, ein Augenwechsel springt also
+kaum. Die Seitendifferenz wird angezeigt.
+
+**Stufe 2, geplant: Bildgüte je Frame.** Lidöffnung, Randabdeckung und Kontrast verändern das
+Gewicht laufend.
+
+**Stufe 3, geplant: Kalman-Filter** über beide Augen. Nur als zusätzliche Spur, weil er die
+schnelle Phase dämpfen kann.
+
+**Stufe 4, später: lernendes Modell („KI-Mittelwert“).** Erst mit Vergleichsdaten aus der VOG.
+Ohne Referenz gibt es kein Lernziel, und ein Modell würde Kurven glätten oder Muster erfinden.
+
+**Harte Regeln:**
+
+- Rohspuren beider Augen bleiben immer erhalten und sichtbar. Eine schöne Kurve darf nie die einzige sein.
+- Keine Glättung, die Sakkaden oder schnelle Phasen abschwächt.
+- Der Mittelwert setzt gleichsinnige Augen voraus. Das stimmt bei Normalbefund und vielen
+  Nystagmen, nicht aber bei internukleärer Ophthalmoplegie, Paresen oder dissoziiertem Nystagmus.
+  Dort würde er den Befund verdecken. Bei großer Seitendifferenz gilt deshalb Einzelaugenauswertung.
+
+## 4. Okulomotorik-Untersuchung (Plan)
+
+Alle Prüfungen laufen nach bestandener Kalibrierung, mit gestütztem Kopf und auf dieselbe Weise:
+Reiz am Bildschirm, Zeitreihe, Kennwerte, Güte, Bewertung gegen vorläufige Bereiche.
+
+| Prüfung | Reiz | Kennwerte | Bewertung | Mit 30 Hz |
+|---|---|---|---|---|
+| **Primärposition** | 30–60 s Mittelpunkt, zusätzlich reizlose Fläche | Drift, Rucke, Schlagrichtung, Frequenz, langsame Phase | kein Nachweis über Grenze / Nystagmus / nicht auswertbar | möglich, unter Fixation |
+| **Sakkaden** | Sprünge ±10° und ±15°, horizontal und vertikal, zufälliger Zeitpunkt | Latenz, Amplitude, Gain = Amplitude ÷ Ziel, Korrektursakkaden, Seitenvergleich | normometrisch / hypometrisch / hypermetrisch | Gain gut, Latenz grob (±33 ms), Spitzengeschwindigkeit nein |
+| **Blickfolge langsam** | Sinus 0,2–0,4 Hz, ±10° | Gain, Phase, Zahl und Amplitude von Aufholsakkaden | glatt / sakkadiert | gut |
+| **Blickfolge schnell** | Sinus 0,6–1 Hz oder Rampe | wie oben | glatt / sakkadiert | möglich, Zuverlässigkeit prüfen |
+| **Blickhaltung** | exzentrische Ziele halten | Rückdrift, Rucke | Blickrichtungsnystagmus ja/nein | nur bis Bildschirmrand, Ziele außerhalb nötig |
+| **Optokinetik** | bewegte Streifen | Schlagrichtung, Seitenvergleich | erhalten / asymmetrisch | Funktionstest |
+
+**Sakkadenbewertung:** Gemessen wird die erste Sakkade vor einer Korrektur. Hypometrie heißt
+Gain unter 1 mit Korrektur in Zielrichtung, Hypermetrie Gain über 1 mit Rückkorrektur. Eine
+leichte Hypometrie ist auch beim Gesunden üblich, die Bereiche müssen also aus Normdaten kommen.
+
+**Blickfolgebewertung:** Aufholsakkaden werden über Geschwindigkeitssprünge erkannt und aus der
+glatten Komponente entfernt. Gain = Augengeschwindigkeit ÷ Zielgeschwindigkeit.
+
+**Gemeinsame Grenzen:** Fixation bleibt möglich, die schnelle Phase ist nicht vermessbar, Torsion
+fehlt, und die vertikale Messung ist schwächer. Das Lid folgt dem Blick nach unten. Ein iPhone mit
+60 fps verbessert Latenz und Sakkadenerkennung, ersetzt aber keine VOG mit mehr als 200 Hz.
+
+**Ergebnisbericht:** Je Prüfung Rohkurve, Kennwerte mit Streuung, Zahl gültiger Durchgänge, Güte
+und Einordnung. Die Ausgabe beschreibt Messwerte; sie stellt keine Diagnose. Normbereiche fehlen
+bisher, also braucht es Vergleichsdaten Gesunder je Altersgruppe.
+
+## 5. Reihenfolge
+
+1. Kalibrierung mit echtem Gesicht prüfen, Prüffehler und Unruhe protokollieren.
+2. Worker, unabhängige Bildquelle und eigene Irisrandanalyse (`IMPLEMENTIERUNGSNOTIZ_CODEX.md`).
+3. Künstliches Auge und Kopf-Störtest, jetzt auch mit Sakkaden und Blickfolge.
+4. Blickfolge langsam: einfachste Prüfung mit bekanntem Sollsignal.
+5. Sakkaden, dann Primärposition, dann schnelle Blickfolge und Optokinetik.
+6. VOG-Vergleich und Normdaten an Gesunden.
+7. Ergebnisbericht, Stufe 2 und 3 der Zusammenführung.
+
+Patientenmessungen erst danach, mit Einwilligung und pseudonymisiert.

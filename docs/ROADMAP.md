@@ -14,15 +14,17 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 | E6 | Messen, Güte, Speichern | Taktgeber-Kalibrierung intern und iPhone liegt vor | offen |
 | E7 | Analysen: Tapping, Tremor, Gesicht | Vortests bestanden, Grenzen dokumentiert | offen |
 | E8 | Optional: Apple Vision, Sprachmodell | Vergleich gegen MediaPipe liegt vor | offen |
-| A0–A7 | Augen, Blickrichtung, Nystagmus | siehe `KONZEPT_AUGEN.md` Abschnitt 6 | Konzept fertig, **nächster Schwerpunkt** |
+| A0–A7 | Augen, Blickrichtung, Nystagmus | siehe `KONZEPT_AUGEN.md` Abschnitt 6 | Augenseite steht, **aktueller Schwerpunkt** |
+| O1–O7 | Kalibrierung und Okulomotorik-Untersuchung | siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 5 | Kalibrierung gebaut, Untersuchungen geplant |
 
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
 
 ## Reihenfolge
 
 1. Testseite als Messwerkzeug: getrennte Statistik je Modell, Bildzeit und Sitzungszustände. **Erledigt.**
-2. Vortest, dann Bildquelle und Analyse in Web Worker umstellen (siehe `IMPLEMENTIERUNGSNOTIZ_CODEX.md`).
-3. Augenmodus mit horizontaler Rohkurve und Gültigkeitsanzeige (A1).
+2. Augenmodus mit Rohkurven und Gültigkeitsanzeige (A1). **Erste Fassung steht:** `testseite/augen.html`, auf Wunsch vor dem Worker gebaut, nur mit MediaPipe-Irispunkten.
+   Individuelle Kalibrierung und gewichteter Mittelwert sind vorgezogen; mit echtem Gesicht ungeprüft.
+3. Vortest, dann Bildquelle und Analyse in Web Worker umstellen (siehe `IMPLEMENTIERUNGSNOTIZ_CODEX.md`); eigene Irisrandanalyse ergänzen.
 4. Künstliches Auge und Kopf-Störtest.
 5. Verfahren bei mehreren Abständen und Lichtbedingungen vergleichen.
 6. Früher Vergleich mit VOG.

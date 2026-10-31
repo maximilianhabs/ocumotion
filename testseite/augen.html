@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Vision Augen</title>
+<style>
+  :root {
+    --bg: #f5f5f4; --panel: #ffffff; --text: #1c1917; --muted: #78716c;
+    --line: #e7e5e4; --accent: #0f766e; --warn: #b45309; --stage: #1c1917;
+    --right: #0f766e; --left: #c2410c; --head: #a8a29e; --mean: #1c1917;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --panel: #292524; --text: #f5f5f4; --muted: #a8a29e;
+      --line: #44403c; --accent: #2dd4bf; --warn: #fbbf24; --stage: #0c0a09;
+      --right: #2dd4bf; --left: #fb923c; --head: #78716c; --mean: #f5f5f4;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px;
+         max-width: 1320px; margin: 0 auto; padding: 16px; }
+  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+  .stage { position: relative; aspect-ratio: 16 / 9; background: var(--stage);
+           border-radius: 10px; overflow: hidden; }
+  .stage video, .stage > canvas { position: absolute; inset: 0; width: 100%; height: 100%;
+           object-fit: contain; transform: scaleX(-1); }
+  #hint { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
+          color: #d6d3d1; text-align: center; }
+  #hint[hidden] { display: none; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 12px 14px; margin-bottom: 12px; }
+  h2 { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 8px;
+       text-transform: uppercase; letter-spacing: .04em; }
+  .eyes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .eyes figure { margin: 0; }
+  .eyes canvas { width: 100%; aspect-ratio: 2 / 1; background: var(--stage); border-radius: 8px;
+                 display: block; transform: scaleX(-1); }
+  figcaption { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .curve { width: 100%; height: 170px; display: block; }
+  .axis { color: var(--muted); font-size: 12px; margin: 8px 0 2px; }
+  #cal { position: fixed; inset: 0; z-index: 10; background: #e7e5e4; color: #1c1917; }
+  #cal[hidden] { display: none; }
+  #calDot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+            background: #dc2626; box-shadow: 0 0 0 7px #e7e5e4, 0 0 0 9px #1c1917; }
+  #calDot::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: #1c1917; }
+  #calText { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; font-size: 14px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 3px;
+                         margin-right: 5px; vertical-align: middle; background: var(--c); }
+  ol { margin: 0; padding-left: 18px; font-size: 13px; }
+  select, button { font: inherit; color: inherit; }
+  select { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
+           border-radius: 6px; margin-bottom: 6px; }
+  button { width: 100%; padding: 8px; border: 0; border-radius: 6px; background: var(--accent);
+           color: var(--panel); font-weight: 600; cursor: pointer; margin-bottom: 6px; }
+  button.stop { background: var(--warn); }
+  button.second { background: var(--bg); color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: default; }
+  dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+  .big { font-size: 30px; font-weight: 700; color: var(--accent); min-height: 44px; }
+  #status { color: var(--muted); font-size: 13px; min-height: 19px; }
+  #status.warn { color: var(--warn); }
+  footer { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mac Vision Augen</h1>
+    <p>Stufe A1: Irismitte aus MediaPipe, horizontale Rohkurve. <a href="index.html">Zur allgemeinen Testseite</a></p>
+  </header>
+
+  <div>
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="hint">Auf „Kamera starten“ klicken und die Freigabe erlauben.</div>
+    </div>
+    <div class="eyes">
+      <figure><canvas id="eyeLinks" width="240" height="120"></canvas><figcaption>Linkes Auge der Person</figcaption></figure>
+      <figure><canvas id="eyeRechts" width="240" height="120"></canvas><figcaption>Rechtes Auge der Person</figcaption></figure>
+    </div>
+    <section style="margin-top:12px">
+      <h2>Augenposition, letzte 10 s</h2>
+      <div class="axis">Horizontal: oben = rechts der Person</div>
+      <canvas id="curve" class="curve"></canvas>
+      <div class="axis">Vertikal: oben = nach oben</div>
+      <canvas id="curveV" class="curve"></canvas>
+      <div class="legend">
+        <span style="--c:var(--mean)">Mittelwert</span>
+        <span style="--c:var(--right)">rechtes Auge</span>
+        <span style="--c:var(--left)">linkes Auge</span>
+        <span style="--c:var(--head)">Kopf</span>
+        <span id="unit">Irisdurchmesser, Lücken = ungültig</span>
+      </div>
+    </section>
+  </div>
+
+  <aside>
+    <section>
+      <h2>So testest du</h2>
+      <ol>
+        <li>Helles, gleichmäßiges Licht von vorn. Brille abnehmen.</li>
+        <li>Augen <strong>40 cm</strong> vom Bildschirm messen, zum Beispiel A4-Blatt längs (30 cm) plus Handbreite (10 cm). Kopf mittig, möglichst aufstützen.</li>
+        <li>Kamera starten, dann „Kalibrieren“. Dauer rund eine Minute.</li>
+        <li>Kopf still, nur mit den Augen dem Punkt folgen. Abbruch mit Esc.</li>
+        <li>Danach zeigt die Kurve Grad. Nach einer Kopfbewegung neu kalibrieren.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Steuerung</h2>
+      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
+      <select id="smoothing" aria-label="Glättung">
+        <option value="1">Modellglättung an (ein Gesicht)</option>
+        <option value="2">Modellglättung aus (zwei Gesichter)</option>
+      </select>
+      <button id="toggle">Kamera starten</button>
+      <select id="distance" aria-label="Abstand Augen zum Bildschirm">
+        <option value="30">Abstand 30 cm</option>
+        <option value="40" selected>Abstand 40 cm (empfohlen)</option>
+        <option value="50">Abstand 50 cm</option>
+      </select>
+      <button id="calibrate" disabled>Kalibrieren</button>
+      <button id="zero" class="second" disabled>Nullpunkt ohne Kalibrierung</button>
+      <div id="status" role="status"></div>
+    </section>
+    <section>
+      <h2>Blickrichtung</h2>
+      <div class="big" id="direction">–</div>
+      <dl>
+        <dt>Position rechts / links</dt><dd id="mPos">–</dd>
+        <dt>Nullpunkt</dt><dd id="mZero">nicht gesetzt</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Kalibrierung</h2>
+      <dl>
+        <dt>Ergebnis</dt><dd id="cState">keine</dd>
+        <dt>Prüffehler rechts h / v</dt><dd id="cRechts">–</dd>
+        <dt>Prüffehler links h / v</dt><dd id="cLinks">–</dd>
+        <dt>Unruhe rechts / links</dt><dd id="cNoise">–</dd>
+        <dt>Gewicht rechts / links</dt><dd id="cWeight">–</dd>
+        <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
+        <dt>Seitendifferenz</dt><dd id="mDiff">–</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Messwerte (letzte 3 s)</h2>
+      <dl>
+        <dt>Ausgehandelt</dt><dd id="mMode">–</dd>
+        <dt>Analysen/s</dt><dd id="mRate">–</dd>
+        <dt>Gültige Bilder</dt><dd id="mValid">–</dd>
+        <dt>Grund für Ausfälle</dt><dd id="mReason">–</dd>
+        <dt>Streuung</dt><dd id="mNoise">–</dd>
+        <dt>Irisbreite</dt><dd id="mIris">–</dd>
+        <dt>Analysedauer</dt><dd id="mMs">–</dd>
+        <dt>Doppelte Bildzeiten</dt><dd id="mDup">–</dd>
+        <dt>Zeitbasis</dt><dd id="mClock">–</dd>
+      </dl>
+    </section>
+  </aside>
+
+  <footer>
+    Forschungsprototyp, keine Diagnose. Grad gelten nur für den gemessenen Abstand und nur, solange der
+    Kopf ruhig bleibt; die Kalibrierung liegt im Arbeitsspeicher und endet mit dem Stopp. Bilder und Augenausschnitte bleiben im Browser und werden weder
+    gespeichert noch gesendet, auch die Kurve verschwindet mit der Seite. Streuung in Irisdurchmessern;
+    sie beweist keine Genauigkeit, weil Modellglättung sie senken kann.
+    Die Schwellen sind vorläufig. Programmcode und Modell kommen aus dem Netz.
+  </footer>
+</main>
+
+<div id="cal" hidden>
+  <div id="calDot"></div>
+  <p id="calText"></p>
+</div>
+
+<script type="module">
+import { FilesetResolver, FaceLandmarker }
+  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
+import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
+import { calibrate, fuse, median, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
+const WINDOW_MS = 3000;
+const CURVE_MS = 10000;
+const IRIS_RANGE = 0.6;
+const DEGREE_RANGE = 25;
+const HEAD_IN_DEGREES = 10;
+const DIRECTION_DEGREES = 5;
+const MAX_DISTANCE_DRIFT = 0.08;
+const MAX_HEAD_DRIFT = 1;
+const FULLSCREEN_TIMEOUT_MS = 2000;
+const CAL_LEAD_MS = 3000;
+const CAL_SETTLE_MS = 1200;
+const CAL_COLLECT_MS = 2800;
+const STALL_MS = 1500;
+const WARMUP_MS = 1000;
+const ZERO_MS = 1000;
+
+const $ = (id) => document.getElementById(id);
+const video = $("video");
+const overlay = $("overlay");
+const ctx = overlay.getContext("2d");
+const controls = ["toggle", "camera", "smoothing", "distance"];
+
+let fileset = null;
+let landmarker = null;
+let stream = null;
+let running = false;
+let busy = false;
+let session = 0;
+let frameHandle = null;
+let segmentStart = 0;
+let lastFrameAt = null;
+let lastFrameMs = null;
+let clockOffset = null;
+let lastStamp = 0;
+let clockSource = "–";
+let duplicates = 0;
+let stalled = false;
+let previousHead = null;
+let headZero = null;
+let zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
+let zeroSet = false;
+let samples = [];
+let calibration = null;
+let calRun = 0;
+let collecting = null;
+
+const comma = (value, digits = 2) => value.toFixed(digits).replace(".", ",");
+const signed = (value) => (value === null ? "–" : `${value > 0 ? "+" : ""}${comma(value)}`);
+
+function setStatus(text, warn = false) {
+  $("status").textContent = text;
+  $("status").classList.toggle("warn", warn);
+}
+
+async function createLandmarker() {
+  fileset ??= await FilesetResolver.forVisionTasks(WASM);
+  landmarker = await FaceLandmarker.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
+    runningMode: "VIDEO",
+    numFaces: Number($("smoothing").value),
+    outputFaceBlendshapes: false,
+    outputFacialTransformationMatrixes: false,
+  });
+}
+
+function closeLandmarker() {
+  landmarker?.close();
+  landmarker = null;
+}
+
+function resetSegment() {
+  segmentStart = performance.now() + WARMUP_MS;
+  samples = [];
+  duplicates = 0;
+  previousHead = null;
+  headZero = null;
+  zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
+  zeroSet = false;
+  $("mZero").textContent = calibration ? "aus Kalibrierung" : "nicht gesetzt";
+  $("direction").textContent = "–";
+  $("mPos").textContent = "–";
+}
+
+function clearRates() {
+  for (const id of ["mRate", "mValid", "mReason", "mNoise", "mIris", "mMs", "mDup", "mDiff", "cDrift"]) {
+    $(id).textContent = "–";
+  }
+}
+
+function frameClock(metadata) {
+  if (metadata.captureTime > 0) return { ms: metadata.captureTime, source: "captureTime" };
+  return { ms: metadata.mediaTime * 1000, source: "mediaTime" };
+}
+
+function taskStamp(frameMs) {
+  clockOffset ??= lastStamp + 1000 - frameMs;
+  lastStamp = Math.max(lastStamp + 1, Math.round(frameMs + clockOffset));
+  return lastStamp;
+}
+
+function drawEyeMarks(points, eye, color) {
+  const px = (index) => ({ x: points[index].x * overlay.width, y: points[index].y * overlay.height });
+  const center = px(eye.center);
+  const rim = px(eye.rimA);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, Math.hypot(rim.x - center.x, rim.y - center.y), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  for (const point of [center, px(eye.imageLeft), px(eye.imageRight)]) {
+    ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
+  }
+}
+
+// Vergroesserter Ausschnitt nur zur Anzeige; er wird nirgends abgelegt.
+function drawEyeCrop(points, eye, canvas, color) {
+  const target = canvas.getContext("2d");
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  const a = points[eye.imageLeft];
+  const b = points[eye.imageRight];
+  const spanX = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h) * 1.7;
+  const spanY = spanX / 2;
+  const sx = ((a.x + b.x) / 2) * w - spanX / 2;
+  const sy = ((a.y + b.y) / 2) * h - spanY / 2;
+  target.drawImage(video, sx, sy, spanX, spanY, 0, 0, canvas.width, canvas.height);
+  const scale = canvas.width / spanX;
+  const cx = (points[eye.center].x * w - sx) * scale;
+  const cy = (points[eye.center].y * h - sy) * scale;
+  const rim = points[eye.rimA];
+  const radius = Math.hypot((rim.x - points[eye.center].x) * w, (rim.y - points[eye.center].y) * h) * scale;
+  target.strokeStyle = color;
+  target.lineWidth = 2;
+  target.beginPath();
+  target.arc(cx, cy, radius, 0, Math.PI * 2);
+  target.stroke();
+}
+
+function drawCurve(id, keys) {
+  const canvas = $(id);
+  const context = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.round(canvas.clientWidth * dpr);
+  const height = Math.round(canvas.clientHeight * dpr);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  const style = getComputedStyle(document.documentElement);
+  const range = calibration ? DEGREE_RANGE : IRIS_RANGE;
+  const marks = calibration ? [-15, -5, 0, 5, 15] : [-0.12, 0, 0.12];
+  context.clearRect(0, 0, width, height);
+  const yOf = (value) => height / 2 - (value / range) * (height / 2);
+  context.strokeStyle = style.getPropertyValue("--line");
+  context.lineWidth = dpr;
+  for (const value of marks) {
+    context.beginPath();
+    context.moveTo(0, yOf(value));
+    context.lineTo(width, yOf(value));
+    context.stroke();
+  }
+  if (!samples.length) return;
+  const newest = samples.at(-1).at;
+  const xOf = (at) => width - ((newest - at) / CURVE_MS) * width;
+  for (const [key, token, thickness] of keys) {
+    context.strokeStyle = style.getPropertyValue(token);
+    context.lineWidth = thickness * dpr;
+    context.beginPath();
+    let open = false;
+    for (const sample of samples) {
+      const value = sample[key];
+      if (value === null) {
+        open = false;
+        continue;
+      }
+      const y = yOf(Math.max(-range, Math.min(range, value)));
+      if (open) context.lineTo(xOf(sample.at), y);
+      else context.moveTo(xOf(sample.at), y);
+      open = true;
+    }
+    context.stroke();
+  }
+}
+
+function drawCurves() {
+  drawCurve("curve", [["head", "--head", 1.5], ["rechts", "--right", 1.5], ["links", "--left", 1.5], ["mean", "--mean", 2.5]]);
+  drawCurve("curveV", [["vRechts", "--right", 1.5], ["vLinks", "--left", 1.5], ["vMean", "--mean", 2.5]]);
+}
+
+function applyValues(sample, raw) {
+  if (calibration) {
+    const degrees = (side) => (raw[side] && calibration[side].weight > 0
+      ? toDegrees(calibration[side].model, raw[side].x, raw[side].y) : null);
+    const right = degrees("rechts");
+    const left = degrees("links");
+    const fused = fuse(right, left, calibration);
+    sample.rechts = right?.h ?? null;
+    sample.links = left?.h ?? null;
+    sample.vRechts = right?.v ?? null;
+    sample.vLinks = left?.v ?? null;
+    sample.mean = fused?.h ?? null;
+    sample.vMean = fused?.v ?? null;
+    return;
+  }
+  const relative = (side) => (raw[side]
+    ? { x: raw[side].x - zero[side].x, y: raw[side].y - zero[side].y } : null);
+  const right = relative("rechts");
+  const left = relative("links");
+  const present = [right, left].filter(Boolean);
+  sample.rechts = right?.x ?? null;
+  sample.links = left?.x ?? null;
+  sample.vRechts = right?.y ?? null;
+  sample.vLinks = left?.y ?? null;
+  if (present.length) {
+    sample.mean = present.reduce((sum, value) => sum + value.x, 0) / present.length;
+    sample.vMean = present.reduce((sum, value) => sum + value.y, 0) / present.length;
+  }
+}
+
+function recordFrame(now, faces, ms) {
+  const sample = { at: now, ms, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
+                   vMean: null, head: null, irisPx: null, headPoint: null, raw: null, reasons: [] };
+  if (faces.length !== 1) {
+    sample.reasons.push(faces.length ? "zweite Person" : "kein Gesicht");
+    previousHead = null;
+    samples.push(sample);
+    collecting?.samples.push({ rechts: null, links: null, irisPx: null, head: null });
+    return;
+  }
+  const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead);
+  previousHead = frame.head;
+  headZero ??= frame.head;
+  const point = (eye) => (eye.valid ? { x: eye.x, y: eye.y } : null);
+  sample.raw = { rechts: point(frame.rechts), links: point(frame.links) };
+  sample.irisPx = frame.irisPx;
+  sample.headPoint = frame.head;
+  if (frame.irisPx > 0) {
+    const scale = calibration ? HEAD_IN_DEGREES : 1;
+    sample.head = (-(frame.head.x - headZero.x) / frame.irisPx) * scale;
+  }
+  applyValues(sample, sample.raw);
+  sample.reasons = [...new Set([...frame.rechts.reasons, ...frame.links.reasons])];
+  samples.push(sample);
+  collecting?.samples.push({ ...sample.raw, irisPx: frame.irisPx, head: frame.head });
+}
+
+function analyse(now, stamp) {
+  const started = performance.now();
+  const result = landmarker.detectForVideo(video, stamp);
+  const ms = performance.now() - started;
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  const faces = result.faceLandmarks;
+  if (faces.length === 1) {
+    const style = getComputedStyle(document.documentElement);
+    const right = style.getPropertyValue("--right");
+    const left = style.getPropertyValue("--left");
+    drawEyeMarks(faces[0], EYES.rechts, right);
+    drawEyeMarks(faces[0], EYES.links, left);
+    drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
+    drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
+  }
+  recordFrame(now, faces, ms);
+  samples = samples.filter((sample) => now - sample.at <= CURVE_MS);
+  if (!collecting) drawCurves();
+}
+
+function requestFrame(id) {
+  frameHandle = video.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
+}
+
+function onFrame(id, now, metadata) {
+  if (id !== session) return;
+  lastFrameAt = now;
+  if (stalled) {
+    stalled = false;
+    resetSegment();
+    setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
+  }
+  const clock = frameClock(metadata);
+  clockSource = clock.source;
+  if (lastFrameMs !== null && clock.ms <= lastFrameMs) {
+    duplicates += 1;
+    requestFrame(id);
+    return;
+  }
+  lastFrameMs = clock.ms;
+  try {
+    analyse(now, taskStamp(clock.ms));
+  } catch (error) {
+    stop();
+    setStatus(`Analyse abgebrochen: ${error.message}`, true);
+    return;
+  }
+  requestFrame(id);
+}
+
+function setZero() {
+  const now = performance.now();
+  const recent = samples.filter((sample) => now - sample.at <= ZERO_MS && sample.raw);
+  const center = (side) => {
+    const points = recent.map((sample) => sample.raw[side]).filter(Boolean);
+    if (!points.length) return null;
+    return { x: median(points.map((p) => p.x)), y: median(points.map((p) => p.y)) };
+  };
+  const right = center("rechts");
+  const left = center("links");
+  if (!right || !left) {
+    setStatus("Nullpunkt nicht gesetzt: keine gültigen Augenwerte.", true);
+    return;
+  }
+  zero = { rechts: right, links: left };
+  zeroSet = true;
+  samples = [];
+  previousHead = null;
+  headZero = null;
+  $("mZero").textContent = "gesetzt";
+  setStatus("Nullpunkt gesetzt.");
+}
+
+function setCalibration(next) {
+  calibration = next;
+  samples = [];
+  headZero = null;
+  const degrees = Boolean(next);
+  $("unit").textContent = degrees
+    ? `Grad, Kopf: 1 Irisdurchmesser = ${HEAD_IN_DEGREES} Einheiten, Lücken = ungültig`
+    : "Irisdurchmesser, Lücken = ungültig";
+  $("mZero").textContent = degrees ? "aus Kalibrierung" : "nicht gesetzt";
+  drawCurves();
+}
+
+function showCalibration(result) {
+  const eyeText = (eye) => (eye.errorH === null
+    ? (eye.reason ?? "–")
+    : `${comma(eye.errorH, 1)}° / ${comma(eye.errorV, 1)}°`);
+  $("cRechts").textContent = eyeText(result.rechts);
+  $("cLinks").textContent = eyeText(result.links);
+  const noise = (eye) => (eye.noise === null ? "–" : `${comma(eye.noise, 2)}°`);
+  $("cNoise").textContent = `${noise(result.rechts)} / ${noise(result.links)}`;
+  const total = result.rechts.weight + result.links.weight;
+  const share = (eye) => (total > 0 ? `${Math.round((eye.weight / total) * 100)} %` : "–");
+  $("cWeight").textContent = `${share(result.rechts)} / ${share(result.links)}`;
+  if (!result.passed) $("cState").textContent = "nicht bestanden";
+  else {
+    const both = result.rechts.passed && result.links.passed;
+    $("cState").textContent = both ? "bestanden, beide Augen" : `bestanden, nur ${result.best}`;
+  }
+}
+
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+function placeDot(target) {
+  const distance = Number($("distance").value);
+  const pixel = targetPixels(target, distance, window.innerWidth, window.innerHeight);
+  $("calDot").style.left = `${pixel.x}px`;
+  $("calDot").style.top = `${pixel.y}px`;
+}
+
+async function runCalibration() {
+  const id = ++calRun;
+  const active = () => id === calRun && running && document.fullscreenElement !== null;
+  try {
+    await Promise.race([
+      document.documentElement.requestFullscreen(),
+      wait(FULLSCREEN_TIMEOUT_MS).then(() => { throw new Error("keine Antwort"); }),
+    ]);
+  } catch (error) {
+    setStatus(`Vollbild nicht möglich: ${error.message}`, true);
+    return;
+  }
+  await wait(300);
+  // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
+  if (Math.abs(window.innerWidth - window.screen.width) > 2) {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    setStatus("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.", true);
+    return;
+  }
+  $("cal").hidden = false;
+  placeDot({ h: 0, v: 0 });
+  $("calText").textContent = "Kopf still halten, nur mit den Augen dem Punkt folgen. Abbruch mit Esc.";
+  await wait(CAL_LEAD_MS);
+  const entries = [];
+  for (const [index, target] of STEPS.entries()) {
+    if (!active()) break;
+    placeDot(target);
+    $("calText").textContent = `Punkt ${index + 1} von ${STEPS.length}`;
+    await wait(CAL_SETTLE_MS);
+    const entry = { target, samples: [] };
+    collecting = entry;
+    await wait(CAL_COLLECT_MS);
+    collecting = null;
+    entries.push(entry);
+  }
+  const complete = active() && entries.length === STEPS.length;
+  $("cal").hidden = true;
+  if (document.fullscreenElement) await document.exitFullscreen();
+  if (!running) return;
+  if (!complete) {
+    setStatus("Kalibrierung abgebrochen.", true);
+    return;
+  }
+  const measured = entries.flatMap((entry) => entry.samples).filter((sample) => sample.head);
+  const irisList = measured.map((sample) => sample.irisPx);
+  const result = calibrate(entries);
+  showCalibration(result);
+  if (!result.passed || !irisList.length) {
+    setCalibration(null);
+    setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
+    return;
+  }
+  result.irisPx = median(irisList);
+  result.head = { x: median(measured.map((s) => s.head.x)), y: median(measured.map((s) => s.head.y)) };
+  setCalibration(result);
+  setStatus("Kalibriert. Kurve in Grad.");
+}
+
+function renderStats() {
+  if (!running) return;
+  const now = performance.now();
+  if (!stalled && lastFrameAt !== null && now - lastFrameAt > STALL_MS) {
+    stalled = true;
+    resetSegment();
+    setStatus("Keine Bilder: Fenster verdeckt? Messsegment beendet.", true);
+  }
+  if (now < segmentStart) {
+    clearRates();
+    return;
+  }
+  const from = Math.max(now - WINDOW_MS, segmentStart);
+  const seconds = Math.max((now - from) / 1000, 0.001);
+  const recent = samples.filter((sample) => sample.at >= from);
+  $("mRate").textContent = comma(recent.length / seconds, 1);
+  $("mDup").textContent = duplicates;
+  $("mClock").textContent = clockSource;
+  if (!recent.length) {
+    for (const id of ["mValid", "mReason", "mNoise", "mIris", "mMs"]) $(id).textContent = "–";
+    return;
+  }
+  const valid = recent.filter((sample) => sample.mean !== null);
+  $("mValid").textContent = `${Math.round((valid.length / recent.length) * 100)} %`;
+  const counts = new Map();
+  for (const sample of recent) {
+    for (const reason of sample.reasons) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  $("mReason").textContent = top ? top[0] : "keine";
+  const noise = standardDeviation(valid.map((sample) => sample.mean));
+  $("mNoise").textContent = noise === null ? "–" : comma(noise, 3);
+  const widths = recent.map((sample) => sample.irisPx).filter((value) => value !== null);
+  $("mIris").textContent = widths.length ? `${Math.round(median(widths))} px` : "–";
+  $("mMs").textContent = `${comma(recent.reduce((sum, s) => sum + s.ms, 0) / recent.length, 1)} ms`;
+  const latest = valid.slice(-5);
+  const last = samples.at(-1);
+  const unit = calibration ? "°" : "";
+  const value = (number) => (number === null ? "–" : `${signed(number)}${unit}`);
+  $("mPos").textContent = `${value(last.rechts)} / ${value(last.links)}`;
+  if (calibration) {
+    const h = latest.length ? median(latest.map((sample) => sample.mean)) : null;
+    const v = latest.length ? median(latest.map((sample) => sample.vMean)) : null;
+    const side = direction(h, DIRECTION_DEGREES);
+    let label = "–";
+    if (side !== null) {
+      const height = v > DIRECTION_DEGREES ? " oben" : v < -DIRECTION_DEGREES ? " unten" : "";
+      label = `${side}${height} ${comma(Math.abs(h), 0)}°`;
+    }
+    $("direction").textContent = label;
+    const both = recent.filter((sample) => sample.rechts !== null && sample.links !== null);
+    $("mDiff").textContent = both.length
+      ? `${comma(median(both.map((sample) => Math.abs(sample.rechts - sample.links))), 1)}°` : "–";
+    const seen = recent.filter((sample) => sample.headPoint);
+    if (seen.length) {
+      const iris = median(seen.map((sample) => sample.irisPx));
+      const change = iris / calibration.irisPx - 1;
+      const headX = median(seen.map((sample) => sample.headPoint.x));
+      const headY = median(seen.map((sample) => sample.headPoint.y));
+      const moved = Math.hypot(headX - calibration.head.x, headY - calibration.head.y) / iris;
+      $("cDrift").textContent = `${change > 0 ? "näher " : "weiter "}${comma(Math.abs(change) * 100, 0)} %`;
+      if (Math.abs(change) > MAX_DISTANCE_DRIFT || moved > MAX_HEAD_DRIFT) {
+        setStatus("Kopf hat sich bewegt: Grad unsicher, bitte neu kalibrieren.", true);
+      } else if ($("status").classList.contains("warn")) {
+        setStatus("Kalibriert. Kurve in Grad.");
+      }
+    }
+  } else {
+    const smoothed = latest.length ? median(latest.map((sample) => sample.mean)) : null;
+    $("direction").textContent = zeroSet ? (direction(smoothed) ?? "–") : "nicht kalibriert";
+  }
+}
+
+async function start() {
+  const deviceId = $("camera").value;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
+               ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
+    });
+    video.srcObject = stream;
+    await video.play();
+    if (!landmarker) {
+      setStatus("Lade Modell …");
+      await createLandmarker();
+    }
+  } catch (error) {
+    stop();
+    setStatus(`Start fehlgeschlagen: ${error.message}`, true);
+    return;
+  }
+  overlay.width = video.videoWidth;
+  overlay.height = video.videoHeight;
+  $("hint").hidden = true;
+  running = true;
+  session += 1;
+  stalled = false;
+  lastFrameMs = null;
+  clockOffset = null;
+  $("toggle").textContent = "Kamera stoppen";
+  $("toggle").classList.add("stop");
+  $("zero").disabled = false;
+  $("calibrate").disabled = false;
+  const track = stream.getVideoTracks()[0];
+  track.addEventListener("ended", () => {
+    if (!running) return;
+    stop();
+    setStatus("Kamera getrennt. Messung beendet.", true);
+  });
+  const { width, height, frameRate } = track.getSettings();
+  $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0, 1)} fps`;
+  await listCameras();
+  resetSegment();
+  lastFrameAt = performance.now();
+  setStatus("Läuft. Abstand messen, dann kalibrieren.");
+  requestFrame(session);
+}
+
+function stop() {
+  running = false;
+  session += 1;
+  calRun += 1;
+  collecting = null;
+  $("cal").hidden = true;
+  if (document.fullscreenElement) document.exitFullscreen();
+  setCalibration(null);
+  if (frameHandle !== null) video.cancelVideoFrameCallback(frameHandle);
+  frameHandle = null;
+  stream?.getTracks().forEach((track) => track.stop());
+  stream = null;
+  video.srcObject = null;
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  for (const canvas of [$("eyeRechts"), $("eyeLinks")]) {
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  }
+  resetSegment();
+  drawCurves();
+  clearRates();
+  $("mMode").textContent = "–";
+  $("mClock").textContent = "–";
+  $("hint").hidden = false;
+  $("zero").disabled = true;
+  $("calibrate").disabled = true;
+  $("toggle").textContent = "Kamera starten";
+  $("toggle").classList.remove("stop");
+  setStatus("Kamera aus.");
+}
+
+async function listCameras() {
+  const select = $("camera");
+  const current = select.value;
+  const devices = (await navigator.mediaDevices.enumerateDevices())
+    .filter((device) => device.kind === "videoinput" && device.label);
+  if (!devices.length) return;
+  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)));
+  if (current) select.value = current;
+}
+
+async function exclusive(action) {
+  if (busy) return;
+  busy = true;
+  for (const id of controls) $(id).disabled = true;
+  try {
+    await action();
+  } finally {
+    busy = false;
+    for (const id of controls) $(id).disabled = false;
+  }
+}
+
+$("toggle").addEventListener("click", () => exclusive(running ? stop : start));
+$("zero").addEventListener("click", setZero);
+$("calibrate").addEventListener("click", () => exclusive(runCalibration));
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement) $("cal").hidden = true;
+});
+$("smoothing").addEventListener("change", () => exclusive(async () => {
+  closeLandmarker();
+  if (!running) return;
+  setStatus("Lade Modell …");
+  try {
+    await createLandmarker();
+  } catch (error) {
+    stop();
+    setStatus(`Modell ließ sich nicht laden: ${error.message}`, true);
+    return;
+  }
+  resetSegment();
+  setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
+}));
+$("camera").addEventListener("change", () => {
+  if (running) exclusive(async () => { stop(); await start(); });
+});
+document.addEventListener("visibilitychange", () => {
+  if (!running) return;
+  resetSegment();
+  if (document.hidden) setStatus("Tab verdeckt: Messsegment beendet.", true);
+  else setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
+});
+window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
+window.addEventListener("resize", drawCurves);
+setInterval(renderStats, 500);
+drawCurves();
+</script>
+</body>
+</html>
