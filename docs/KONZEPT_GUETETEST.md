@@ -46,20 +46,22 @@ Gemessen wird am echten Kamerabild, live im RAM. Es entsteht keine Videodatei. D
 Projektregel, und die Iris ist ein starkes biometrisches Merkmal. Der Preis: Modelle und Parameter
 lassen sich nicht nachträglich am selben Material vergleichen; dafür braucht es jeweils einen neuen Lauf.
 
-Am Ende gibt es zwei freiwillige Knöpfe:
+Nichts wird automatisch gespeichert. Am Ende gibt es zwei freiwillige Knöpfe, und die Seite warnt
+vor dem Verlassen oder einem neuen Lauf, wenn noch nicht gespeichert wurde:
 
-- **Bericht kopieren:** Text mit allen Kennwerten.
-- **Zahlenreihe speichern:** JSON im Downloads-Ordner mit Rohwerten je Bild, Reizzeiten, Kalibrierung,
+- **Testlauf speichern:** JSON im Downloads-Ordner mit Rohwerten je Bild, Reizzeiten, Kalibrierung,
   Einstellungen. Keine Bilder. Die Datei ist personenbezogen und gehört gelöscht, sobald sie
   ausgewertet ist. Sie gehört nicht ins Repo.
+- **Bericht kopieren:** Text mit allen Kennwerten.
 
 ## Regeln
 
 - Besteht die Kalibrierung nicht, läuft der Test mit dem vorhandenen Modell weiter und kennzeichnet das
   Ergebnis. Sonst gingen genau die Daten verloren, mit denen sich die Schwellen einstellen lassen.
   Grad werden dann nicht in die Anzeige übernommen.
-- Esc, verdecktes Fenster, Bildstillstand, Kamerastopp und Kopfbewegung an einem Ziel brechen den
-  Lauf ab. Ein abgebrochener Lauf liefert keinen Bericht.
+- Esc, verdecktes Fenster, Bildstillstand, Kamerastopp und starke Kopfbewegung brechen den Lauf ab.
+  Ein abgebrochener Lauf liefert keinen Bericht. Mittlere Bewegung wird nur je Ziel gezählt und im
+  Bericht ausgewiesen.
 - Bei `Modellglättung an` sind Blickfolge und Sakkaden nur begrenzt aussagekräftig. Sinnvoll ist ein
   zweiter Lauf mit `aus`; der Vergleich beider Läufe zeigt den Effekt der Glättung.
 

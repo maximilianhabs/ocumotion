@@ -130,9 +130,9 @@
       <div class="legend" id="rNote"></div>
       <dl class="levels" id="rLevels"></dl>
       <dl class="levels" id="rValues"></dl>
-      <button id="rCopy" class="second" style="margin-top:10px">Bericht kopieren</button>
-      <button id="rSave" class="second">Zahlenreihe speichern</button>
-      <div class="legend">Die Datei enthält Augenwerte ohne Bilder, liegt im Downloads-Ordner und ist personenbezogen.</div>
+      <button id="rSave" class="primary" style="margin-top:10px">Testlauf speichern</button>
+      <button id="rCopy" class="second">Bericht kopieren</button>
+      <div class="legend">Nichts wird automatisch gespeichert. Die Datei kommt in den Downloads-Ordner, enthält Augenwerte ohne Bilder und ist personenbezogen.</div>
     </section>
     <section>
       <h2>So testest du</h2>
@@ -223,8 +223,8 @@ import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen
 import { calibrate, fuse, median, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
 import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
          SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
-import { analysePose, assess, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor }
-  from "./positionierung-logik.js";
+import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
+         medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./positionierung-logik.js";
 
 const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
@@ -235,8 +235,6 @@ const IRIS_RANGE = 0.6;
 const DEGREE_RANGE = 25;
 const HEAD_IN_DEGREES = 10;
 const DIRECTION_DEGREES = 5;
-const MAX_DISTANCE_DRIFT = 0.08;
-const MAX_HEAD_DRIFT = 1;
 const FULLSCREEN_TIMEOUT_MS = 2000;
 const POSE_WINDOW_MS = 1000;
 const REMEMBER_WINDOW_MS = 2000;
@@ -279,6 +277,8 @@ let calRun = 0;
 let calibrating = false;
 let collecting = null;
 let lastRun = null;
+let runUnsaved = false;
+let headMarks = 0;
 let currentTarget = { h: 0, v: 0 };
 let reference = null;
 let positionOk = false;
@@ -784,9 +784,10 @@ async function collectTarget(id, target, settleMs, collectMs) {
   entry.to = performance.now();
   const drift = positionDrift(entry.samples, reference, video.videoWidth, video.videoHeight);
   if (drift?.moved) {
-    abortCalibration("Kopf oder Abstand verändert: Lauf abgebrochen.");
+    abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
     return null;
   }
+  if (drift?.marked) headMarks += 1;
   return entry;
 }
 
@@ -939,6 +940,7 @@ function showReport(run, report, result) {
     ["Aufholsakkaden je Zyklus", `${number(slow?.catchUpsPerCycle)} / ${number(fast?.catchUpsPerCycle)}`],
     ["Sakkaden h Gain, Latenz", `${number(saccades?.h?.gain, 2)}, ${number(saccades?.h?.latency, 0)} ms`],
     ["Sakkaden v Gain, Latenz", `${number(saccades?.v?.gain, 2)}, ${number(saccades?.v?.latency, 0)} ms`],
+    ["Ziele mit Kopfbewegung", `${headMarks} von ${STEPS.length + ACCURACY_TARGETS.length}`],
     ["Sakkaden erkannt", `${saccades?.h?.detected ?? 0} / ${saccades?.h?.count ?? 0} h, ${saccades?.v?.detected ?? 0} / ${saccades?.v?.count ?? 0} v`],
   ];
   const levelRow = ({ name, level }) => {
@@ -961,6 +963,9 @@ function showReport(run, report, result) {
   $("rValues").replaceChildren(...rows.map(([name, value]) => levelRow({ name, level: value })));
   for (const cell of $("rValues").querySelectorAll("dd")) cell.className = "";
   $("report").hidden = false;
+  $("rSave").textContent = "Testlauf speichern";
+  runUnsaved = true;
+  $("report").scrollIntoView({ block: "start" });
   lastRun = {
     meta: {
       createdAt: new Date().toISOString(),
@@ -969,6 +974,7 @@ function showReport(run, report, result) {
       mode: $("mMode").textContent,
       clock: clockSource,
       duplicates,
+      headMarks,
       devicePixelRatio: window.devicePixelRatio,
       screen: `${window.screen.width}×${window.screen.height}`,
       reference,
@@ -993,7 +999,10 @@ async function runQualityTest() {
     rememberPosition();
     if (!reference) return;
   }
+  if (runUnsaved && !window.confirm("Der letzte Testlauf ist noch nicht gespeichert. Trotzdem neu starten?")) return;
   $("report").hidden = true;
+  runUnsaved = false;
+  headMarks = 0;
   const id = ++calRun;
   if (!await enterFullscreen(id)) return;
   $("calText").textContent = "";
@@ -1030,7 +1039,9 @@ function saveRun() {
   link.download = `macvision-guetetest-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
   link.click();
   URL.revokeObjectURL(link.href);
-  setStatus("Zahlenreihe im Downloads-Ordner gespeichert.");
+  runUnsaved = false;
+  $("rSave").textContent = "Gespeichert, nochmal speichern";
+  setStatus(`Gespeichert in Downloads: ${link.download}`);
 }
 
 function renderStats() {
@@ -1105,9 +1116,13 @@ function renderStats() {
       const headY = median(seen.map((sample) => sample.headPoint.y));
       const moved = Math.hypot(headX - calibration.head.x, headY - calibration.head.y) / iris;
       $("cDrift").textContent = `${change > 0 ? "näher " : "weiter "}${comma(Math.abs(change) * 100, 0)} %`;
-      if (Math.abs(change) > MAX_DISTANCE_DRIFT || moved > MAX_HEAD_DRIFT) {
+      if (Math.abs(change) > STOP_DISTANCE_CHANGE || moved > STOP_HEAD_SHIFT) {
         invalidateCalibration("ungültig, Kopf bewegt");
-        setStatus("Kopf hat sich bewegt: Kalibrierung ungültig, bitte neu kalibrieren.", true);
+        setStatus("Kopf hat sich stark bewegt: Kalibrierung ungültig, bitte neu kalibrieren.", true);
+      } else if (Math.abs(change) > MARK_DISTANCE_CHANGE || moved > MARK_HEAD_SHIFT) {
+        setStatus("Kopf hat sich bewegt: Grad ungenauer.", true);
+      } else if ($("status").textContent.startsWith("Kopf hat sich bewegt")) {
+        setStatus("Kalibriert. Kurve in Grad.");
       }
     }
   } else {
@@ -1250,6 +1265,9 @@ document.addEventListener("visibilitychange", () => {
   abortCalibration("Fenster verdeckt: Kalibrierung abgebrochen.");
   if (document.hidden) setStatus("Tab verdeckt: Messsegment beendet.", true);
   else if (!calibration) setStatus("Läuft. Neues Messsegment.");
+});
+window.addEventListener("beforeunload", (event) => {
+  if (runUnsaved) event.preventDefault();
 });
 window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
 window.addEventListener("resize", drawCurves);

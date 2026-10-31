@@ -45,8 +45,8 @@ zählen beide Achsen, auch die erwartete Nullkomponente.
 Besteht keines der Augen, bleibt die Anzeige ohne Grad.
 
 **Gültigkeit:** Die Kalibrierung liegt nur im Arbeitsspeicher und endet mit dem Stopp. Sie verfällt
-beim Modellwechsel und wenn die Irisbreite im 3-s-Median um mehr als 8 % abweicht oder der Kopf um
-mehr als einen Irisdurchmesser wandert. Esc, verdecktes Fenster, Bildstillstand und Kamerastopp
+beim Modellwechsel und wenn die Irisbreite im 3-s-Median um mehr als 25 % abweicht oder der Kopf um
+mehr als vier Irisdurchmesser wandert; ab 15 % oder zwei Irisdurchmessern warnt die Seite. Esc, verdecktes Fenster, Bildstillstand und Kamerastopp
 brechen den Lauf sofort ab; Kamerastopp bleibt jederzeit möglich. Der Bezug „Irisbreite × gemessener Abstand“ kann später den Abstand laufend schätzen.
 
 **Grenzen:** Die Abbildung ist linear und gilt für ±15°. Für den Blick darüber hinaus braucht es
@@ -70,13 +70,17 @@ einmal von Hand gemessen.
    Kopfhaltung, Kamera und Auflösung als persönliche Referenz im RAM. Der Zielbereich passt sich an.
 4. Abstand laufend aus Irisbreite und Lidwinkelabstand relativ zur Referenz, nur als Mehrsekunden-Median.
    Widersprechen sich beide um mehr als 10 %, lautet die Anzeige „unsicher“.
-5. Kalibrieren geht erst nach dem Merken. Während Reizen ist die Hilfe aus. Weicht ein Ziel um mehr als
-   8 % Abstand oder einen Irisdurchmesser von der Referenz ab, bricht die Kalibrierung ab.
+5. Kalibrieren geht erst nach dem Merken. Während Reizen ist die Hilfe aus. Die Bewegung je Ziel hat
+   drei Stufen: bis 15 % Abstand und 2 Irisdurchmesser läuft die Messung normal, darüber wird das Ziel
+   vermerkt, ab 25 % oder 4 Irisdurchmessern bricht der Lauf ab. Nach dem ersten echten Test gelockert,
+   weil 8 % und ein Irisdurchmesser zu oft abbrachen.
 
 **Grenzen und Ergänzungen aus der Prüfung:**
 
 - Bei 27–36 Bildpunkten Iris entspricht ein Bildpunkt 3–4 %, also 1,1–1,5 cm bei 40 cm. Einzelbilder
-  taugen dafür nicht. Die Warnschwelle von 8 % entspricht rund 3 cm.
+  taugen dafür nicht. 15 % entsprechen rund 6 cm, 25 % rund 10 cm. Mehr Spielraum kostet Genauigkeit:
+  1 cm Kopfversatz entspricht bei 40 cm rund 1,4° Fehler am Blickziel, 15 % Abstand verfälschen die
+  Grad um rund denselben Anteil. Vermerkte Ziele sind deshalb im Bericht ausgewiesen.
 - Google nennt für die Iris 11,7 ± 0,5 mm und im eigenen Test 4,3 % mittleren Fehler, braucht aber die
   Brennweite. Für diese Kamera ist sie unbekannt, eine automatische Erstschätzung entfällt vorerst.
 - Die Augenhöhe ist noch offen. Die Rechnung nimmt an, dass die Augen vor der Bildschirmmitte liegen.
@@ -90,7 +94,28 @@ einmal von Hand gemessen.
   Kopfmatrix von MediaPipe bleibt aus, bis sie gebraucht wird.
 
 **Noch ungeprüft:** Beim Blick auf 15° sieht die Kamera die Iris verkürzt, rechnerisch um gut 3 %. Ob
-die Schwelle von 8 % dabei Fehlabbrüche auslöst, zeigt erst der echte Lauf.
+die Grenzen dabei Fehlvermerke auslösen, zeigt die Auswertung echter Läufe.
+
+## 2b. Einmalige Kameramessung und Bildschirmgröße (Plan)
+
+**Entscheidung vom 31.10.2026:** kein A4-Assistent mit Blatt neben dem Gesicht. Bei 40 cm ist das Bild
+beim geschätzten Bildwinkel nur 23–32 cm hoch, und neben dem Gesicht bleiben 13–20 cm Breite; A4 passt
+dort voraussichtlich nicht vollständig hinein. Für eine einzelne Person liefert „Position merken“
+außerdem schon die nötige Referenz. Ein helles Blatt kann zudem die Belichtung verschieben.
+
+**Stattdessen, nach dem ersten gespeicherten Gütetest:** einmal ein Lineal oder A4-Blatt in rund 60 cm
+gemessenem Abstand parallel zur Kamera ins Bild halten. Daraus folgt
+`Brennweite in Bildpunkten = Breite im Bild × Abstand ÷ echte Breite`. Der Wert gilt fest für diese
+Kamera und Auflösung und wird mehrfach gemessen. Das ist Stufe A0 aus `KONZEPT_AUGEN.md`.
+
+Das ergibt den echten Bildwinkel, einen passenden Rahmen schon vor dem Merken und eine absolute
+Abstandsschätzung `Abstand = Brennweite × 11,7 mm ÷ Irisbreite`. Google nennt für dieses Verfahren
+4,3 % mittleren Fehler; für diese Kamera ist das noch zu prüfen. Sie bleibt eine Schätzung, kein Ersatz
+für den gemessenen Abstand, solange sie nicht gegen ihn belegt ist.
+
+**Für andere Geräte, später:** Die Bildschirmbreite von 28,6 cm ist fest eingetragen. Fremde Geräte
+brauchen eine Einrichtung, bei der ein A4-Blatt an den Bildschirm gehalten und ein Rechteck auf dieselbe
+Größe gezogen wird. Das geht ohne Kamera. Ohne sie wären dort alle Gradwerte falsch.
 
 ## 3. Zusammenführung beider Augen
 
@@ -151,8 +176,9 @@ bisher, also braucht es Vergleichsdaten Gesunder je Altersgruppe.
 
 ## 5. Reihenfolge
 
-1. Kalibrierung mit echtem Gesicht prüfen, Prüffehler und Unruhe protokollieren, Wiederholbarkeit
-   über mehrere Läufe messen, Schwellen an diesen Daten festlegen.
+1. Gütetest mit gespeicherter Datei, Prüffehler und Unruhe protokollieren, Wiederholbarkeit über
+   mehrere Läufe messen, Schwellen an diesen Daten festlegen.
+1a. Einmalige Kameramessung aus Abschnitt 2b.
 2. Worker, unabhängige Bildquelle und eigene Irisrandanalyse (`IMPLEMENTIERUNGSNOTIZ_CODEX.md`).
 3. Künstliches Auge und Kopf-Störtest, jetzt auch mit Sakkaden und Blickfolge.
 4. Blickfolge langsam: einfachste Prüfung mit bekanntem Sollsignal.

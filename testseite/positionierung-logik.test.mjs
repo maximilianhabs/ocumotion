@@ -92,11 +92,17 @@ test("Widersprüchliche Merkmale ergeben keinen Abstand", () => {
 
 test("Bewegung gegenüber der Referenz wird erkannt", () => {
   const reference = { x: 0.5, y: 0.4, irisPx: 30 };
-  const still = Array(10).fill({ irisPx: 30.5, head: { x: 642, y: 289 } });
-  assert.equal(positionDrift(still, reference, WIDTH, HEIGHT).moved, false);
-  const closer = Array(10).fill({ irisPx: 34, head: { x: 640, y: 288 } });
-  assert.equal(positionDrift(closer, reference, WIDTH, HEIGHT).moved, true);
-  const shifted = Array(10).fill({ irisPx: 30, head: { x: 700, y: 288 } });
+  const slight = Array(10).fill({ irisPx: 32.5, head: { x: 660, y: 289 } });
+  const small = positionDrift(slight, reference, WIDTH, HEIGHT);
+  assert.equal(small.marked, false);
+  assert.equal(small.moved, false);
+  const closer = Array(10).fill({ irisPx: 36, head: { x: 640, y: 288 } });
+  const medium = positionDrift(closer, reference, WIDTH, HEIGHT);
+  assert.equal(medium.marked, true);
+  assert.equal(medium.moved, false);
+  const shifted = Array(10).fill({ irisPx: 30, head: { x: 800, y: 288 } });
   assert.equal(positionDrift(shifted, reference, WIDTH, HEIGHT).moved, true);
+  const muchCloser = Array(10).fill({ irisPx: 39, head: { x: 640, y: 288 } });
+  assert.equal(positionDrift(muchCloser, reference, WIDTH, HEIGHT).moved, true);
   assert.equal(positionDrift([{ irisPx: null, head: null }], reference, WIDTH, HEIGHT), null);
 });

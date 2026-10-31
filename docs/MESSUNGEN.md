@@ -91,3 +91,9 @@ Abstand und Abbruch bei Bewegung sind in der Oberfläche mit echtem Gesicht unge
 exakt folgt, lief durch alle fünf Teile: Kalibrierung bestanden, Zielfehler 0,0°, Blickfolge-Gain 1,00,
 Sakkaden-Gain 1,00. Die Sakkadenlatenz blieb leer, weil das simulierte Auge ohne Latenz springt. Export
 und Bericht geprüft, die Datei enthält keine Bilder. Das belegt nur den Ablauf, nichts über echte Augen.
+
+## 31.10.2026 — Erster echter Gütetest
+
+Vom Nutzer durchgeführt, ohne gespeicherte Datei. Rückmeldung: Der Test brach oft ab, sobald der Kopf
+nicht mehr exakt in Position war. Deshalb gelten nun die Stufen 15 % / 2 Irisdurchmesser zum Vermerken
+und 25 % / 4 Irisdurchmesser zum Abbrechen. Kennwerte dieses Laufs liegen nicht vor.

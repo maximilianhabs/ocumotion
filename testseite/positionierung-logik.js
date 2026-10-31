@@ -8,15 +8,18 @@ import { median } from "./kalibrierung-logik.js";
 
 export const ROUGH_TARGET = { x: 0.5, y: 0.42, span: 0.18, spanDistanceCm: 40 };
 const ROUGH_TOLERANCE = { x: 0.08, y: 0.14, size: 0.3 };
-const PERSONAL_TOLERANCE = { x: 0.04, y: 0.04, size: 0.06 };
+const PERSONAL_TOLERANCE = { x: 0.06, y: 0.06, size: 0.1 };
 const MAX_ROLL = 6;
 const MAX_YAW = 0.18;
 const KEEP_FACTOR = 1.4;
 const MAX_FEATURE_CONFLICT = 0.1;
-const MAX_STABLE_SPREAD = 0.03;
+const MAX_STABLE_SPREAD = 0.06;
 const MIN_STABLE_POSES = 20;
-export const MAX_DISTANCE_CHANGE = 0.08;
-export const MAX_HEAD_SHIFT = 1;
+// Bis "vermerkt" laeuft die Messung normal; dazwischen wird sie gekennzeichnet, darueber abgebrochen.
+export const MARK_DISTANCE_CHANGE = 0.15;
+export const MARK_HEAD_SHIFT = 2;
+export const STOP_DISTANCE_CHANGE = 0.25;
+export const STOP_HEAD_SHIFT = 4;
 
 const toPixels = (point, width, height) => ({ x: point.x * width, y: point.y * height });
 
@@ -114,6 +117,7 @@ export function positionDrift(samples, reference, width, height) {
   return {
     distanceChange,
     headShift,
-    moved: Math.abs(distanceChange) > MAX_DISTANCE_CHANGE || headShift > MAX_HEAD_SHIFT,
+    marked: Math.abs(distanceChange) > MARK_DISTANCE_CHANGE || headShift > MARK_HEAD_SHIFT,
+    moved: Math.abs(distanceChange) > STOP_DISTANCE_CHANGE || headShift > STOP_HEAD_SHIFT,
   };
 }

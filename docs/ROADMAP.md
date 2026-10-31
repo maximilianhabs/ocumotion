@@ -19,7 +19,8 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
 
-**Nächster Schritt:** Gütetest mit echtem Gesicht, siehe `KONZEPT_GUETETEST.md`.
+**Nächster Schritt:** Gütetest mit echtem Gesicht und gespeicherter Datei, siehe `KONZEPT_GUETETEST.md`.
+Danach die einmalige Kameramessung, siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 2b.
 
 ## Reihenfolge
 
