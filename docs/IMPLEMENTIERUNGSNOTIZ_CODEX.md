@@ -25,6 +25,9 @@ Blinkzustand je Segment, Warmlauf von 1 s, Verwerfen nicht steigender Bildzeiten
 `OffscreenCanvas` samt WebGL2 sind dort vorhanden. Vorgesehen ist also: Bilder im Hauptthread lesen
 und als `VideoFrame` in den Worker übertragen.
 
+**Einschränkung:** Laut MDN stellen Browser `MediaStreamTrackProcessor` unterschiedlich bereit, teils nur im
+Worker, teils nur im Hauptfenster. Der Rückfall über `requestVideoFrameCallback` ist also Pflicht.
+
 **Noch nicht belegt:** MediaPipe GPU im Worker, Annahme von `VideoFrame` durch MediaPipe, Verhalten
 mit echter Kamera, normales Chrome und Safari. Das klärt ein kleiner Vortest vor dem Umbau.
 

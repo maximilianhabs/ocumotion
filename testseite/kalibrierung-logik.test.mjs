@@ -1,7 +1,7 @@
 // Kalibrierung gegen Augen mit bekannter Abbildung. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calibrate, evaluateEye, fuse, MAX_SIDE_DIFFERENCE, medianFilter, MIN_SAMPLES, sensitivity, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+import { calibrate, evaluateEye, fuse, hasEnoughData, MAX_SIDE_DIFFERENCE, medianFilter, sensitivity, STEPS, targetPixels, targetsFit, toDegrees } from "./kalibrierung-logik.js";
 
 const near = (actual, expected, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
@@ -63,7 +63,7 @@ test("Ein schlechtes Auge fällt aus, das gute bleibt", () => {
 });
 
 test("Zu wenige gültige Bilder sind kein Ergebnis", () => {
-  const entries = run({ samples: MIN_SAMPLES - 1 });
+  const entries = run({ samples: 3 });
   const result = calibrate(entries);
   assert.equal(result.passed, false);
   assert.equal(result.rechts.model, null);
@@ -218,4 +218,29 @@ test("Rauschen im Bild besteht nach dem Filter, wenn die Ziele stimmen", () => {
   const noisy = (h, v) => { const eye = eyeAt(h, v); return { x: eye.x + jitter(), y: eye.y + jitter() * 0.5 }; };
   const eye = evaluateEye(run({ rechts: noisy, samples: 80 }), "rechts");
   assert.equal(eye.passedH, true);
+});
+
+test("Medianfilter entfernt bei 30 und 60 fps denselben 60-ms-Ausreißer", () => {
+  const trace = (fps) => Array.from({ length: fps }, (_, i) => {
+    const time = (i * 1000) / fps;
+    return { time, h: time >= 500 && time < 560 ? 50 : 0 };
+  });
+  for (const fps of [30, 60]) {
+    assert.equal(trace(fps).some((p) => p.h === 50), true);
+    assert.equal(medianFilter(trace(fps), ["h"]).some((p) => p.h === 50), false);
+  }
+});
+
+test("Datenmenge zählt als Zeit, nicht als Bildzahl", () => {
+  const points = (count, stepMs) => Array.from({ length: count }, (_, i) => ({ time: i * stepMs }));
+  assert.equal(hasEnoughData(points(10, 33.4)), true);
+  assert.equal(hasEnoughData(points(10, 16.7)), false);
+  assert.equal(hasEnoughData(points(20, 16.7)), true);
+  assert.equal(hasEnoughData(points(2, 500)), false);
+});
+
+test("Fremder Bildschirm: Ziele werden gegen die echte Größe geprüft", () => {
+  assert.equal(targetsFit(40, 1440, 900, 28.6), true);
+  assert.equal(targetsFit(40, 390, 844, 7), false);
+  assert.equal(targetsFit(40, 1920, 1080, 52), true);
 });

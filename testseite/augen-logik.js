@@ -11,7 +11,8 @@ export const EYES = {
 };
 
 export const MIN_APERTURE = 0.14;
-export const MAX_HEAD_STEP = 0.3;
+export const MAX_HEAD_SPEED = 9;
+const NOMINAL_FRAME_MS = 1000 / 30;
 export const DIRECTION_THRESHOLD = 0.12;
 
 const toPixels = (point, width, height) => ({ x: point.x * width, y: point.y * height });
@@ -49,13 +50,15 @@ export function headPoint(points, width, height) {
   };
 }
 
-export function measureFrame(points, width, height, previousHead) {
+// MAX_HEAD_SPEED: Irisdurchmesser je Sekunde, damit die Grenze nicht von der Bildrate abhaengt.
+export function measureFrame(points, width, height, previousHead, frameDeltaMs = NOMINAL_FRAME_MS) {
   const rechts = measureEye(points, width, height, EYES.rechts);
   const links = measureEye(points, width, height, EYES.links);
   const head = headPoint(points, width, height);
   const irisPx = (rechts.irisPx + links.irisPx) / 2;
   const headStep = previousHead && irisPx > 0 ? distance(head, previousHead) / irisPx : 0;
-  const headMoved = headStep > MAX_HEAD_STEP;
+  const headSpeed = frameDeltaMs > 0 ? headStep / (frameDeltaMs / 1000) : 0;
+  const headMoved = headSpeed > MAX_HEAD_SPEED;
   if (headMoved) {
     for (const eye of [rechts, links]) {
       eye.valid = false;

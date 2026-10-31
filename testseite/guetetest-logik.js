@@ -4,7 +4,7 @@
 // und bewertet keine Person. Alle Bewertungsgrenzen sind experimentell.
 // Zeiten in Millisekunden auf der Uhr von performance.now().
 
-import { fitPlane, fuse, median, medianFilter, spread, toDegrees } from "./kalibrierung-logik.js";
+import { fitPlane, fuse, hasEnoughData, median, medianFilter, spread, toDegrees } from "./kalibrierung-logik.js";
 
 export const FIXATION_MS = 20000;
 export const TARGET_SETTLE_MS = 1200;
@@ -39,7 +39,8 @@ const SACCADE_LATEST_MS = 800;
 const SACCADE_SETTLE_MS = 600;
 const SACCADE_BASELINE_MS = 300;
 const CATCHUP_VELOCITY = 50;
-const MIN_POINTS = 10;
+const MIN_PURSUIT_MS = 1000;
+const MIN_BASELINE_MS = 80;
 
 export const CHANNELS = ["rechts", "links", "mittel"];
 
@@ -80,16 +81,20 @@ function robustSpread(values) {
 
 function slopePerSecond(allPoints, key) {
   const points = present(allPoints, key);
-  if (points.length < MIN_POINTS) return null;
+  if (!hasEnoughData(points)) return null;
   const first = points[0].time;
   const fit = fitPlane(points.map((p) => ({ x: (p.time - first) / 1000, y: ((p.time - first) / 1000) ** 2, value: p[key] })), "value");
   return fit ? fit[1] : null;
 }
 
 export function analyseFixation(points, frameCount) {
-  const h = present(points, "h").map((p) => p.h);
-  const v = present(points, "v").map((p) => p.v);
-  if (h.length < MIN_POINTS && v.length < MIN_POINTS) return null;
+  const hPoints = present(points, "h");
+  const vPoints = present(points, "v");
+  const enoughH = hasEnoughData(hPoints);
+  const enoughV = hasEnoughData(vPoints);
+  if (!enoughH && !enoughV) return null;
+  const h = hPoints.map((p) => p.h);
+  const v = vPoints.map((p) => p.v);
   const both = points.filter((p) => p.h !== null && p.v !== null);
   const centerH = h.length ? median(h) : 0;
   const centerV = v.length ? median(v) : 0;
@@ -100,10 +105,10 @@ export function analyseFixation(points, frameCount) {
     validShare: Math.min(coverageH, coverageV),
     coverageH,
     coverageV,
-    sdH: h.length >= MIN_POINTS ? spread(h) : null,
-    sdV: v.length >= MIN_POINTS ? spread(v) : null,
-    robustSdH: h.length >= MIN_POINTS ? robustSpread(h) : null,
-    robustSdV: v.length >= MIN_POINTS ? robustSpread(v) : null,
+    sdH: enoughH ? spread(h) : null,
+    sdV: enoughV ? spread(v) : null,
+    robustSdH: enoughH ? robustSpread(h) : null,
+    robustSdV: enoughV ? robustSpread(v) : null,
     p95: deviations.length ? deviations[Math.floor(deviations.length * 0.95)] : null,
     driftH: slopePerSecond(points, "h"),
   };
@@ -114,7 +119,7 @@ export function analyseFixation(points, frameCount) {
 export function differenceNoise(series) {
   const left = new Map(series.links.map((p) => [p.time, p]));
   const pairs = series.rechts.filter((p) => left.has(p.time)).map((p) => [p, left.get(p.time)]);
-  if (pairs.length < MIN_POINTS) return null;
+  if (!hasEnoughData(pairs.map(([right]) => right))) return null;
   return {
     h: spread(pairs.map(([r, l]) => r.h - l.h)) / Math.SQRT2,
     v: spread(pairs.map(([r, l]) => r.v - l.v)) / Math.SQRT2,
@@ -126,13 +131,15 @@ export function analyseTargets(windows, points) {
   const errors = [];
   for (const window of windows) {
     const inside = points.filter((p) => p.time >= window.from && p.time < window.to);
-    const h = present(inside, "h").map((p) => p.h);
-    const v = present(inside, "v").map((p) => p.v);
-    if (h.length < MIN_POINTS && v.length < MIN_POINTS) continue;
+    const hPoints = present(inside, "h");
+    const vPoints = present(inside, "v");
+    const enoughH = hasEnoughData(hPoints);
+    const enoughV = hasEnoughData(vPoints);
+    if (!enoughH && !enoughV) continue;
     errors.push({
       name: window.target.name,
-      h: h.length >= MIN_POINTS ? median(h) - window.target.h : null,
-      v: v.length >= MIN_POINTS ? median(v) - window.target.v : null,
+      h: enoughH ? median(hPoints.map((p) => p.h)) - window.target.h : null,
+      v: enoughV ? median(vPoints.map((p) => p.v)) - window.target.v : null,
     });
   }
   if (!errors.length) return null;
@@ -152,7 +159,7 @@ export function analyseTargets(windows, points) {
 export function analysePursuit(points, run, startTime) {
   const omega = (2 * Math.PI * run.frequency) / 1000;
   const inside = present(points, "h").filter((p) => p.time >= startTime && p.time <= startTime + run.durationMs);
-  if (inside.length < MIN_POINTS * 3) return null;
+  if (!hasEnoughData(inside, "time", MIN_PURSUIT_MS)) return null;
   const rows = inside.map((p) => {
     const phase = omega * (p.time - startTime);
     return { x: Math.sin(phase), y: Math.cos(phase), value: p.h };
@@ -186,7 +193,7 @@ export function analyseSaccades(allPoints, jumps) {
     const end = jumps[index + 1]?.at ?? jump.at + SACCADE_MAX_MS;
     const before = points.filter((p) => p.time >= jump.at - SACCADE_BASELINE_MS && p.time < jump.at);
     const after = points.filter((p) => p.time >= jump.at + SACCADE_SETTLE_MS && p.time < end);
-    if (before.length < 3 || after.length < 3) return;
+    if (!hasEnoughData(before, "time", MIN_BASELINE_MS) || !hasEnoughData(after, "time", MIN_BASELINE_MS)) return;
     const start = median(before.map((p) => p[key]));
     const landed = median(after.map((p) => p[key]));
     const step = jump.to - jump.from;

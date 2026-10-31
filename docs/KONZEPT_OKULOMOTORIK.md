@@ -12,7 +12,7 @@ individuelle Kalibrierung in Grad.
 
 ## 2. Kalibrierung (gebaut)
 
-**Aufbau:** Bekannt sind Bildschirmbreite (28,6 cm) und Abstand Auge–Bildschirm. Daraus ergibt
+**Aufbau:** Bekannt sind die eingestellte Bildschirmbreite (Standard 28,6 cm) und der Abstand Auge–Bildschirm. Daraus ergibt
 sich für jeden Blickpunkt der Winkel: `Versatz = tan(Winkel) × Abstand`. Die Kamera misst den
 Abstand nicht; die Person misst ihn einmal von Hand.
 

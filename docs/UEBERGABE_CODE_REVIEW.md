@@ -29,6 +29,8 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | Datei | Inhalt |
 |---|---|
 | `docs/KONZEPT_OKULOMOTORIK.md` | **Hauptdokument:** Kalibrierung, Zusammenführung, Untersuchungen, Reihenfolge |
+| `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
 | `docs/KONZEPT_AUGEN.md` | Messgrundlagen, Auflösung, Hürden, Stufen A0–A7 |
 | `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | Bauplan Worker und Bildquelle, mit Prüfvermerk |
 | `docs/ROADMAP.md`, `docs/MESSUNGEN.md` | Stand, Reihenfolge, Messprotokoll |
@@ -40,7 +42,8 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
 | `testseite/trockenlauf.js` | Simuliertes Gesicht, `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
-| `testseite/*.test.mjs` | 56 Logiktests mit konstruierten Daten |
+| `testseite/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
+| `testseite/*.test.mjs` | 67 Logiktests mit konstruierten Daten |
 | `tools/guetetest_auswertung.py` | Vertiefte Auswertung einer Exportdatei |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 

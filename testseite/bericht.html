@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac Vision Bericht</title>
+<style>
+  :root {
+    --bg: #f5f5f4; --page: #ffffff; --text: #1c1917; --muted: #57534e; --line: #d6d3d1;
+    --right: #1d4ed8; --left: #c2410c; --target: #7c3aed; --mean: #1c1917; --grey: #e7e5e4;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { max-width: 210mm; margin: 16px auto; padding: 12mm; background: var(--page); }
+  h1 { font-size: 19px; margin: 0; }
+  h2 { font-size: 13px; margin: 0 0 4px; }
+  p { margin: 3px 0; }
+  .muted { color: var(--muted); font-size: 11px; }
+  .banner { border: 1.5px solid var(--warn); color: var(--warn); padding: 4px 8px; margin: 6px 0; font-weight: 600; }
+  .lines { margin: 8px 0; padding-left: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .wide { grid-column: 1 / -1; }
+  .span-two { grid-column: span 2; }
+  .card { border: 1px solid var(--line); border-radius: 6px; padding: 7px; break-inside: avoid; }
+  .card.grey { background: var(--grey); }
+  .card.hatched { background: repeating-linear-gradient(45deg, var(--page), var(--page) 5px, var(--grey) 5px, var(--grey) 9px); }
+  .tag { float: right; font-size: 10px; color: var(--muted); }
+  svg { display: block; width: 100%; height: auto; }
+  dl { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin: 4px 0 0; font-size: 11px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  ul { margin: 2px 0; padding-left: 15px; }
+  .review { min-height: 18mm; }
+  #load { max-width: 210mm; margin: 16px auto; padding: 0 12mm; }
+  @media screen and (max-width: 720px) {
+    main { padding: 16px; }
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .grid > * { grid-column: 1 !important; }
+  }
+  @media print {
+    body { background: none; }
+    main { margin: 0; padding: 0; max-width: none; }
+    #load { display: none; }
+    @page { size: A4; margin: 10mm; }
+  }
+</style>
+</head>
+<body>
+<div id="load">
+  <p><label>Gütetest-Datei öffnen: <input id="file" type="file" accept="application/json"></label>
+  <button id="print" type="button">Drucken oder als PDF sichern</button></p>
+  <p id="message" class="muted"></p>
+</div>
+<main id="report" hidden></main>
+
+<script type="module">
+import { buildReport } from "./bericht-logik.js";
+
+const COLOR = { right: "var(--right)", left: "var(--left)", target: "var(--target)", mean: "var(--mean)", line: "var(--line)" };
+const number = (value, digits = 1) => (value === null || value === undefined ? "–" : value.toFixed(digits).replace(".", ","));
+const percent = (value) => (value === null || value === undefined ? "–" : `${Math.round(value * 100)} %`);
+const escapeHtml = (text) => String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function polyline(points, xOf, yOf, color, width, dash = "") {
+  const parts = [];
+  let current = [];
+  let previous = null;
+  for (const point of points) {
+    if (previous !== null && point.time - previous > 100) {
+      parts.push(current);
+      current = [];
+    }
+    current.push(`${xOf(point.time).toFixed(1)},${yOf(point.value).toFixed(1)}`);
+    previous = point.time;
+  }
+  parts.push(current);
+  return parts.filter((part) => part.length > 1).map((part) =>
+    `<polyline points="${part.join(" ")}" fill="none" stroke="${color}" stroke-width="${width}" stroke-dasharray="${dash}"/>`).join("");
+}
+
+function fixationChart(section) {
+  const size = 200;
+  const range = 6;
+  const at = (value) => size / 2 + (value / range) * (size / 2);
+  const dots = section.points.map((p) => `<circle cx="${at(p.h).toFixed(1)}" cy="${at(-p.v).toFixed(1)}" r="1.1" fill="${COLOR.mean}" fill-opacity=".45"/>`).join("");
+  return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Blickposition in Ruhe, Bereich plus minus ${range} Grad">
+    <rect width="${size}" height="${size}" fill="none" stroke="${COLOR.line}"/>
+    <path d="M${size / 2} 0V${size}M0 ${size / 2}H${size}" stroke="${COLOR.line}"/>${dots}
+    <text x="4" y="11" font-size="9" fill="currentColor">±${range}°</text></svg>`;
+}
+
+function targetChart(section) {
+  const width = 200;
+  const height = 200;
+  const x = (value) => width / 2 + (value / 18) * (width / 2);
+  const y = (value) => height / 2 - (value / 16) * (height / 2);
+  const marks = section.targets.map((t) => {
+    const cross = `<path d="M${x(t.targetH) - 4} ${y(t.targetV)}h8M${x(t.targetH)} ${y(t.targetV) - 4}v8" stroke="${COLOR.target}" stroke-width="1.4"/>`;
+    if (t.h === null || t.v === null) return cross;
+    return `${cross}<line x1="${x(t.targetH)}" y1="${y(t.targetV)}" x2="${x(t.h)}" y2="${y(t.v)}" stroke="${COLOR.mean}"/><circle cx="${x(t.h)}" cy="${y(t.v)}" r="3" fill="${COLOR.mean}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Blickziele als Kreuz, gemessene Position als Punkt">
+    <rect width="${width}" height="${height}" fill="none" stroke="${COLOR.line}"/>
+    <path d="M${width / 2} 0V${height}M0 ${height / 2}H${width}" stroke="${COLOR.line}"/>${marks}</svg>`;
+}
+
+function saccadeChart(section) {
+  const size = 150;
+  const range = 14;
+  const at = (value) => size / 2 + (value / range) * (size / 2);
+  const marks = section.endpoints.map((p) => (p.axis === "h"
+    ? `<circle cx="${at(p.target)}" cy="${at(-p.end).toFixed(1)}" r="3.2" fill="none" stroke="${COLOR.mean}"/>`
+    : `<rect x="${at(p.target) - 3}" y="${(at(-p.end) - 3).toFixed(1)}" width="6" height="6" fill="none" stroke="${COLOR.left}"/>`)).join("");
+  return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Ziel gegen Endlage, Diagonale ist die Sollgerade">
+    <rect width="${size}" height="${size}" fill="none" stroke="${COLOR.line}"/>
+    <line x1="0" y1="${size}" x2="${size}" y2="0" stroke="${COLOR.target}" stroke-dasharray="4 3"/>${marks}</svg>`;
+}
+
+function pursuitChart(entry) {
+  const width = 600;
+  const height = 80;
+  const start = entry.startTime;
+  const x = (time) => ((time - start) / entry.run.durationMs) * width;
+  const y = (value) => height / 2 - (value / 14) * (height / 2);
+  const line = (points, color, stroke, dash) => polyline(
+    points.filter((p) => p.h !== null).map((p) => ({ time: p.time, value: p.h })), x, y, color, stroke, dash);
+  const target = Array.from({ length: 201 }, (_, i) => {
+    const time = start + (i / 200) * entry.run.durationMs;
+    const value = entry.run.amplitude * Math.sin(2 * Math.PI * entry.run.frequency * ((time - start) / 1000));
+    return `${x(time).toFixed(1)},${y(value).toFixed(1)}`;
+  }).join(" ");
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Zielkurve und Blickfolge ${escapeHtml(entry.name)}">
+    <rect width="${width}" height="${height}" fill="none" stroke="${COLOR.line}"/>
+    <polyline points="${target}" fill="none" stroke="${COLOR.target}" stroke-width="1.6" stroke-dasharray="5 3"/>
+    ${line(entry.series.rechts, COLOR.right, 0.8, "")}${line(entry.series.links, COLOR.left, 0.8, "3 2")}${line(entry.series.mittel, COLOR.mean, 1.3, "")}</svg>`;
+}
+
+function eventChart(timeline) {
+  const phases = timeline.phases;
+  if (!phases.length) return "";
+  const width = 600;
+  const label = 118;
+  const rowHeight = 15;
+  const start = phases[0].from;
+  const end = phases.at(-1).to;
+  const x = (time) => label + ((time - start) / (end - start || 1)) * (width - label);
+  const phaseBars = phases.map((phase, index) =>
+    `<rect x="${x(phase.from).toFixed(1)}" y="1" width="${Math.max(x(phase.to) - x(phase.from), 1).toFixed(1)}" height="12" fill="${index % 2 ? "#e7e5e4" : "#d6d3d1"}"/>
+     <title>${escapeHtml(phase.name)}</title>`).join("");
+  const rows = timeline.rows.map((row, index) => {
+    const top = (index + 1) * rowHeight;
+    const name = `<text x="0" y="${top + 10}" font-size="9" fill="currentColor">${escapeHtml(row.name)}</text>`;
+    if (!row.available) return `${name}<text x="${label}" y="${top + 10}" font-size="9" fill="#78716c">in dieser Datei nicht erfasst</text>`;
+    return name + row.spans.map((span) =>
+      `<rect x="${x(span.from).toFixed(1)}" y="${top + 2}" width="${Math.max(x(span.to) - x(span.from), 1.5).toFixed(1)}" height="9" fill="#b45309"/>`).join("");
+  }).join("");
+  return `<svg viewBox="0 0 ${width} ${(timeline.rows.length + 1) * rowHeight + 2}" role="img" aria-label="Ablauf und Ereignisse">
+    <text x="0" y="11" font-size="9" fill="currentColor">Ablauf</text>${phaseBars}${rows}</svg>
+    <p class="muted">${phases.map((phase) => escapeHtml(phase.name)).join(" · ")}</p>`;
+}
+
+const facts = (rows) => `<dl>${rows.map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
+
+function card(section, body) {
+  const hatched = section.status === "nicht auswertbar" ? " hatched" : "";
+  return `<section class="card${hatched}"><span class="tag">${escapeHtml(section.status)}</span>
+    <h2>${escapeHtml(section.title)}</h2>${body}</section>`;
+}
+
+function render(data) {
+  const report = buildReport(data);
+  const [fixation, targets, saccades, pursuit] = report.sections;
+  const { meta, calibration, summary } = report;
+  const eye = (item) => (item.errorH === null ? item.reason
+    : `${number(item.errorH)}° / ${number(item.errorV)}°${item.reason ? `, ${item.reason}` : ""}`);
+  const pursuitCards = pursuit.runs.map((entry) => `<div>
+    <p class="muted">${escapeHtml(entry.name)}: ${number(entry.run.frequency, 2)} Hz, ±${entry.run.amplitude}°.
+    Amplitudenverhältnis ${number(entry.stats?.gain, 2)}, Phasenversatz ${number(entry.stats?.lagMs, 0)} ms, enthält Verarbeitungszeit.</p>
+    ${pursuitChart(entry)}</div>`).join("");
+  const main = document.getElementById("report");
+  main.innerHTML = `
+    <h1>Okulomotorischer Gütebericht</h1>
+    <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} · ${escapeHtml(meta?.smoothing ?? "")} ·
+      ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
+    <div class="banner">Entwicklungsdaten eines Forschungsprototyps. Keine Befundaussage, keine Diagnose.</div>
+    <h2>${escapeHtml(summary.headline)}</h2>
+    <ul class="lines">${summary.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+    <p class="muted">${escapeHtml(report.condition)}</p>
+    <div class="grid">
+      ${card(fixation, `${fixationChart(fixation)}<p class="muted">Positionsspur, keine Konfidenzellipse.</p>${facts([
+        ["Robust h / v", `${number(fixation.stats?.robustSdH, 2)}° / ${number(fixation.stats?.robustSdV, 2)}°`],
+        ["Abdeckung h / v", `${percent(fixation.stats?.coverageH)} / ${percent(fixation.stats?.coverageV)}`],
+      ])}`)}
+      ${card(targets, `${targetChart(targets)}<p class="muted">Kreuz Ziel, Punkt Messung.</p>${facts([
+        ["Fehler h / v", `${number(targets.stats?.errorH)}° / ${number(targets.stats?.errorV)}°`],
+        ["Größter Fehler", `${number(targets.stats?.maxError)}°`],
+        ["Ziele", `${targets.targets.length} von ${targets.planned}`],
+      ])}`)}
+      ${card(saccades, `${saccadeChart(saccades)}<p class="muted">Kreis horizontal, Quadrat vertikal. Endlage, nicht erste Landung.</p>${facts([
+        ["Endlage h / v", `${number(saccades.stats?.h?.endGain, 2)} / ${number(saccades.stats?.v?.endGain, 2)}`],
+        ["Latenz h, enthält Verarbeitung", `${number(saccades.stats?.h?.latency, 0)} ms`],
+      ])}`)}
+      <div class="wide">${card(pursuit, `${pursuitCards}<p class="muted">Violett Ziel, blau rechtes Auge, orange gestrichelt linkes Auge, schwarz Mittelwert. Lücken bleiben Lücken.</p>`)}</div>
+      <section class="card wide"><h2>Ablauf und Ereignisse</h2>${eventChart(report.timeline)}</section>
+      <section class="card grey wide"><h2>Nicht untersucht</h2><ul>${report.notExamined.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul></section>
+      <section class="card"><h2>Kalibrierung</h2>${facts([
+        ["Rechts h / v", eye(calibration.rechts)], ["Links h / v", eye(calibration.links)],
+      ])}<p class="muted">Technische Grenzen, keine Normwerte.</p></section>
+      <section class="card review span-two"><h2>Ärztliche Einordnung</h2><p class="muted">Noch offen. Von Hand zu ergänzen.</p></section>
+    </div>`;
+  main.hidden = false;
+  document.getElementById("message").textContent = "";
+}
+
+function show(data) {
+  try {
+    render(data);
+  } catch (error) {
+    document.getElementById("message").textContent = `Datei nicht lesbar: ${error.message}`;
+  }
+}
+
+window.macVisionLoad = show;
+document.getElementById("print").addEventListener("click", () => window.print());
+document.getElementById("file").addEventListener("change", async (event) => {
+  const [file] = event.target.files;
+  if (file) show(JSON.parse(await file.text()));
+});
+if (window.opener?.macVisionRun) show(window.opener.macVisionRun);
+</script>
+</body>
+</html>

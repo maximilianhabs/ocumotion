@@ -5,12 +5,13 @@
 // Zielen mit role "fit" angepasst und an den Zielen mit role "check" geprueft.
 
 export const SCREEN_WIDTH_CM = 28.6;
-export const MIN_SAMPLES = 10;
+export const MIN_VALID_MS = 330;
 // Alle Schwellen sind experimentell und noch nicht an Daten validiert.
 export const MAX_ERROR_H = 2;
 export const MAX_ERROR_V = 3;
 export const MAX_POINT_ERROR = 4;
-export const FILTER_SIZE = 5;
+// Alles Zeitliche steht in Millisekunden, damit es bei jeder Bildrate dasselbe bedeutet.
+export const FILTER_HALF_MS = 70;
 const FILTER_MAX_GAP_MS = 100;
 export const MAX_NOISE_H = 1.5;
 export const MAX_NOISE_V = 2.5;
@@ -46,6 +47,14 @@ export function targetPixels(target, distanceCm, cssWidth, cssHeight, screenWidt
     x: cssWidth / 2 + (Math.tan(radians(target.h)) * distanceCm) / cmPerPx,
     y: cssHeight / 2 - (Math.tan(radians(target.v)) * distanceCm) / cmPerPx,
   };
+}
+
+// Passen alle Ziele bei diesem Abstand und dieser Bildschirmgroesse auf den Bildschirm?
+export function targetsFit(distanceCm, cssWidth, cssHeight, screenWidthCm, targets = STEPS) {
+  return targets.every((target) => {
+    const pixel = targetPixels(target, distanceCm, cssWidth, cssHeight, screenWidthCm);
+    return pixel.x >= 0 && pixel.x <= cssWidth && pixel.y >= 0 && pixel.y <= cssHeight;
+  });
 }
 
 function solve3(matrix, vector) {
@@ -100,22 +109,28 @@ export function median(values) {
 }
 
 // Zentrierter Medianfilter: senkt Rauschen und erhaelt Spruenge. Er greift nicht ueber Luecken.
-export function medianFilter(points, keys, timeKey = "time", size = FILTER_SIZE) {
-  const half = Math.floor(size / 2);
+export function medianFilter(points, keys, timeKey = "time", halfMs = FILTER_HALF_MS) {
   return points.map((point, index) => {
     const result = { ...point };
     const window = [];
-    for (let i = index; i >= Math.max(0, index - half); i -= 1) {
+    for (let i = index; i >= 0 && point[timeKey] - points[i][timeKey] <= halfMs; i -= 1) {
       if (i < index && points[i + 1][timeKey] - points[i][timeKey] > FILTER_MAX_GAP_MS) break;
       window.push(points[i]);
     }
-    for (let i = index + 1; i <= Math.min(points.length - 1, index + half); i += 1) {
+    for (let i = index + 1; i < points.length && points[i][timeKey] - point[timeKey] <= halfMs; i += 1) {
       if (points[i][timeKey] - points[i - 1][timeKey] > FILTER_MAX_GAP_MS) break;
       window.push(points[i]);
     }
     for (const key of keys) result[key] = median(window.map((item) => item[key]));
     return result;
   });
+}
+
+// Reicht die abgedeckte Zeit? Gezaehlt wird Bildzahl mal Bildabstand, nicht die Bildzahl.
+export function hasEnoughData(points, timeKey = "time", minMs = MIN_VALID_MS) {
+  if (points.length < 3) return false;
+  const steps = points.slice(1).map((point, index) => point[timeKey] - points[index][timeKey]);
+  return points.length * median(steps) >= minMs;
 }
 
 export function spread(values) {
@@ -130,7 +145,7 @@ const rootMeanSquare = (values) =>
 function stepPoint(entry, side) {
   const valid = entry.samples.filter((sample) => sample[side])
     .map((sample) => ({ ...sample[side], t: sample.t }));
-  if (valid.length < MIN_SAMPLES) return { ...entry.target, samples: valid, usable: false };
+  if (!hasEnoughData(valid, "t")) return { ...entry.target, samples: valid, usable: false };
   return {
     ...entry.target,
     samples: valid,

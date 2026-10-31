@@ -59,7 +59,9 @@
   .legend span::before { content: ""; display: inline-block; width: 12px; height: 3px;
                          margin-right: 5px; vertical-align: middle; background: var(--c); }
   ol { margin: 0; padding-left: 18px; font-size: 13px; }
-  select, button { font: inherit; color: inherit; }
+  select, button, input { font: inherit; color: inherit; }
+  input { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
+          border-radius: 6px; margin-bottom: 6px; }
   select { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
            border-radius: 6px; margin-bottom: 6px; }
   button { width: 100%; padding: 8px; border: 0; border-radius: 6px; background: var(--accent);
@@ -131,6 +133,7 @@
       <dl class="levels" id="rLevels"></dl>
       <dl class="levels" id="rValues"></dl>
       <button id="rSave" class="primary" style="margin-top:10px">Testlauf speichern</button>
+      <button id="rReport" class="second">Bericht ansehen</button>
       <button id="rCopy" class="second">Bericht kopieren</button>
       <div class="legend">Nichts wird automatisch gespeichert. Die Datei kommt in den Downloads-Ordner, enthält Augenwerte ohne Bilder und ist personenbezogen.</div>
     </section>
@@ -147,6 +150,11 @@
     <section>
       <h2>Steuerung</h2>
       <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
+      <select id="cameraMode" aria-label="Kamera-Modus">
+        <option value="1280x720x30">1280×720, 30 fps</option>
+        <option value="1280x720x60">1280×720, 60 fps</option>
+        <option value="1920x1080x60">1920×1080, 60 fps</option>
+      </select>
       <select id="smoothing" aria-label="Glättung">
         <option value="2">Modellglättung aus (empfohlen)</option>
         <option value="1">Modellglättung an</option>
@@ -158,6 +166,8 @@
         <option value="40" selected>Abstand 40 cm (empfohlen)</option>
         <option value="50">Abstand 50 cm</option>
       </select>
+      <label class="legend" for="screenCm">Sichtbare Bildschirmbreite in cm</label>
+      <input id="screenCm" type="number" min="5" max="150" step="0.1" value="28.6">
       <button id="remember" class="second" disabled>Position merken</button>
       <button id="calibrate" disabled>Kalibrieren</button>
       <button id="zero" class="second" disabled>Nullpunkt ohne Kalibrierung</button>
@@ -223,7 +233,8 @@
 import { FilesetResolver, FaceLandmarker }
   from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
-import { calibrate, fuse, median, sensitivity, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+import { calibrate, fuse, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
+  from "./kalibrierung-logik.js";
 import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
          SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
@@ -247,14 +258,15 @@ const CAL_COLLECT_MS = 2800;
 const STALL_MS = 1500;
 const WARMUP_MS = 1000;
 const ZERO_MS = 1000;
-const LIVE_FILTER_FRAMES = 5;
+const LIVE_FILTER_MS = 140;
+const BOOK_ASPECT = 1.6;
 
 const $ = (id) => document.getElementById(id);
 const video = $("video");
 const overlay = $("overlay");
 const ctx = overlay.getContext("2d");
-const controls = ["toggle", "camera", "smoothing", "distance"];
-const calControls = ["camera", "smoothing", "distance", "zero"];
+const controls = ["toggle", "camera", "cameraMode", "smoothing", "distance", "screenCm"];
+const calControls = ["camera", "cameraMode", "smoothing", "distance", "screenCm", "zero"];
 
 let fileset = null;
 let landmarker = null;
@@ -272,6 +284,7 @@ let clockSource = "–";
 let duplicates = 0;
 let stalled = false;
 let previousHead = null;
+let previousHeadMs = null;
 let headZero = null;
 let zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
 let zeroSet = false;
@@ -470,13 +483,18 @@ function applyValues(sample, raw) {
 
 // Reize laufen auf performance.now(); captureTime liegt auf derselben Uhr, sonst der Callback.
 const eventTime = (timing) => timing.captureMs ?? timing.at;
+const screenWidthCm = () => Number($("screenCm").value) || SCREEN_WIDTH_CM;
 
 // Der Mittelwert laeuft live durch denselben Median wie die Auswertung; die Augen bleiben roh.
 function filterLive(sample, key) {
   sample[`${key}Raw`] = sample[key];
   if (sample[key] === null) return;
-  const recent = samples.slice(1 - LIVE_FILTER_FRAMES).map((item) => item[`${key}Raw`]);
-  sample[key] = median([...recent.filter((value) => value !== null && value !== undefined), sample[key]]);
+  const recent = [];
+  for (let i = samples.length - 1; i >= 0 && sample.frameMs - samples[i].frameMs <= LIVE_FILTER_MS; i -= 1) {
+    const value = samples[i][`${key}Raw`];
+    if (value !== null && value !== undefined) recent.push(value);
+  }
+  sample[key] = median([...recent, sample[key]]);
 }
 
 function recordFrame(timing, faces) {
@@ -490,8 +508,10 @@ function recordFrame(timing, faces) {
     collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
     return;
   }
-  const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead);
+  const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead,
+                             previousHeadMs === null ? undefined : timing.frameMs - previousHeadMs);
   previousHead = frame.head;
+  previousHeadMs = timing.frameMs;
   headZero ??= frame.head;
   const point = (eye) => (eye.valid ? { x: eye.x, y: eye.y, aperture: eye.aperture } : null);
   sample.raw = { rechts: point(frame.rechts), links: point(frame.links) };
@@ -764,7 +784,7 @@ const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 function placeDot(target) {
   currentTarget = { ...target };
   const distance = Number($("distance").value);
-  const pixel = targetPixels(target, distance, window.innerWidth, window.innerHeight);
+  const pixel = targetPixels(target, distance, window.innerWidth, window.innerHeight, screenWidthCm());
   $("calDot").style.left = `${pixel.x}px`;
   $("calDot").style.top = `${pixel.y}px`;
 }
@@ -792,6 +812,10 @@ async function enterFullscreen(id) {
   // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
   if (Math.abs(window.innerWidth - window.screen.width) > 2) {
     abortCalibration("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.");
+    return false;
+  }
+  if (!targetsFit(Number($("distance").value), window.innerWidth, window.innerHeight, screenWidthCm())) {
+    abortCalibration("Die Blickziele passen bei diesem Abstand nicht auf den Bildschirm.");
     return false;
   }
   $("cal").hidden = false;
@@ -1002,6 +1026,8 @@ function showReport(run, report, result) {
       smoothing: $("smoothing").selectedOptions[0].textContent,
       filter: "Median 5 Bilder in Auswertung, Rohwerte im Export",
       distanceCm: Number($("distance").value),
+      screenWidthCm: screenWidthCm(),
+      cameraWish: $("cameraMode").value,
       mode: $("mMode").textContent,
       clock: clockSource,
       duplicates,
@@ -1168,10 +1194,11 @@ function renderStats() {
 
 async function start() {
   const deviceId = $("camera").value;
+  const [wishWidth, wishHeight, wishFps] = $("cameraMode").value.split("x").map(Number);
   try {
     stream = DRY_RUN ? (await import("./trockenlauf.js")).fakeStream() : await navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
+      video: { width: { ideal: wishWidth }, height: { ideal: wishHeight }, frameRate: { ideal: wishFps },
                ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
     });
     video.srcObject = stream;
@@ -1203,6 +1230,10 @@ async function start() {
     stop();
     setStatus("Kamera getrennt. Messung beendet.", true);
   });
+  const screenAspect = window.screen.width / window.screen.height;
+  if (Math.abs(screenAspect - BOOK_ASPECT) > 0.02) {
+    setStatus("Anderer Bildschirm erkannt? Bildschirmbreite prüfen, sonst sind die Winkel falsch.", true);
+  }
   const { width, height, frameRate } = track.getSettings();
   $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0, 1)} fps`;
   await listCameras();
@@ -1268,11 +1299,13 @@ $("calibrate").addEventListener("click", runCalibration);
 $("remember").addEventListener("click", rememberPosition);
 $("qualityTest").addEventListener("click", runQualityTest);
 $("rCopy").addEventListener("click", copyReport);
-$("rSave").addEventListener("click", saveRun);
-$("distance").addEventListener("change", () => {
-  clearReference();
-  invalidateCalibration("keine");
+$("rReport").addEventListener("click", () => {
+  if (!lastRun) return;
+  window.macVisionRun = lastRun;
+  window.open("bericht.html", "_blank");
 });
+$("rSave").addEventListener("click", saveRun);
+$("distance").addEventListener("change", geometryChanged);
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement) abortCalibration("Vollbild beendet: Kalibrierung abgebrochen.");
 });
@@ -1291,9 +1324,16 @@ $("smoothing").addEventListener("change", () => exclusive(async () => {
   resetSegment();
   setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
 }));
-$("camera").addEventListener("change", () => {
-  if (running) exclusive(async () => { stop(); await start(); });
-});
+for (const id of ["camera", "cameraMode"]) {
+  $(id).addEventListener("change", () => {
+    if (running) exclusive(async () => { stop(); await start(); });
+  });
+}
+function geometryChanged() {
+  clearReference();
+  invalidateCalibration("keine");
+}
+$("screenCm").addEventListener("change", geometryChanged);
 document.addEventListener("visibilitychange", () => {
   if (!running) return;
   resetSegment();

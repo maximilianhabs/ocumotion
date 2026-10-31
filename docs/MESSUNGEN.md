@@ -215,3 +215,16 @@ Alle drei Läufe ergeben: horizontal nutzbar, vertikal unzuverlässig. In Lauf 3
 knapp durch (2,3° gegen die Grenze 2,0°). Die Endlage von 0,84 stammt daher vom rechten Auge allein; das
 linke lag bei 1,16, das frühere einfache Mittel bei 0,99. Das spricht gegen zu frühes Aussortieren eines
 Auges und muss an weiteren Läufen geprüft werden.
+
+## 31.10.2026 — Umstellung auf Millisekunden
+
+Filter (±70 ms), Datenmenge (330 ms) und Kopfgrenze (9 Irisdurchmesser je Sekunde) rechnen nun in Zeit. Alle
+drei Läufe neu gerechnet: Bei 30 fps änderten sich nur zwei Werte um 0,01. `make test`: 60 von 60 bestanden.
+Die Betriebsart mit 60 fps ist nur mit Testvideo und ohne echte Kamera geprüft.
+
+## 31.10.2026 — Visueller Bericht
+
+`make test`: 67 von 67 bestanden. `bericht.html` öffnete alle drei echten Läufe ohne Rechenfehler; alle drei
+ergeben „horizontal nutzbar, vertikal unzuverlässig“. Die Dateien enthalten noch keine Kopfereignisse, Lauf 1
+auch keine Lidwerte; der Bericht zeigt das als „nicht erfasst“. Der Weg über „Bericht ansehen“ nach einem echten
+Lauf und die Druckausgabe sind noch nicht geprüft.

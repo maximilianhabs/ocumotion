@@ -75,6 +75,14 @@ test("Kopfsprung zwischen zwei Bildern macht das Bild ungültig", () => {
   assert.ok(second.rechts.reasons.includes("Kopfbewegung"));
 });
 
+test("Die Kopfgrenze gilt je Sekunde, nicht je Bild", () => {
+  const first = measureFrame(face(), WIDTH, HEIGHT, null);
+  const at30 = measureFrame(face({ offsetX: 6 }), WIDTH, HEIGHT, first.head, 1000 / 30);
+  const at60 = measureFrame(face({ offsetX: 6 }), WIDTH, HEIGHT, first.head, 1000 / 60);
+  assert.notEqual(meanX(at30), null);
+  assert.equal(meanX(at60), null);
+});
+
 test("Kleine Kopfbewegung bleibt gültig", () => {
   const first = measureFrame(face(), WIDTH, HEIGHT, null);
   const second = measureFrame(face({ offsetX: 2 }), WIDTH, HEIGHT, first.head);
