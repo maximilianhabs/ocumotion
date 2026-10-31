@@ -259,3 +259,88 @@ Schlagrichtung jeweils gegen den Reiz, keine Falschmeldung in der Kontrolle. Mit
 
 An den vier Läufen, gegen die volle Kalibrierung: horizontal Faktor 0,98, 1,08, 1,03, 0,93, Zielfehler 1,2–2,8°;
 vertikal Faktor 0,97, 0,70, 0,73, 1,12, Zielfehler 2,2–6,2°. Trockenlauf des Kurzlaufs dauerte 78 s.
+
+## 31.10.2026 — Erster Kurzlauf, echte Augen
+
+Ohne Kalibrierung, Menüabstand 40 cm, gemessener Abstand nicht mitgeteilt, Irisbreite 27,8 Bildpunkte, also weiter weg als
+in den früheren Läufen. 100 % Abdeckung, keine Kopfmarke. Maßstab aus Sprüngen: horizontal 86 °/Irisdurchmesser, im
+Bereich der früheren Kalibrierungen.
+
+Primärposition und alle vier Blickrichtungen ohne Ruckmuster; das ist der erste echte Lauf des Blickhaltens, ohne
+Falschmeldung. SWJ 1 in 16 s. Blickfolge Gain 1,06, 2,3 Sakkaden je Zyklus, über der Arbeitsgrenze; acht Sekunden sind dafür kurz.
+
+**Optokinetik: kein Sägezahn nachweisbar.** Sprünge über 1° je 5,5 s: 5 rechts und 5 links bei Reiz nach rechts, 7 rechts und 9
+links bei Reiz nach links. Mittlere Augengeschwindigkeit −0,4 und −2,4 °/s statt nahe +6 und −6 °/s. Die Rohkurve zeigt
+unregelmäßiges Wandern. Die Erkennung hat damit noch immer keinen echten Nystagmus gesehen. Ob ein Reizproblem
+(Dauer, Abstand, Aufgabe) oder eine Messgrenze vorliegt, ist offen; der ausführliche Lauf mit 12 s und Kontrolle steht aus.
+
+Der erste Bericht nannte dazu „3 Schläge, 6,0 °/s“ aus zwei Phasen. Das war zu sicher formuliert; ohne einheitliche Richtung
+gibt es nun keinen Wert mehr.
+
+## 31.10.2026 — Zweiter Kurzlauf, echte Augen
+
+Wieder Kurzlauf, kein ausführlicher Lauf. Menüabstand 40 cm, gemessener Abstand nicht mitgeteilt, Irisbreite 35,2 statt 27,8
+Bildpunkte, also deutlich näher als im ersten Kurzlauf. 100 % Abdeckung, keine Kopfmarke. Maßstab aus Sprüngen 95 °/Irisdurchmesser.
+
+Primärposition und alle Blickrichtungen ohne Ruckmuster, SWJ 2 in 16 s. Blickfolge glatt: Gain 1,02, 0,0 Sakkaden je Zyklus
+statt 2,3. Das Ruherauschen wurde dabei nicht besser, robust 0,84° statt 0,70°; die Nähe erklärt die bessere Folge also nicht
+sicher.
+
+**Optokinetik: wieder kein Sägezahn.** Eine eigene Zerlegung nach Geschwindigkeit (schnell ab 30 °/s, dazwischen Regression) für
+beide Kurzläufe, ohne Änderung am Code:
+
+| Lauf, Block | Schnelle Sprünge rechts/links | Langsame Phasen |
+|---|---|---|
+| 1, Muster rechts | 0 / 1 | 0,0 und 0,0 °/s |
+| 1, Muster links | 1 / 0 | −0,7 und 0,1 °/s |
+| 2, Muster rechts | 0 / 1 | 0,0 und 0,1 °/s |
+| 2, Muster links | 3 / 3 | 6 Abschnitte, 1 mit und 3 gegen den Reiz, Betrag bis 4,6 °/s |
+
+**Einordnung:** Eine Messgrenze ist damit unwahrscheinlich. Dieselbe Messung folgte im selben Lauf einem Punkt mit bis zu 15,7 °/s
+(10° bei 0,25 Hz) mit Gain 1,02; langsame Bewegung um 8 °/s wäre also sichtbar. Das Auge stand in den Streifenblöcken überwiegend
+still. Plausibler ist deshalb, dass Reiz oder Aufgabe in dieser Form keinen OKN auslösen; 7 s sind zudem kurz. Bewiesen ist das
+nicht, weil das Empfinden beim Lauf fehlt und der ausführliche Lauf mit 12 s und Kontrolle aussteht.
+
+Im Block „Muster links“ von Lauf 2 meldet der Bericht 14 Sprünge, die Zerlegung nach Geschwindigkeit nur 6. Die großen Sprünge bis
+11,8° in beide Richtungen sehen nach Blickwechseln aus, nicht nach Rückstellungen. `detectJumps` zählt dort vermutlich doppelt;
+ungeprüft, für die Aussage „kein Sägezahn“ ohne Folgen.
+
+## 31.10.2026 — Erster ausführlicher Lauf, echte Augen
+
+Dauer 248 s ab Kalibrierung, vom Nutzer als sehr anstrengend beschrieben. Menüabstand 40 cm, gemessener Abstand nicht mitgeteilt,
+Irisbreite 35–37 Bildpunkte. Kalibrierung freigegeben (Prüffehler 0,95°/1,31°), Bericht trotzdem „beide Achsen unzuverlässig“:
+neue Ziele 3,5°/3,3°, schlimmstes Ziel 9,5°. Primärposition, Blickrichtungen und SWJ ohne Befund. Blickfolge Gain 0,96 und 0,98,
+schnell 4,3 Sakkaden je Zyklus. Sakkaden rechts und links metrisch (1,03–1,07), vertikal nicht beurteilbar.
+
+**Kopf und Nullpunkt wandern.** Die Kopfposition im Bild sank stetig von y 390 auf 455 Bildpunkte, x von 684 auf 700. Kopfmarken ab 110 s.
+Der Blick auf die Mitte wanderte mit:
+
+| Zeitpunkt | h | v |
+|---|---|---|
+| Ruhe, 57 s | −0,3° | 0,5° |
+| OKN Ausgangslage, 198 s | 0,9° | 2,1° |
+| OKN Kontrolle, 240 s | 2,0° | 5,7° |
+
+Eine Kalibrierung gilt damit nur am Anfang, vertikal besonders. Ein zweiter Fehler ist nicht durch diese Wanderung erklärt: Ziele
+rechts lagen schon bei 80 s zu weit außen und zu hoch (Soll 15/0, Ist 19,6/5,6; bei 134 s Soll 10/7, Ist 17,3/13,2), links und unten
+stimmten sie. Ursache offen.
+
+**Optokinetik: weiter kein Sägezahn, aber ein wiederholbarer Hinweis.**
+
+| Block | Schnelle Sprünge rechts/links | Langsame Abschnitte |
+|---|---|---|
+| Muster rechts | 1 / 1 | um 0 °/s |
+| Muster links | 7 / 1, Schlagrichtung passt zum Reiz | meist −0,4 bis −1,0 °/s, also Gain um 0,1 |
+| Kontrolle mit Punkt | 0 / 0 | 0,2 °/s über 7 s |
+
+Die Zerlegung erfasst nur Sprünge ab etwa 3° je 100 ms, kleinere Schläge bleiben ihr verborgen. `detectJumps` findet in denselben
+Blöcken mehr Sprünge, bei Muster rechts aber in beide Richtungen gleich viele, auch das ist kein Sägezahn.
+Die mittlere Augengeschwindigkeit lag in allen drei Läufen bei Muster links in Reizrichtung (−2,4, −2,5, −1,9 °/s), bei Muster rechts
+nahe null (−0,4, 0,6, 0,5 °/s). Das kann eine schwache Antwort oder eine Folge der festen Reihenfolge sein; rechts kam immer zuerst.
+In der Kontrolle ruhte das Auge, und die Messung zeigte trotz Muster Ruhe. Das spricht in diesem Lauf gegen ein Streifenartefakt, ist aber
+kein validierter Ausschluss.
+
+**Rechnerische Kürzung am selben Lauf:** Ruhe 12 statt 20 s ergibt bessere Streuung (0,59°/0,99° statt 0,82°/1,63°; vertikal kippt es ab
+10 s), aber SWJ nicht beurteilbar. Blickhalten 4 statt 7 s ändert nichts. Blickfolge 8 statt 16 s kippt auf grenzwertig. Die
+horizontalen Sakkaden bleiben mit den ersten acht Sprüngen gleich. Kalibrierfenster 2,0 statt 2,8 s: Prüffehler 0,98°/1,41°, vertikal
+keine Freigabe mehr, also nicht kürzen. Gültig nur für diesen einen Lauf ohne Nystagmus.

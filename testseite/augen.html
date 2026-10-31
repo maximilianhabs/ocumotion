@@ -57,6 +57,16 @@
   #calStripes { position: absolute; inset: 0; width: 100%; height: 100%; }
   .result-line { margin: 4px 0; font-size: 13px; }
   #calDot::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: #1c1917; }
+  #calCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(760px, 90vw);
+             text-align: center; }
+  #calCard[hidden], #calCard [hidden] { display: none; }
+  #calCard p { margin: 0; }
+  #cardStep { font-size: 16px; color: #57534e; margin-bottom: 14px !important; }
+  #cardTitle { font-size: 30px; font-weight: 600; margin: 0 0 14px; text-transform: none; letter-spacing: 0; color: #1c1917; }
+  #cardText { font-size: 22px; line-height: 1.4; margin-bottom: 14px !important; }
+  #cardDuration { font-size: 16px; color: #57534e; margin-bottom: 22px !important; }
+  #cardNotice, #cardHead { font-size: 18px; color: #b45309; margin-bottom: 14px !important; }
+  #cardKey { font-size: 16px; color: #57534e; }
   #calText { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; font-size: 14px; }
   .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 4px; }
   .legend span::before { content: ""; display: inline-block; width: 12px; height: 3px;
@@ -126,9 +136,10 @@
   <aside>
     <section>
       <h2>Untersuchung starten</h2>
-      <button id="runShort" class="primary" disabled>Kurzlauf, rund 80 Sekunden</button>
-      <button id="runLong" class="second" disabled>Ausführlicher Lauf, rund 4 Minuten</button>
-      <div class="legend">Beide enthalten bewegte Streifen. Der Kurzlauf braucht keine Kalibrierung, misst aber keine Metrik. Kopf aufstützen, nur den Augen folgen.</div>
+      <button id="runShort" class="primary" disabled>Kurzlauf, rund 1,5 Minuten</button>
+      <button id="runLong" class="second" disabled>Ausführlicher Lauf, rund 3,5 Minuten</button>
+      <button id="runOkn" class="second" disabled>Optokinetik, rund 1,5 Minuten</button>
+      <div class="legend">Kurzlauf und Optokinetik enthalten bewegte Streifen. Jeder Lauf besteht aus Etappen; vor jeder erscheint eine Karte, das Tempo bestimmen Sie mit der Leertaste. Kurzlauf und Optokinetik brauchen keine Kalibrierung und messen keine Metrik. Kopf aufstützen, nur den Augen folgen.</div>
     </section>
     <section id="report" hidden>
       <h2>Ergebnis</h2>
@@ -228,22 +239,33 @@
   <canvas id="calStripes" hidden></canvas>
   <div id="calDot"></div>
   <p id="calText"></p>
+  <div id="calCard" hidden>
+    <p id="cardStep"></p>
+    <h2 id="cardTitle"></h2>
+    <p id="cardText"></p>
+    <p id="cardDuration"></p>
+    <p id="cardNotice" hidden></p>
+    <p id="cardHead" hidden>Bitte den Kopf zurück zur Ausgangsposition bringen.</p>
+    <p id="cardKey"></p>
+  </div>
 </div>
 
 <script type="module">
 import { FilesetResolver, FaceLandmarker }
   from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
-import { calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
+import { CAL_COLLECT_MS, CAL_SETTLE_MS, calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
   from "./kalibrierung-logik.js";
-import { ACCURACY_TARGETS, GAZE_HOLDS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { buildReport } from "./bericht-logik.js";
 import { PROTOCOLS } from "./protokolle.js";
+import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stepText } from "./etappen-logik.js";
 import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./okn-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
-         medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./positionierung-logik.js";
+         canResume, medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./positionierung-logik.js";
 
 const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
+// Mit ?trockenlauf&tasten warten die Karten auf die echte Taste, damit sich die Bedienung ohne Kamera prüfen lässt.
+const DRY_KEYS = new URLSearchParams(window.location.search).has("tasten");
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
 const WINDOW_MS = 3000;
@@ -256,8 +278,6 @@ const FULLSCREEN_TIMEOUT_MS = 2000;
 const POSE_WINDOW_MS = 1000;
 const REMEMBER_WINDOW_MS = 2000;
 const CAL_LEAD_MS = 3000;
-const CAL_SETTLE_MS = 1200;
-const CAL_COLLECT_MS = 2800;
 const STALL_MS = 1500;
 const WARMUP_MS = 1000;
 const ZERO_MS = 1000;
@@ -296,6 +316,9 @@ let calibration = null;
 let calRun = 0;
 let calibrating = false;
 let collecting = null;
+// Nur während der Pause: Kopflage der letzten Bilder, keine Messdaten.
+let pauseProbe = null;
+let cancelCard = null;
 let lastRun = null;
 let runUnsaved = false;
 let headEvents = [];
@@ -500,6 +523,12 @@ function filterLive(sample, key) {
   sample[key] = median([...recent, sample[key]]);
 }
 
+function pushProbe(head, irisPx) {
+  if (!pauseProbe) return;
+  pauseProbe.push({ head, irisPx });
+  if (pauseProbe.length > PAUSE_PROBE_FRAMES) pauseProbe.shift();
+}
+
 function recordFrame(timing, faces) {
   const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
                    vMean: null, head: null, irisPx: null, headPoint: null, raw: null, pose: null,
@@ -509,6 +538,7 @@ function recordFrame(timing, faces) {
     previousHead = null;
     samples.push(sample);
     collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
+    pushProbe(null, null);
     return;
   }
   const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead,
@@ -532,6 +562,7 @@ function recordFrame(timing, faces) {
   if (sample.disagree) sample.reasons.push("Seitendifferenz");
   samples.push(sample);
   const rejected = (eye) => (eye.valid ? undefined : { aperture: eye.aperture, reasons: eye.reasons });
+  pushProbe(frame.head, frame.irisPx);
   collecting?.samples.push({
     t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx,
     irisRechts: frame.rechts.irisPx, irisLinks: frame.links.irisPx, head: frame.head,
@@ -642,6 +673,7 @@ function updateButtons() {
   $("calibrate").disabled = !running || calibrating || !reference;
   $("runShort").disabled = !running || calibrating || !faceVisible;
   $("runLong").disabled = !running || calibrating || !faceVisible;
+  $("runOkn").disabled = !running || calibrating || !faceVisible;
 }
 
 function clearGuide() {
@@ -736,6 +768,8 @@ function endCalibrating() {
   calibrating = false;
   $("cal").hidden = true;
   collecting = null;
+  $("calCard").hidden = true;
+  $("calDot").hidden = false;
   for (const id of calControls) $(id).disabled = !running;
   updateButtons();
 }
@@ -744,6 +778,7 @@ function endCalibrating() {
 function abortCalibration(message) {
   if (!calibrating) return;
   calRun += 1;
+  cancelCard?.();
   $("calStripes").hidden = true;
   $("calDot").hidden = false;
   endCalibrating();
@@ -822,7 +857,15 @@ async function enterFullscreen(id) {
   return true;
 }
 
-// Sammelt an einem Ziel. Liefert null, wenn der Lauf abgebrochen oder der Kopf bewegt wurde.
+// Kopf oder Abstand außerhalb der Abbruchgrenze. Der Aufrufer entscheidet: Etappe wiederholen oder Lauf beenden.
+class HeadMoved extends Error {
+  constructor(drift) {
+    super("Kopf oder Abstand stark verändert");
+    this.drift = drift;
+  }
+}
+
+// Sammelt an einem Ziel. Liefert null, wenn der Lauf abgebrochen wurde; bewegt sich der Kopf, wirft sie HeadMoved.
 async function collectTarget(id, target, settleMs, collectMs) {
   placeDot(target);
   await wait(settleMs);
@@ -834,10 +877,7 @@ async function collectTarget(id, target, settleMs, collectMs) {
   collecting = null;
   entry.to = performance.now();
   const drift = positionDrift(entry.samples, reference, video.videoWidth, video.videoHeight);
-  if (drift?.moved) {
-    abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
-    return null;
-  }
+  if (drift?.moved) throw new HeadMoved(drift);
   if (drift?.marked) {
     headEvents.push({ time: entry.from, target: target.name, distanceChange: drift.distanceChange, headShift: drift.headShift });
   }
@@ -879,7 +919,14 @@ async function runCalibration() {
   if (busy || calibrating || !running || !reference) return;
   const id = ++calRun;
   if (!await enterFullscreen(id)) return;
-  const entries = await calibrationSequence(id);
+  let entries = null;
+  try {
+    entries = await calibrationSequence(id);
+  } catch (error) {
+    if (!(error instanceof HeadMoved)) throw error;
+    abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
+    return;
+  }
   if (!entries) return;
   await leaveFullscreen();
   const result = finishCalibration(entries);
@@ -887,16 +934,7 @@ async function runCalibration() {
   else setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
 }
 
-async function announce(id, text, ms) {
-  placeDot({ h: 0, v: 0 });
-  $("calDot").hidden = false;
-  $("calText").textContent = text;
-  await wait(ms);
-  return id === calRun;
-}
-
 async function phaseFixation(id, durationMs) {
-  $("calText").textContent = "Ruhig auf den Punkt schauen, normal blinzeln";
   const entry = { samples: [] };
   collecting = entry;
   await wait(durationMs);
@@ -904,31 +942,38 @@ async function phaseFixation(id, durationMs) {
   return id === calRun ? entry : null;
 }
 
-async function phaseGaze(id, gaze) {
+async function phaseGaze(id, part) {
   const holds = [];
-  for (const target of GAZE_HOLDS) {
-    $("calText").textContent = `Blick ${target.name} halten`;
-    const part = await collectTarget(id, target, gaze.settleMs, gaze.holdMs);
-    if (!part) return null;
-    holds.push({ target, samples: part.samples });
+  for (const target of part.targets) {
+    const hold = await collectTarget(id, target, part.settleMs, part.holdMs);
+    if (!hold) return null;
+    holds.push({ target, samples: hold.samples });
     placeDot({ h: 0, v: 0 });
-    $("calText").textContent = "Zurück zur Mitte";
-    await wait(gaze.returnMs);
+    await wait(part.returnMs);
     if (id !== calRun) return null;
   }
   return holds;
 }
 
-async function phaseAccuracy(id) {
+async function phaseAccuracy(id, part) {
   const entry = { samples: [], windows: [] };
-  for (const [index, target] of ACCURACY_TARGETS.entries()) {
-    $("calText").textContent = `Punkt ${index + 1} von ${ACCURACY_TARGETS.length}`;
-    const part = await collectTarget(id, target, TARGET_SETTLE_MS, TARGET_COLLECT_MS);
-    if (!part) return null;
-    entry.samples.push(...part.samples);
-    entry.windows.push({ target, from: part.from, to: part.to });
+  for (const target of part.targets) {
+    const hold = await collectTarget(id, target, part.settleMs, part.collectMs);
+    if (!hold) return null;
+    entry.samples.push(...hold.samples);
+    entry.windows.push({ target, from: hold.from, to: hold.to });
   }
   return entry;
+}
+
+async function phaseCalibration(id, part) {
+  const entries = [];
+  for (const target of part.targets) {
+    const entry = await collectTarget(id, target, part.settleMs, part.collectMs);
+    if (!entry) return null;
+    entries.push(entry);
+  }
+  return entries;
 }
 
 function phasePursuit(id, run) {
@@ -972,6 +1017,127 @@ async function phaseSaccades(id, saccades) {
   return id === calRun ? entry : null;
 }
 
+const CARD_POLL_MS = 200;
+const DRY_CARD_MS = 300;
+const PAUSE_PROBE_FRAMES = 15;
+const CARD_KEY = "Weiter mit Leertaste";
+const REPEAT_NOTICE = "Der Kopf hat sich bewegt. Diese Etappe wird wiederholt.";
+
+function fillCard({ step = "", title, text, duration = "", notice = "", key = "" }) {
+  collecting = null;
+  $("calDot").hidden = true;
+  $("calStripes").hidden = true;
+  $("calText").textContent = "";
+  const set = (name, value) => {
+    $(name).textContent = value;
+    $(name).hidden = !value;
+  };
+  set("cardStep", step);
+  set("cardTitle", title);
+  set("cardText", text);
+  set("cardDuration", duration);
+  set("cardNotice", notice);
+  set("cardKey", key);
+  $("cardHead").hidden = true;
+  $("calCard").hidden = false;
+}
+
+// Wartet auf Eingabe. Bei Abbruch (Lauf gewechselt, Esc, Vollbildende) löst sie mit null auf und entfernt
+// in jedem Fall beide Listener und die Zeitgeber. Im Trockenlauf läuft sie nach dryMs von selbst weiter.
+function awaitInput(id, { onKey, onClick, onTick, dryMs, dryValue }) {
+  return new Promise((resolve) => {
+    let timer = null;
+    const keyListener = (event) => {
+      if (!event.repeat) onKey?.(event, finish);
+    };
+    const clickListener = (event) => onClick?.(event, finish);
+    function finish(value) {
+      clearInterval(timer);
+      clearTimeout(timer);
+      document.removeEventListener("keydown", keyListener);
+      document.removeEventListener("click", clickListener);
+      pauseProbe = null;
+      cancelCard = null;
+      resolve(value);
+    }
+    cancelCard = () => finish(null);
+    if (DRY_RUN && !DRY_KEYS) {
+      timer = setTimeout(() => finish(id === calRun ? dryValue() : null), dryMs);
+      return;
+    }
+    document.addEventListener("keydown", keyListener);
+    document.addEventListener("click", clickListener);
+    timer = setInterval(() => {
+      if (id !== calRun) finish(null);
+      else onTick?.();
+    }, CARD_POLL_MS);
+    onTick?.();
+  });
+}
+
+// Karte vor einer Etappe. Keine Messung; die Kopfprüfung läuft nur als Tor für Weiter.
+// Liefert Beginn, Ende und Wartezeit oder null bei Abbruch.
+async function showCard(id, card) {
+  fillCard({ ...card, key: CARD_KEY });
+  pauseProbe = [];
+  const shownAt = performance.now();
+  const headOk = () => DRY_RUN || canResume(pauseProbe ?? [], reference, video.videoWidth, video.videoHeight);
+  const timing = () => {
+    const continuedAt = performance.now();
+    return { shownAt, continuedAt, waitMs: continuedAt - shownAt };
+  };
+  const attempt = (done) => {
+    if (canContinue(performance.now() - shownAt, headOk())) done(timing());
+  };
+  return awaitInput(id, {
+    onKey: (event, done) => {
+      if (event.code !== "Space") return;
+      event.preventDefault();
+      attempt(done);
+    },
+    onClick: (event, done) => attempt(done),
+    onTick: () => { $("cardHead").hidden = !pauseProbe?.length || headOk(); },
+    dryMs: DRY_CARD_MS,
+    dryValue: timing,
+  });
+}
+
+// Schlusskarte: Taste 1 bis 5 oder Leertaste. Kein Tor durch die Kopfprüfung.
+// Liefert { value } (1 bis 5 oder null) oder null bei Abbruch.
+function askEffort(id) {
+  fillCard({ step: "Geschafft", title: "Wie anstrengend war das?", text: "Taste 1 bis 5, Leertaste überspringt.",
+             duration: "1 = gar nicht anstrengend, 5 = sehr anstrengend" });
+  return awaitInput(id, {
+    onKey: (event, done) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        done({ value: null });
+        return;
+      }
+      const value = effortFromKey(event.key);
+      if (value !== null) {
+        event.preventDefault();
+        done({ value });
+      }
+    },
+    dryMs: DRY_CARD_MS,
+    dryValue: () => ({ value: null }),
+  });
+}
+
+// Hinführung: Punkt in der Mitte, die Rohwerte dieser Sekunde sind nur für den Nullpunkt.
+async function leadPhase(id) {
+  $("calCard").hidden = true;
+  $("calStripes").hidden = true;
+  placeDot({ h: 0, v: 0 });
+  $("calDot").hidden = false;
+  const entry = { samples: [] };
+  collecting = entry;
+  await wait(LEAD_MS);
+  collecting = null;
+  return id === calRun ? entry.samples : null;
+}
+
 const OKN_LIGHT = "#c8c8c8";
 const OKN_DARK = "#303030";
 const OKN_INSTRUCTION = "Streifen verfolgen, dann den nächsten nehmen. Kopf ruhig.";
@@ -1007,7 +1173,7 @@ function oknBlock(id, block, stripes) {
     $("calStripes").hidden = !moving;
     $("calDot").hidden = block.kind === "moving" || block.kind === "grey";
     placeDot({ h: 0, v: 0 });
-    $("calText").textContent = moving ? "" : block.label;
+    $("calText").textContent = "";
     const entry = { block: { ...block }, samples: [] };
     entry.block.from = performance.now();
     collecting = entry;
@@ -1036,35 +1202,130 @@ function oknBlock(id, block, stripes) {
   });
 }
 
+function checkHead(samples) {
+  const drift = positionDrift(samples, reference, video.videoWidth, video.videoHeight);
+  if (drift?.moved) throw new HeadMoved(drift);
+}
+
+function samplesOf(part, data) {
+  switch (part.kind) {
+    case "calibration":
+    case "okn": return data.flatMap((entry) => entry.samples);
+    case "gaze": return data.flatMap((hold) => hold.samples);
+    default: return data.samples;
+  }
+}
+
+// Ein Messteil. Liefert null bei Abbruch; wirft HeadMoved, wenn der Kopf die Grenze überschreitet.
+// Zielpunkte prüfen den Kopf je Ziel (collectTarget), die übrigen Teile am Ende.
+async function measurePart(id, part, stripes) {
+  let data = null;
+  switch (part.kind) {
+    case "calibration": return phaseCalibration(id, part);
+    case "accuracy": return phaseAccuracy(id, part);
+    case "gaze": return phaseGaze(id, part);
+    case "fixation": data = await phaseFixation(id, part.durationMs); break;
+    case "pursuit": data = await phasePursuit(id, part.run); break;
+    case "saccades": data = await phaseSaccades(id, part); break;
+    case "okn":
+      data = [];
+      for (const block of part.blocks) {
+        const entry = await oknBlock(id, block, stripes);
+        if (!entry) return null;
+        data.push(entry);
+      }
+      break;
+    default: throw new Error(`unbekannter Teil: ${part.kind}`);
+  }
+  if (data) checkHead(samplesOf(part, data));
+  return data;
+}
+
+// Die Messdaten behalten ihre Form je Baustein, damit Auswertung und alte Dateien weiter passen.
+function mergeStage(run, results) {
+  for (const { part, data } of results) {
+    switch (part.kind) {
+      case "calibration": run.calibration = [...(run.calibration ?? []), ...data]; break;
+      case "accuracy": run.accuracy = data; break;
+      case "fixation": run.fixation = data; break;
+      case "gaze": run.gaze.push(...data); break;
+      case "pursuit": run.pursuit.push(data); break;
+      case "saccades": run.saccades = data; break;
+      case "okn": run.okn.push(...data); break;
+      default: break;
+    }
+  }
+}
+
+// Eine Etappe: Karte, Hinführung, Messung. Bewegt sich der Kopf, werden nur die Daten dieser Etappe verworfen
+// und ihre Karte erscheint erneut, höchstens zweimal. Alle anderen Abbrüche beenden den Lauf.
+async function runStage(id, protocol, stage, run, stripes, { skipCard = false } = {}) {
+  const position = protocol.stages.indexOf(stage);
+  let repeats = 0;
+  let waitMs = 0;
+  let notice = "";
+  for (;;) {
+    let card = null;
+    if (!skipCard || repeats > 0) {
+      card = await showCard(id, { step: stepText(position, protocol.stages.length), title: stage.title, text: stage.text,
+                                  duration: cardDuration(stageMs(stage)), notice });
+      if (!card) return null;
+      waitMs += card.waitMs;
+    }
+    const leadSamples = await leadPhase(id);
+    if (!leadSamples) return null;
+    try {
+      const results = [];
+      for (const part of stage.parts) {
+        const data = await measurePart(id, part, stripes);
+        if (!data) return null;
+        results.push({ part, data });
+      }
+      const drift = positionDrift(results.flatMap(({ part, data }) => samplesOf(part, data)), reference,
+                                  video.videoWidth, video.videoHeight);
+      mergeStage(run, results);
+      return { id: stage.id, title: stage.title, shownAt: card?.shownAt ?? null, continuedAt: card?.continuedAt ?? null,
+               waitMs, leadSamples, headShift: drift?.headShift ?? null, repeats };
+    } catch (error) {
+      collecting = null;
+      if (!(error instanceof HeadMoved)) throw error;
+      if (!canRepeat(repeats)) {
+        abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
+        return null;
+      }
+      repeats += 1;
+      notice = REPEAT_NOTICE;
+    }
+  }
+}
+
 async function examPhases(id, protocol, stripes) {
-  const ms = protocol.announceMs;
-  const run = { pursuit: [], okn: [] };
-  if (!await announce(id, "Ruhig schauen", ms)) return null;
-  run.fixation = await phaseFixation(id, protocol.fixationMs);
-  if (!run.fixation || !await announce(id, "Dem Punkt folgen und dort bleiben", ms)) return null;
-  run.gaze = await phaseGaze(id, protocol.gaze);
-  if (!run.gaze) return null;
-  if (protocol.accuracy) {
-    if (!await announce(id, "Neue Punkte", ms)) return null;
-    run.accuracy = await phaseAccuracy(id);
-    if (!run.accuracy) return null;
-  }
-  for (const entry of protocol.pursuit) {
-    if (!await announce(id, `Dem Punkt ${entry.name} folgen`, ms)) return null;
-    const result = await phasePursuit(id, entry);
-    if (!result) return null;
-    run.pursuit.push(result);
-  }
-  if (!await announce(id, "Dem springenden Punkt sofort folgen", ms)) return null;
-  run.saccades = await phaseSaccades(id, protocol.saccades);
-  if (!run.saccades || !await announce(id, OKN_INSTRUCTION, ms)) return null;
-  for (const block of protocol.okn) {
-    if (block.kind === "control" && !await announce(id, "Jetzt nur den Punkt ansehen, nicht den Streifen folgen", ms)) return null;
-    const entry = await oknBlock(id, block, stripes);
+  const run = { pursuit: [], okn: [], gaze: [], stages: [] };
+  const record = (entry) => {
+    const index = run.stages.findIndex((item) => item.id === entry.id);
+    if (index >= 0) run.stages[index] = entry;
+    else run.stages.push(entry);
+  };
+  for (const stage of protocol.stages) {
+    const entry = await runStage(id, protocol, stage, run, stripes);
     if (!entry) return null;
-    run.okn.push(entry);
+    record(entry);
+    if (stage.id !== "kalibrierung-2" || calibrate(run.calibration).mittel.passedH) continue;
+    // Horizontale nicht freigegeben: beide Teile einmal wiederholen. Danach läuft es weiter wie bisher,
+    // auch bei erneutem Misserfolg; die Auswertung kennzeichnet die Kalibrierung dann als nicht bestanden.
+    const parts = ["kalibrierung-1", "kalibrierung-2"].map((name) => protocol.stages.find((item) => item.id === name));
+    const card = await showCard(id, { title: "Kalibrierung wiederholen",
+      text: "Die Kalibrierung hat nicht gepasst. Beide Teile laufen einmal noch einmal. Kopf ruhig, nur mit den Augen folgen.",
+      duration: cardDuration(parts.reduce((sum, item) => sum + stageMs(item), 0)) });
+    if (!card) return null;
+    run.calibrationRetry = card;
+    run.calibration = [];
+    for (const again of parts) {
+      const retried = await runStage(id, protocol, again, run, stripes, { skipCard: true });
+      if (!retried) return null;
+      record({ ...retried, calibrationRetry: true });
+    }
   }
-  $("calDot").hidden = false;
   return run;
 }
 
@@ -1072,15 +1333,17 @@ function showResult(protocol, run, meta) {
   const report = buildReport({ run, meta });
   const { summary, findings } = report;
   const line = (name, status) => `<div class="result-line"><strong>${name}:</strong> ${status}</div>`;
+  const okn = line("Optokinetik", findings.okn ? `${findings.okn.conform} von ${findings.okn.total} reizkonform` : "nicht untersucht");
   $("rOverall").textContent = summary.headline;
   $("rOverall").className = "big";
-  $("rLines").innerHTML = [
+  // Eine reine Optokinetik-Datei sagt nichts zu den übrigen Befunden.
+  $("rLines").innerHTML = report.oknOnly ? okn : [
     line("Spontannystagmus", findings.spontaneous.status),
     line("Blickrichtung", findings.gazeStatus),
     line("Square-Wave-Jerks", findings.swj.status),
     line("Blickfolge", findings.pursuitStatus),
     line("Sakkaden", findings.saccadeStatus),
-    line("Optokinetik", findings.okn ? `${findings.okn.conform} von ${findings.okn.total} reizkonform` : "nicht untersucht"),
+    ...(findings.okn || hasPart(protocol, "okn") ? [okn] : []),
   ].join("");
   $("report").hidden = false;
   $("rSave").textContent = "Testlauf speichern";
@@ -1103,23 +1366,21 @@ async function runExam(protocol) {
   headEvents = [];
   const id = ++calRun;
   if (!await enterFullscreen(id)) return;
-  const stripes = prepareStripes();
-  let entries = null;
-  if (protocol.calibrated) {
-    entries = await calibrationSequence(id);
-    if (!entries) return;
-  }
+  $("calText").textContent = "";
+  const stripes = hasPart(protocol, "okn") ? prepareStripes() : null;
   const run = await examPhases(id, protocol, stripes);
   if (!run) return;
-  if (entries) run.calibration = entries;
+  const effort = await askEffort(id);
+  if (!effort) return;
   await leaveFullscreen();
-  if (entries) finishCalibration(entries);
+  if (run.calibration) finishCalibration(run.calibration);
   const field = fieldDegrees(screenWidthCm(), Number($("distance").value));
   showResult(protocol, run, {
     createdAt: new Date().toISOString(),
     protocol: protocol.title,
-    okn: { instruction: OKN_INSTRUCTION, speedDegPerS: OKN_SPEED, periodDeg: stripes.periodDeg,
-           stripePairs: field / stripes.periodDeg, fieldDeg: field, colors: [OKN_LIGHT, OKN_DARK] },
+    effort: effort.value,
+    okn: stripes ? { instruction: OKN_INSTRUCTION, speedDegPerS: OKN_SPEED, periodDeg: stripes.periodDeg,
+                     stripePairs: field / stripes.periodDeg, fieldDeg: field, colors: [OKN_LIGHT, OKN_DARK] } : null,
     smoothing: $("smoothing").selectedOptions[0].textContent,
     filter: "Median rund 140 ms in Auswertung, Rohwerte im Export",
     distanceCm: Number($("distance").value),
@@ -1141,7 +1402,8 @@ function saveRun() {
   link.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
   link.download = `macvision-lauf-${kind}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
   link.click();
-  URL.revokeObjectURL(link.href);
+  // Sofortiges Freigeben kann den Download abbrechen, besonders bei großen Dateien.
+  setTimeout(() => URL.revokeObjectURL(link.href), 60000);
   runUnsaved = false;
   $("rSave").textContent = "Gespeichert, nochmal speichern";
   setStatus(`Gespeichert in Downloads: ${link.download}`);
@@ -1341,6 +1603,7 @@ $("calibrate").addEventListener("click", runCalibration);
 $("remember").addEventListener("click", rememberPosition);
 $("runShort").addEventListener("click", () => runExam(PROTOCOLS.kurz));
 $("runLong").addEventListener("click", () => runExam(PROTOCOLS.lang));
+$("runOkn").addEventListener("click", () => runExam(PROTOCOLS.okn));
 $("rReport").addEventListener("click", () => {
   if (!lastRun) return;
   window.macVisionRun = lastRun;

@@ -76,7 +76,9 @@ export function analyseBlock(series, rawMean, block, expectedFrames) {
     const slope = slopeBetween(raw, "h", from, to);
     if (slope !== null) slopes.push(slope);
   }
-  const speed = slopes.length ? Math.abs(median(slopes)) : null;
+  // Ohne einheitliche Schlagrichtung gibt es keine langsame Phase, die man vermessen dürfte.
+  const consistent = share >= MIN_SHARE;
+  const speed = consistent && slopes.length ? Math.abs(median(slopes)) : null;
   const slowSign = slopes.length ? Math.sign(median(slopes)) : 0;
   const seconds = (points.at(-1).time - points[0].time) / 1000;
   const pattern = beats.length >= MIN_BEATS && share >= MIN_SHARE && slowSign === -beatDirection;
@@ -90,12 +92,15 @@ export function analyseBlock(series, rawMean, block, expectedFrames) {
     beatDirection,
     rate: beats.length / seconds,
     share,
-    phases: slopes.length,
+    consistent,
+    jumpsRight: positive,
+    jumpsLeft: negative,
+    phases: consistent ? slopes.length : 0,
     slopes,
     spv: speed,
-    spvSpread: slopes.length >= 2 ? spread(slopes.map(Math.abs)) : null,
+    spvSpread: consistent && slopes.length >= 2 ? spread(slopes.map(Math.abs)) : null,
     gain: speed !== null ? speed / OKN_SPEED : null,
-    quantifiable: slopes.length >= MIN_QUANT_PHASES,
+    quantifiable: consistent && slopes.length >= MIN_QUANT_PHASES,
     coverage,
     minJump: MIN_JUMP.h,
   };

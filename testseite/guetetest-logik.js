@@ -6,7 +6,7 @@
 
 import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, midpoint, spread, toDegrees } from "./kalibrierung-logik.js";
 
-export const FIXATION_MS = 20000;
+export const FIXATION_MS = 16000;
 export const TARGET_SETTLE_MS = 1200;
 export const TARGET_COLLECT_MS = 1800;
 export const PAUSE_MS = 2000;
@@ -28,18 +28,17 @@ export const GAZE_HOLDS = [
   { name: "unten", h: 0, v: -10 },
 ];
 export const GAZE_SETTLE_MS = 1000;
-export const GAZE_HOLD_MS = 7000;
-export const GAZE_RETURN_MS = 2000;
+export const GAZE_HOLD_MS = 4000;
+export const GAZE_RETURN_MS = 1500;
 
 export const PURSUIT_RUNS = [
-  { name: "langsam", amplitude: 10, frequency: 0.25, durationMs: 16000 },
+  { name: "langsam", amplitude: 10, frequency: 0.25, durationMs: 12000 },
   { name: "schnell", amplitude: 10, frequency: 0.5, durationMs: 8000 },
 ];
 
 export const SACCADE_JUMPS = [
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: -10 },
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: 0 },
-  { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: -8 },
   { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: 0 },
 ];
 export const SACCADE_MIN_MS = 1200;

@@ -20,8 +20,7 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
 
-**Nächster Schritt:** je ein echter Lauf beider Protokolle, siehe `PROTOKOLLE.md`. Der ausführliche Lauf ersetzt den
-bisherigen Gütetest und den OKN-Test.
+**Nächster Schritt:** je ein echter Lauf der Protokolle mit Etappen, siehe `PROTOKOLLE.md` und `KONZEPT_PROBANDENFUEHRUNG.md`. Danach Stufe B1 aus dem Backlog unten.
 Der visuelle Bericht liegt unter `testseite/bericht.html`, Zielbild in `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`.
 Danach die einmalige Kameramessung, siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 2b, und der Vergleich mit dem
 iPhone als Kamera, siehe `KONZEPT_UEBERTRAGBARKEIT.md`.
@@ -40,6 +39,53 @@ Gestensteuerung und Mac-Steuerung warten, bis diese Machbarkeitsfrage beantworte
 
 **Vor belastbaren Messungen noch offen:** Modelle und Laufzeit lokal mit Prüfsumme bereitstellen,
 Betrieb ohne Netzwerk testen.
+
+## Backlog Untersuchung und Befund
+
+Aus einer externen Recherche vom 31.10.2026. Die Aussagen zum eigenen Code sind am Code geprüft. Die Literaturangaben unter
+„Quellen“ sind übernommen und noch nicht im Original gelesen; vor jeder Verwendung im Bericht gegenlesen.
+
+**Leitlinie:** Die Grundstruktur bleibt. Der Kurztest ist ein begrenztes Screening, keine verkürzte VOG. Kern sind Fixation, Blickhalten,
+Sakkaden und Blickfolge; Optokinetik ist Ergänzung, Antisakkaden gehören nicht in die Routine.
+
+### B1 — Aussagen korrigieren, vor weiterer Deutung
+
+| Punkt | Stelle | Änderung |
+|---|---|---|
+| Messfreigabe hängt an der Leistung | `axisUsable()`: Endlagen-Gain ±0,3 | Echte Dysmetrie darf nicht als schlechte Messung gelten. Für Gesunde als technische Plausibilität behalten, aus der Patientenfreigabe nehmen |
+| Endlage ersetzt erste Landung | `judgeSaccades()`: `firstGain ?? endGain` | Ersatz streichen; fehlt die erste Landung, ist die Metrik nicht beurteilbar |
+| Erste Landung ungenau | festes Fenster ab 25 % der Zielamplitude | Korrekturen können hineinfallen. Primärsakkade als eigenes Ereignis bestimmen |
+| OKN als „unauffällig“ | `oknStatus()` | Stattdessen „reizkonforme Antwort nachweisbar“ |
+| Kontrolle als Artefakt-Beweis | `controlVerdict()`: „spricht gegen ein Reflexartefakt“ | Nur noch Beobachtung, kein validierter Ausschluss |
+| Detektion klingt wie Nachweis | Text „Nachweisgrenze“ bei 1,5° und 3° | Heißt Mindestgröße der Erkennung; die echte Nachweisgrenze ist nicht gemessen |
+| SWJ hochgerechnet | Rate je Minute aus 16 s mit Ampel | Nur „n Kandidaten in t Sekunden“, keine Ampel aus so kurzer Zeit |
+| Ampel und Arbeitsgrenzen vermischt | `LIMITS` | Technische Arbeitsgrenzen von klinischer Einordnung trennen; Detektionsschwelle, Einordnung und Krankheitsgrenze getrennt führen. Hängt mit Zweckbestimmung in `ROAD_TO_PUBLIC.md` Stufe 1 zusammen |
+| Untersuchter Winkel | Bericht | Tatsächlichen Winkel nennen. ±30° sind am Bildschirm nicht erreichbar, bei 40 cm rund ±20° |
+
+### B2 — Protokoll
+
+| Punkt | Änderung |
+|---|---|
+| Sakkaden zu vorhersagbar | Richtung und Ziel pseudorandomisieren, nicht nur die Wartezeit |
+| Position und Amplitude | Von +10° nach −10° sind es 20°. Zunächst echte 10°-Sprünge, weitere Größen als eigene Bedingung; Rückkehr zur Mitte getrennt auswerten |
+| Blickfolge in Geschwindigkeit angeben | `v_max = 2π·f·A`. Heute 0,25 Hz und 0,5 Hz bei ±10°, also 15,7 und 31,4 °/s. Vorschlag: 0,2 und 0,4 Hz mit je mindestens drei Zyklen, 0,1 Hz als leichte Variante. Frequenz, Amplitude und `v_max` in den Bericht |
+| Blickfolge-Gain | Heute Amplitudenverhältnis des Sinus-Fits (`gain` in `analysePursuit`) mitsamt Sakkaden. Besser Geschwindigkeit der glatten Anteile ohne schnelle Ereignisse im ganzen Fenster, dazu Phase, Seitensymmetrie, Sakkadierung, Abdeckung |
+| Sakkaden-Kennwerte | Primär-Gain, Landefehler, Korrektursakkaden, Endlagefehler, Latenz, Seitenvergleich |
+| Drei Profile | Kurz als Screening, Standard für die Kernfunktionen mit definierten Reizen, Lang mit Wiederholungen und Zusatzmodulen. Der Bericht nennt den tatsächlichen Umfang |
+| Längeres Blickhalten | Nur im Langprofil und in Etappen. Die veröffentlichten 15 s je Bedingung stehen gegen die Anstrengung; 4 s bleiben ein kurzer Eindruck, ohne echten Nystagmus nicht geprüft |
+| Optokinetik | Aus dem Pflicht-Kurzlauf nehmen. Verfolgen („look“) und reflexnahes Betrachten als getrennte Aufgaben führen und im Export kennzeichnen. 8 °/s ist Funktionstest, kein klassischer Ganzfeld-OKN; Feldgröße, Periode und Anweisung in den Bericht |
+
+### B3 — Validierung
+
+- Reihenfolge: Endpositionen und grobe Muster, dann Primärsakkaden und Korrekturen, dann Latenz über die Reiz-Bild-Zeit.
+- Spitzengeschwindigkeit bleibt gesperrt, solange die Messkette dafür nicht geprüft ist. Keine Genauigkeit durch Hochinterpolieren behaupten.
+- Referenzwerte nur passend zu Aufgabe, Gerät und Alter; fremde Intervalle nicht auf diesen Aufbau übertragen.
+- Reproduzierbarkeit und VOG-Vergleich ersetzt keine Literatur.
+
+### Quellen, noch nicht im Original gelesen
+
+British Society of Audiology, Recommended Procedure Vestibular Assessment – Eye Movement Recordings (2015) · Kullmann et al., PLOS ONE 2021
+und Laryngoscope Investigative Otolaryngology 2021 · Demian et al., Clinical Saccadometry 2023 · Bastani et al., EyePhone 2024.
 
 ## E1 im Detail
 

@@ -191,3 +191,102 @@ test("Optokinetik erscheint als eigener Befund mit Kontrolle", () => {
   assert.equal(okn.total, 2);
   assert.equal(okn.control.suspicious, false);
 });
+
+function oknOnlyRun() {
+  const jumps = [
+    { axis: "h", from: 0, to: 10 }, { axis: "h", from: 10, to: -10 }, { axis: "h", from: -10, to: 10 }, { axis: "h", from: 10, to: 0 },
+  ].map((jump, index) => ({ ...jump, at: 10000 + index * 1500 }));
+  const pick = (time) => jumps.filter((jump) => time >= jump.at + 200).at(-1)?.to ?? 0;
+  const blocks = [["links", "moving", -1, 30000], ["kontrolle", "control", 1, 50000]];
+  return {
+    fixation: { samples: samples(3000, 0, () => ({ h: 0, v: 0 })) },
+    gaze: [],
+    pursuit: [],
+    saccades: { jumps, samples: samples(8000, 9000, (time) => ({ h: pick(time), v: 0 })) },
+    okn: blocks.map(([id, kind, direction, from]) => ({
+      block: { id, label: id, kind, direction, durationMs: 12000, from, to: from + 12000 },
+      samples: samples(12000, from, (time) => {
+        const slow = (((time - from) / 1000) % 0.6) * 6;
+        return { h: kind === "control" ? 0 : direction * (slow - 1.8), v: 0 };
+      }),
+    })),
+  };
+}
+
+test("Eine reine Optokinetik-Datei baut ohne Fehler und behauptet nichts zu Sakkaden oder Blickfolge", () => {
+  const report = buildReport({ run: oknOnlyRun(), meta: META });
+  assert.equal(report.oknOnly, true);
+  assert.equal(report.version, "bericht-5");
+  assert.equal(report.summary.headline, "Nur Optokinetik, Maßstab aus Sprüngen");
+  assert.equal(report.calibration.selfScaled, true);
+  const { findings } = report;
+  assert.equal(findings.okn.total, 1);
+  assert.ok(findings.okn.control);
+  for (const key of ["spontaneous", "gaze", "swj", "pursuit", "pursuitStatus", "saccades", "saccadeStatus", "gazeStatus"]) {
+    assert.equal(findings[key], undefined, key);
+  }
+  assert.ok(report.notExamined.includes("Blickfolge"));
+});
+
+test("Ein langer Lauf ohne Optokinetik baut ohne Fehler und lässt den Abschnitt weg", () => {
+  const run = fullRun();
+  run.okn = [];
+  run.gaze = [];
+  const report = buildReport({ run, meta: META });
+  assert.equal(report.oknOnly, false);
+  assert.equal(report.findings.okn, null);
+  assert.ok(report.findings.spontaneous);
+});
+
+test("Ein alter langer Lauf mit Optokinetik gilt nicht als reine Optokinetik", () => {
+  const run = fullRun();
+  const start = 800000;
+  const from = start;
+  run.okn = [{ block: { id: "rechts", label: "rechts", kind: "moving", direction: 1, durationMs: 12000, from, to: from + 12000 },
+               samples: samples(12000, from, () => ({ h: 0, v: 0 })) }];
+  const report = buildReport({ run, meta: META });
+  assert.equal(report.oknOnly, false);
+  assert.ok(report.findings.okn);
+});
+
+function stagedRun() {
+  const run = fullRun();
+  const lead = (h) => samples(1000, 900000, () => ({ h, v: -1 }));
+  run.stages = [
+    { id: "ruhe", title: "Ruhe", shownAt: 1, continuedAt: 4001, waitMs: 4000, leadSamples: lead(0.5), headShift: 0.8, repeats: 0 },
+    { id: "folge-langsam", title: "Blickfolge langsam", shownAt: 1, continuedAt: 6001, waitMs: 6000, leadSamples: lead(1), headShift: 1.5, repeats: 1 },
+  ];
+  return run;
+}
+
+test("Etappen ergeben den Nullpunkt je Etappe samt Wartezeit und Wiederholungen", () => {
+  const report = buildReport({ run: stagedRun(), meta: { ...META, effort: 3 } });
+  const { stages } = report;
+  assert.equal(stages.rows.length, 2);
+  assert.ok(Math.abs(stages.rows[0].h - 0.5) < 0.1, `${stages.rows[0].h}`);
+  assert.ok(Math.abs(stages.rows[1].v + 1) < 0.1, `${stages.rows[1].v}`);
+  assert.equal(stages.waitMs, 10000);
+  assert.equal(stages.repeats, 1);
+  assert.equal(stages.calibrationRepeated, false);
+  assert.deepEqual(report.effort, { state: "value", value: 3 });
+});
+
+test("Dateien ohne Etappen haben keinen Abschnitt und bauen unverändert", () => {
+  const report = buildReport({ run: fullRun(), meta: META });
+  assert.equal(report.stages, null);
+  assert.deepEqual(report.effort, { state: "absent", value: null });
+});
+
+test("Die Anstrengung unterscheidet übersprungen von einer Zahl", () => {
+  const run = stagedRun();
+  assert.deepEqual(buildReport({ run, meta: { ...META, effort: null } }).effort, { state: "skipped", value: null });
+  assert.equal(buildReport({ run, meta: { ...META, effort: 5 } }).effort.value, 5);
+});
+
+test("Fehlende Hinführung ergibt keinen Nullpunkt statt eines Fehlers", () => {
+  const run = fullRun();
+  run.stages = [{ id: "ruhe", title: "Ruhe", leadSamples: [], waitMs: 1000, repeats: 0 }];
+  const { rows } = buildReport({ run, meta: META }).stages;
+  assert.equal(rows[0].h, null);
+  assert.equal(rows[0].v, null);
+});

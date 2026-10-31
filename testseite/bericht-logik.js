@@ -9,7 +9,7 @@ import { analyseBlock, controlVerdict, directionWord, oknStatus } from "./okn-lo
 import { analyseNystagmus, analyseSaccadeMetrics, analyseSmoothPursuit, analyseSwj, judgeNystagmus, judgePursuit,
          judgeSaccades, judgeSwj, LIMITS, STATUS, withoutLidEvents } from "./befund-logik.js";
 
-export const REPORT_VERSION = "bericht-3";
+export const REPORT_VERSION = "bericht-5";
 const SPAN_GAP_MS = 150;
 const LID_LOW_SHARE = 0.75;
 const ENDPOINT_SETTLE_MS = 600;
@@ -23,6 +23,14 @@ export const NOT_EXAMINED = [
   "Torsion",
   "Vergenz",
   "Vestibulookuläre Funktionen",
+];
+
+export const NOT_EXAMINED_OKN_ONLY = [
+  "Spontannystagmus",
+  "Blickrichtung",
+  "Square-Wave-Jerks",
+  "Blickfolge",
+  "Sakkaden (die Sprünge dienen nur als Maßstab)",
 ];
 
 // Fasst Zeitpunkte zu Spannen zusammen; ein einzelner Punkt bleibt eine kurze Spanne.
@@ -47,7 +55,7 @@ function phases(run) {
     ...(run.pursuit ?? []).flatMap((entry) => span(`Folge ${entry.run.name}`, entry.samples)),
     ...span("Sprünge", run.saccades?.samples),
     ...(run.okn ?? []).flatMap((entry) => span(entry.block.label, entry.samples)),
-  ];
+  ].sort((a, b) => a.from - b.from);
 }
 
 function eventRows(run, meta) {
@@ -140,7 +148,9 @@ function oknFindings(run, calibration) {
     const series = toSeries(entry.samples, calibration);
     const raw = toSeries(entry.samples, calibration, { filter: false }).mittel;
     const result = analyseBlock(series, raw, entry.block, Math.round(entry.block.durationMs / (1000 / 30)));
-    const beat = result.beats ? `${result.beats} Schläge nach ${directionWord(result.beatDirection)}, ${number(result.rate)}/s` : "keine Schläge";
+    const beat = result.consistent === false && result.beats
+      ? `keine einheitliche Schlagrichtung, ${result.jumpsRight} Sprünge nach rechts, ${result.jumpsLeft} nach links`
+      : result.beats ? `${result.beats} Schläge nach ${directionWord(result.beatDirection)}, ${number(result.rate)}/s` : "keine Schläge";
     const speed = result.spv === null ? "langsame Phase nicht messbar"
       : `langsame Phase ${number(result.spv)} °/s, ${result.phases} Phasen${result.quantifiable ? "" : ", zu wenige für einen Wert"}`;
     return {
@@ -164,10 +174,16 @@ function oknFindings(run, calibration) {
   };
 }
 
+// Reine Optokinetik-Datei: Streifenblöcke vorhanden, weder Blickhalten noch Blickfolge.
+export function isOknOnly(run) {
+  return (run.okn?.length ?? 0) > 0 && !(run.gaze?.length) && !(run.pursuit?.length);
+}
+
 function findings(run, calibration, summary, timeline) {
   const releasedH = Boolean(calibration.mittel?.passedH);
   const releasedV = Boolean(calibration.mittel?.passedV);
   const lidSpans = timeline.rows.find((row) => row.name.startsWith("Lidsenkung"))?.spans ?? [];
+  if (isOknOnly(run)) return { okn: oknFindings(run, calibration), limits: LIMITS };
   const rest = toSeries(run.fixation.samples, calibration);
   const restPoints = withoutLidEvents(rest.mittel, lidSpans);
   const spontaneous = {
@@ -182,7 +198,7 @@ function findings(run, calibration, summary, timeline) {
     return places;
   };
   const swj = judgeSwj(analyseSwj(restPoints, eyesOf(rest)), releasedH);
-  const pursuit = run.pursuit.map((entry) => {
+  const pursuit = (run.pursuit ?? []).map((entry) => {
     const series = toSeries(entry.samples, calibration);
     return {
       name: entry.run.name,
@@ -217,6 +233,39 @@ function findings(run, calibration, summary, timeline) {
   };
 }
 
+// Nullpunkt je Etappe aus der Sekunde Hinführung. Nur eine Anzeige, keine Korrektur der Messwerte.
+function stageFindings(run, meta, calibration) {
+  if (!run.stages?.length) return null;
+  const pick = (points, key) => {
+    const values = points.map((p) => p[key]).filter((value) => value !== null && value !== undefined);
+    return values.length ? median(values) : null;
+  };
+  const rows = run.stages.map((stage) => {
+    const points = toSeries(stage.leadSamples ?? [], calibration).mittel;
+    return {
+      id: stage.id,
+      title: stage.title,
+      h: pick(points, "h"),
+      v: pick(points, "v"),
+      waitMs: stage.waitMs ?? null,
+      repeats: stage.repeats ?? 0,
+      headShift: stage.headShift ?? null,
+    };
+  });
+  return {
+    rows,
+    waitMs: rows.reduce((sum, row) => sum + (row.waitMs ?? 0), 0),
+    repeats: rows.reduce((sum, row) => sum + row.repeats, 0),
+    calibrationRepeated: Boolean(run.calibrationRetry),
+  };
+}
+
+// Anstrengung: fehlt in alten Dateien (absent), null = übersprungen.
+function effortOf(meta) {
+  if (meta?.effort === undefined) return { state: "absent", value: null };
+  return meta.effort === null ? { state: "skipped", value: null } : { state: "value", value: meta.effort };
+}
+
 function section(id, title, status, extra = {}) {
   return { id, title, status, ...extra };
 }
@@ -238,7 +287,7 @@ export function buildReport(data) {
   const center = { h: centerOf("h"), v: centerOf("v") };
   const targets = targetEstimates(run.accuracy?.windows ?? [], accuracySeries.mittel);
   const endpoints = saccadeEndpoints(run.saccades.jumps, saccadeSeries.mittel);
-  const pursuit = run.pursuit.map((entry) => {
+  const pursuit = (run.pursuit ?? []).map((entry) => {
     const series = seriesOf(entry.samples);
     return {
       name: entry.run.name,
@@ -249,6 +298,7 @@ export function buildReport(data) {
     };
   });
   const timeline = { phases: phases(run), rows: eventRows(run, meta) };
+  const oknOnly = isOknOnly(run);
   const status = (usable, hasData) => {
     if (!hasData) return "nicht auswertbar";
     return usable ? "horizontal nutzbar" : "eingeschränkt";
@@ -256,7 +306,8 @@ export function buildReport(data) {
   return {
     version: REPORT_VERSION,
     meta,
-    summary,
+    summary: oknOnly ? { ...summary, headline: "Nur Optokinetik, Maßstab aus Sprüngen" } : summary,
+    oknOnly,
     calibration,
     analysis,
     condition: "Beobachtung unter visueller Fixation. Testperson nicht klinisch beurteilt.",
@@ -275,7 +326,9 @@ export function buildReport(data) {
       section("pursuit", "Blickfolge", status(summary.usableH, pursuit.some((entry) => entry.stats)), { runs: pursuit }),
     ],
     timeline,
+    stages: stageFindings(run, meta, calibration),
+    effort: effortOf(meta),
     findings: findings(run, calibration, summary, timeline),
-    notExamined: NOT_EXAMINED,
+    notExamined: oknOnly ? [...NOT_EXAMINED_OKN_ONLY, ...NOT_EXAMINED] : NOT_EXAMINED,
   };
 }

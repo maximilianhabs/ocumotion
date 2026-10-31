@@ -20,6 +20,10 @@ export const MAX_GAP_MS = 600;
 export const MAX_SIDE_DIFFERENCE = 5;
 const MIN_NOISE = 0.05;
 
+// Zeiten je Kalibrierpunkt.
+export const CAL_SETTLE_MS = 1200;
+export const CAL_COLLECT_MS = 2800;
+
 const step = (name, h, v, role) => ({ name, h, v, role });
 
 export const STEPS = [

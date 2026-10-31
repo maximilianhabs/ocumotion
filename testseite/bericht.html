@@ -194,14 +194,30 @@ function gazeTable(findings) {
   return `<table><thead><tr><th>Blick</th><th>Horizontal</th><th>Vertikal</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+function stagesSection(report) {
+  const { stages, effort } = report;
+  if (!stages && effort.state === "absent") return "";
+  const seconds = (ms) => (ms === null ? "–" : `${number(ms / 1000, 0)} s`);
+  const table = stages ? `<table><thead><tr><th>Etappe</th><th>Nullpunkt h</th><th>Nullpunkt v</th><th>Kopfversatz</th><th>Karte</th><th>Wiederholt</th></tr></thead><tbody>${
+    stages.rows.map((row) => `<tr><th>${escapeHtml(row.title)}</th><td>${number(row.h, 2)}°</td><td>${number(row.v, 2)}°</td>
+      <td>${row.headShift === null ? "–" : `${number(row.headShift, 1)} Iris`}</td><td>${seconds(row.waitMs)}</td><td>${row.repeats ? `${row.repeats}×` : "nein"}</td></tr>`).join("")
+  }</tbody></table>
+    <p>Wartezeit auf den Karten insgesamt ${seconds(stages.waitMs)}. Wiederholte Etappen: ${stages.repeats ? `${stages.repeats} Wiederholung${stages.repeats === 1 ? "" : "en"}` : "keine"}.${
+      stages.calibrationRepeated ? " Die Kalibrierung wurde einmal wiederholt." : ""}</p>
+    <p class="muted">Der Nullpunkt ist der Median der Blickposition in der Sekunde vor jeder Etappe, als Hinführung mit dem Punkt in der Mitte. Das ist nur eine Anzeige der Wanderung über den Lauf, keine Korrektur der Messwerte.</p>` : "";
+  const effortText = { absent: "", skipped: "<p>Anstrengung: nicht angegeben.</p>", value: `<p>Anstrengung laut Testperson: ${effort.value} von 5.</p>` }[effort.state];
+  return `<section class="finding"><header><h2>Nullpunkt im Verlauf</h2></header>${table}${effortText}</section>`;
+}
+
 function render(data) {
   const report = buildReport(data);
   const [fixation, targets, saccades, pursuit] = report.sections;
   const { meta, calibration, summary, findings } = report;
   const { limits } = findings;
+  const notExamined = [...report.notExamined, ...(report.oknOnly || findings.okn ? [] : ["Optokinetik (in diesem Lauf nicht untersucht)"])];
   const eye = (item) => (!item ? "in dieser Datei nicht berechnet" : (item.errorH ?? null) === null ? (item.reason ?? "ohne Kalibrierung")
     : `${number(item.errorH)}° / ${number(item.errorV)}°${item.reason ? `, ${item.reason}` : ""}`);
-  const pursuitBlocks = pursuit.runs.map((entry, index) => {
+  const pursuitBlocks = report.oknOnly ? "" : pursuit.runs.map((entry, index) => {
     const judged = findings.pursuit[index];
     return `<div>${line(judged.status, `${entry.name}, ${number(entry.run.frequency, 2)} Hz: ${judged.text}`)}${pursuitChart(entry)}</div>`;
   }).join("");
@@ -214,6 +230,8 @@ function render(data) {
     <h2>${escapeHtml(summary.headline)}</h2>
     <p class="muted">${escapeHtml(report.condition)}</p>
 
+    ${report.oknOnly ? `<p class="muted">Der Maßstab stammt aus den kurzen horizontalen Sprüngen dieses Laufs, nicht aus einer Kalibrierung. Gradwerte sind Näherungen; Aussagen zu Ruhe, Blickrichtung, Blickfolge und Sakkaden macht dieser Lauf nicht.</p>` : ""}
+    ${report.oknOnly ? "" : `
     ${finding(1, "Fixation in Ruhe, Spontannystagmus", findings.spontaneous.status, `<div class="split"><div>
       ${line(findings.spontaneous.horizontal.status, `Horizontal: ${findings.spontaneous.horizontal.text}`)}
       ${line(findings.spontaneous.vertical.status, `Vertikal: ${findings.spontaneous.vertical.text}`)}
@@ -248,19 +266,21 @@ function render(data) {
         ["Latenz horizontal, mit Verarbeitung", `${number(saccades.stats?.h?.latency, 0)} ms`],
       ])}</div><div>${targetChart(targets)}<p class="muted">Kreuz Ziel, Punkt Messung.</p></div></div>
       <p class="limit">Metrisch gilt von ${number(limits.saccade.normalLow, 2)} bis ${number(limits.saccade.normalHigh, 2)}. ${escapeHtml(limits.saccade.source)}. Vertikal nur bei freigegebener Vertikale.</p>`)}
+    `}
 
-    ${findings.okn ? finding(6, "Optokinetik", findings.okn.status, `
+    ${findings.okn ? finding(report.oknOnly ? 1 : 6, "Optokinetik", findings.okn.status, `
       <p>${findings.okn.conform} von ${findings.okn.total} Richtungen reizkonform.</p>
       ${findings.okn.items.map((item) => `${line(item.status, `${item.label}: ${item.text}`)}${oknChart(item)}`).join("")}
       ${findings.okn.control ? `<p>${escapeHtml(findings.okn.control.text)}</p>` : `<p class="muted">Ohne Kontrollblock: Ein Messartefakt durch Hornhautreflexe ist nicht ausgeschlossen.</p>`}
       <p class="limit">Antwort auf einen Bildschirmreiz, kein Ganzfeldtest. Ausbleiben bedeutet keine Störung; Gain 1 ist keine Norm.</p>`)
-      : `<section class="finding"><header><h2>6. Optokinetik</h2>${chip("nicht beurteilbar")}</header><p class="muted">In diesem Lauf nicht untersucht.</p></section>`}
+      : ""}
 
+    ${stagesSection(report)}
     <section class="finding"><header><h2>Messqualität</h2></header>
       ${summary.lines.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}
       ${facts([["Prüffehler Mittel h / v", eye(calibration.mittel)], ["Rechtes Auge", eye(calibration.rechts)], ["Linkes Auge", eye(calibration.links)]])}
       ${eventChart(report.timeline)}</section>
-    <section class="finding"><header><h2>Nicht untersucht</h2>${chip("nicht beurteilbar")}</header><p>${report.notExamined.map(escapeHtml).join(" · ")}</p></section>
+    <section class="finding"><header><h2>Nicht untersucht</h2>${chip("nicht beurteilbar")}</header><p>${notExamined.map(escapeHtml).join(" · ")}</p></section>
     <section class="finding review"><header><h2>Ärztliche Einordnung</h2></header><p class="muted">Noch offen. Von Hand zu ergänzen.</p></section>`;
   main.hidden = false;
   document.getElementById("message").textContent = "";

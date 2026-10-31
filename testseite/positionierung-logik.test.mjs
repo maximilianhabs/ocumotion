@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { EYES } from "./augen-logik.js";
-import { analysePose, assess, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor } from "./positionierung-logik.js";
+import { analysePose, assess, canResume, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor } from "./positionierung-logik.js";
 
 const WIDTH = 1280;
 const HEIGHT = 720;
@@ -105,4 +105,14 @@ test("Bewegung gegenüber der Referenz wird erkannt", () => {
   const muchCloser = Array(10).fill({ irisPx: 39, head: { x: 640, y: 288 } });
   assert.equal(positionDrift(muchCloser, reference, WIDTH, HEIGHT).moved, true);
   assert.equal(positionDrift([{ irisPx: null, head: null }], reference, WIDTH, HEIGHT), null);
+});
+
+test("Weiter nach der Pause nur, wenn der Kopf innerhalb der Abbruchgrenze liegt", () => {
+  const reference = { x: 0.5, y: 0.42, irisPx: 30 };
+  const seen = (dx) => Array.from({ length: 10 }, () => ({ irisPx: 30, head: { x: 640 + dx, y: 302.4 } }));
+  assert.equal(canResume(seen(0), reference, WIDTH, HEIGHT), true);
+  assert.equal(canResume(seen(3 * 30), reference, WIDTH, HEIGHT), true);
+  assert.equal(canResume(seen(5 * 30), reference, WIDTH, HEIGHT), false);
+  assert.equal(canResume([], reference, WIDTH, HEIGHT), false);
+  assert.equal(canResume([{ irisPx: null, head: null }], reference, WIDTH, HEIGHT), false);
 });

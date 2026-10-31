@@ -121,3 +121,10 @@ export function positionDrift(samples, reference, width, height) {
     moved: Math.abs(distanceChange) > STOP_DISTANCE_CHANGE || headShift > STOP_HEAD_SHIFT,
   };
 }
+
+// Weiter nach der Pause: nur wenn der Kopf wieder innerhalb der Abbruchgrenze liegt.
+// Ohne Gesicht oder ohne Messwerte gilt: nicht weiter.
+export function canResume(samples, reference, width, height) {
+  const drift = positionDrift(samples, reference, width, height);
+  return drift !== null && !drift.moved;
+}

@@ -86,6 +86,18 @@ test("Ruhe und Rauschen erzeugen keine Antwort, trotz vorhandenem Reiz", () => {
   assert.equal(analyse(still, 1).state, OKN_STATE.none);
 });
 
+test("Sprünge in beide Richtungen ergeben keine langsame Phase und keinen Gain", () => {
+  // Blick wandert hin und her: gleich viele Sprünge nach rechts und links.
+  const points = times(12000).map((time) => ({ time, h: Math.floor(time / 700) % 2 ? 2.5 : -2.5, v: 0 }));
+  const result = analyse(points, 1);
+  assert.equal(result.state, OKN_STATE.uncertain);
+  assert.equal(result.consistent, false);
+  assert.equal(result.spv, null);
+  assert.equal(result.gain, null);
+  assert.equal(result.phases, 0);
+  assert.ok(result.jumpsRight > 0 && result.jumpsLeft > 0);
+});
+
 test("Reine Sinusbewegung ohne schnelle Phase ist kein OKN", () => {
   const smooth = times(12000).map((time) => ({ time, h: 8 * Math.sin(time / 800), v: 0 }));
   assert.notEqual(analyse(smooth, 1).state, OKN_STATE.conform);
