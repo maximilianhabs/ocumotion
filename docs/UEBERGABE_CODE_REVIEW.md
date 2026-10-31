@@ -14,6 +14,8 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 
 ## Die neuen Ideen
 
+0. **Positionierungshilfe:** fester Zielrahmen, ein Hinweis zur Zeit, persönliche Referenz bei von Hand
+   gemessenem Abstand. Kein Abstand aus einer Durchschnittsgröße. Siehe Hauptdokument, Abschnitt 2a.
 1. **Individuelle Kalibrierung:** Vollbild-Ablauf mit Blickzielen bekannten Winkels bei gemessenem
    Abstand, empfohlen 40 cm. Mitte, rechts, links, oben, unten, dann separate Prüfziele.
 2. **Zusammenführung beider Augen:** Bewertung je Auge, Mittelwert gewichtet nach gemessener Güte. Ein
@@ -34,7 +36,8 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/augen.html` | Augenseite: Erkennung, Kurven, Kalibrierablauf |
 | `testseite/augen-logik.js` | Augenposition x und y aus den Gesichtspunkten |
 | `testseite/kalibrierung-logik.js` | Ziele, Modellanpassung, Bewertung, gewichteter Mittelwert |
-| `testseite/*.test.mjs` | 28 Logiktests mit konstruierten Daten |
+| `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
+| `testseite/*.test.mjs` | 39 Logiktests mit konstruierten Daten |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 
 ## Bitte besonders prüfen

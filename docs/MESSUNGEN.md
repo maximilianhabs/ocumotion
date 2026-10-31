@@ -78,3 +78,9 @@ anderen Achse, vertikale Unruhe, schwankende Einzelwerte, Lücken, geringer Gül
 Seitendifferenz. Mit Testvideo und simuliertem Vollbild geprüft: Abbruch durch Vollbildende, durch
 das Sichtbarkeitsereignis und durch Kamerastopp sowie ein nicht antwortendes Vollbild. Nichts lief
 danach weiter, alle Videospuren endeten. Der Zweig „bestanden“ braucht ein echtes Gesicht.
+
+## 31.10.2026 — Positionierungshilfe, Prüfung ohne Gesicht
+
+`make test`: 39 von 39 bestanden. Mit Testvideo: Zielrahmen wird gezeichnet, Hinweis „Kein Gesicht im
+Bild“, Kalibrieren ohne gemerkte Position gesperrt, Stopp räumt alles ab. Hinweise, Merken, geschätzter
+Abstand und Abbruch bei Bewegung sind in der Oberfläche mit echtem Gesicht ungeprüft.

@@ -54,6 +54,44 @@ Ziele außerhalb des Bildschirms oder ein Augenmodell. Ein falscher Abstand oder
 verschiebt alle Grad um denselben Faktor, ohne dass der Prüffehler das zeigt, weil auch die
 Prüfziele damit berechnet sind. Den wahren Maßstab klärt erst der VOG-Vergleich.
 
+## 2a. Positionierungshilfe (gebaut, mit echtem Gesicht ungeprüft)
+
+**Bewertung:** sinnvoll, aber als Positionierungshilfe, nicht als Abstandsmessung. Gesichts- und
+Irisgröße allein sind mehrdeutig, solange Kamera und Person nicht bekannt sind. Der Abstand bleibt
+einmal von Hand gemessen.
+
+**Ablauf:**
+
+1. Vor der Kalibrierung zeigt das gespiegelte Bild einen festen, breiten Zielbereich: dünnes Oval,
+   Band für die Augenhöhe, Marke für die Mitte. Er bleibt stehen und folgt dem Gesicht nicht.
+2. Immer nur ein Hinweis mit Toleranz und Hysterese: näher, zurück, seitlich, höher, gerade. Vor dem
+   Merken sind die Hinweise nur grob und sperren nichts, denn der gemessene Abstand geht vor.
+3. Nach dem gemessenen Abstand merkt sich die Seite Irisbreite, Lidwinkelabstand, Gesichtsmitte,
+   Kopfhaltung, Kamera und Auflösung als persönliche Referenz im RAM. Der Zielbereich passt sich an.
+4. Abstand laufend aus Irisbreite und Lidwinkelabstand relativ zur Referenz, nur als Mehrsekunden-Median.
+   Widersprechen sich beide um mehr als 10 %, lautet die Anzeige „unsicher“.
+5. Kalibrieren geht erst nach dem Merken. Während Reizen ist die Hilfe aus. Weicht ein Ziel um mehr als
+   8 % Abstand oder einen Irisdurchmesser von der Referenz ab, bricht die Kalibrierung ab.
+
+**Grenzen und Ergänzungen aus der Prüfung:**
+
+- Bei 27–36 Bildpunkten Iris entspricht ein Bildpunkt 3–4 %, also 1,1–1,5 cm bei 40 cm. Einzelbilder
+  taugen dafür nicht. Die Warnschwelle von 8 % entspricht rund 3 cm.
+- Google nennt für die Iris 11,7 ± 0,5 mm und im eigenen Test 4,3 % mittleren Fehler, braucht aber die
+  Brennweite. Für diese Kamera ist sie unbekannt, eine automatische Erstschätzung entfällt vorerst.
+- Die Augenhöhe ist noch offen. Die Rechnung nimmt an, dass die Augen vor der Bildschirmmitte liegen.
+  Sitzen sie 5–9 cm höher, weicht das 10°-Ziel rechnerisch um 0,4–0,8° ab. Weil die Kamera am
+  oberen Rand sitzt und der Deckel geneigt ist, muss das Band empirisch bestimmt werden.
+- Abstand und Kopfhaltung werden in der ersten Fassung nur überwacht und führen zu Markierung oder
+  Abbruch. Sie werden nicht herausgerechnet.
+- Eine Referenz über die Sitzung hinaus wäre personenbezogen und braucht einen ausdrücklichen,
+  löschbaren Speicherort. Vorerst bleibt sie im RAM.
+- Kopfdrehung lässt sich zunächst aus Augenlinie und Verhältnis der Augenbreiten schätzen. Die
+  Kopfmatrix von MediaPipe bleibt aus, bis sie gebraucht wird.
+
+**Noch ungeprüft:** Beim Blick auf 15° sieht die Kamera die Iris verkürzt, rechnerisch um gut 3 %. Ob
+die Schwelle von 8 % dabei Fehlabbrüche auslöst, zeigt erst der echte Lauf.
+
 ## 3. Zusammenführung beider Augen
 
 **Stufe 1, gebaut: gewichteter Mittelwert, je Achse getrennt.** Gewicht je Auge und Achse:

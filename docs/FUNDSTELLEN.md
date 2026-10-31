@@ -23,6 +23,7 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/MESSUNGEN.md` | alle Messergebnisse |
 | `testseite/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
 | `testseite/augen.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
+| `testseite/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
 | `testseite/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
 | `testseite/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
 | `tools/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
