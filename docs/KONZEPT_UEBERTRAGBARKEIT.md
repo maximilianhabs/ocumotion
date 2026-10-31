@@ -28,7 +28,8 @@ MacBook Pro M1 mit interner Kamera. Alles andere ist Plan.
 3. **Windows und Safari:** gezielt testen. Die Bildquelle unterscheidet sich je Browser.
 4. **Eigenständiges iPhone:** eigener Versuchsaufbau, denn der kleine Bildschirm erlaubt nur kleine Blickwinkel.
    Das braucht HTTPS; die Mac-Adresse per HTTP reicht nicht.
-5. **Native iPhone-App:** nur wenn der Browser nachweislich Kamerazugriff oder Bildrate begrenzt.
+5. **Native iPhone-App:** nur wenn der Browser nachweislich Kamerazugriff oder Bildrate begrenzt oder die Vertikale am
+   Mac nicht zu lösen ist. Geprüfter Vorschlag in `KONZEPT_IPHONE_MODUS.md`.
 
 ## Bewusst noch nicht
 

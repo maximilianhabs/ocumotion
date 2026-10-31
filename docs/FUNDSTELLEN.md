@@ -17,6 +17,7 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/KONZEPT.md` | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
 | `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A7 |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild für Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus mit ARKit, Pipeline, nicht begonnen |
 | `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
 | `docs/KONZEPT_GUETETEST.md` | Geführter Gütetest: Ablauf, Daten, Grenzen |
 | `docs/KONZEPT_OKULOMOTORIK.md` | Kalibrierung, Zusammenführung beider Augen, geplante Untersuchungen |

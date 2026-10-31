@@ -30,6 +30,7 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 |---|---|
 | `docs/KONZEPT_OKULOMOTORIK.md` | **Hauptdokument:** Kalibrierung, Zusammenführung, Untersuchungen, Reihenfolge |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus, Pipeline |
 | `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
 | `docs/KONZEPT_AUGEN.md` | Messgrundlagen, Auflösung, Hürden, Stufen A0–A7 |
 | `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | Bauplan Worker und Bildquelle, mit Prüfvermerk |

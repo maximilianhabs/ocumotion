@@ -15,6 +15,7 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 | E7 | Analysen: Tapping, Tremor, Gesicht | Vortests bestanden, Grenzen dokumentiert | offen |
 | E8 | Optional: Apple Vision, Sprachmodell | Vergleich gegen MediaPipe liegt vor | offen |
 | A0–A7 | Augen, Blickrichtung, Nystagmus | siehe `KONZEPT_AUGEN.md` Abschnitt 6 | Augenseite steht, **aktueller Schwerpunkt** |
+| P1 | Eigenständiger iPhone-Modus, nativ mit ARKit | siehe `KONZEPT_IPHONE_MODUS.md` | Pipeline, nicht begonnen |
 | O1–O7 | Kalibrierung und Okulomotorik-Untersuchung | siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 5 | Kalibrierung gebaut, Untersuchungen geplant |
 
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
