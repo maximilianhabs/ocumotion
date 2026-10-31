@@ -73,6 +73,12 @@
   .big { font-size: 30px; font-weight: 700; color: var(--accent); min-height: 44px; }
   #status { color: var(--muted); font-size: 13px; min-height: 19px; }
   #status.warn { color: var(--warn); }
+  button.primary { background: #15803d; color: #fafaf9; font-size: 17px; padding: 11px; }
+  #report[hidden] { display: none; }
+  .levels { margin-top: 8px; }
+  .gut { color: #15803d; }
+  .mittel { color: var(--warn); }
+  .schwach, .nicht-auswertbar { color: #dc2626; }
   footer { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
   @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
 </style>
@@ -113,6 +119,21 @@
   </div>
 
   <aside>
+    <section>
+      <h2>Gütetest, rund 2,5 Minuten</h2>
+      <button id="qualityTest" class="primary" disabled>Gütetest starten</button>
+      <div class="legend">Erst Kamera starten, Abstand messen, dann starten. Kopf aufstützen, nur den Augen folgen.</div>
+    </section>
+    <section id="report" hidden>
+      <h2>Ergebnis Gütetest</h2>
+      <div class="big" id="rOverall">–</div>
+      <div class="legend" id="rNote"></div>
+      <dl class="levels" id="rLevels"></dl>
+      <dl class="levels" id="rValues"></dl>
+      <button id="rCopy" class="second" style="margin-top:10px">Bericht kopieren</button>
+      <button id="rSave" class="second">Zahlenreihe speichern</button>
+      <div class="legend">Die Datei enthält Augenwerte ohne Bilder, liegt im Downloads-Ordner und ist personenbezogen.</div>
+    </section>
     <section>
       <h2>So testest du</h2>
       <ol>
@@ -200,9 +221,12 @@ import { FilesetResolver, FaceLandmarker }
   from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
 import { calibrate, fuse, median, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
+         SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor }
   from "./positionierung-logik.js";
 
+const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
 const WINDOW_MS = 3000;
@@ -254,6 +278,8 @@ let calibration = null;
 let calRun = 0;
 let calibrating = false;
 let collecting = null;
+let lastRun = null;
+let currentTarget = { h: 0, v: 0 };
 let reference = null;
 let positionOk = false;
 let faceVisible = false;
@@ -267,6 +293,11 @@ function setStatus(text, warn = false) {
 }
 
 async function createLandmarker() {
+  if (DRY_RUN) {
+    const { fakeLandmarker } = await import("./trockenlauf.js");
+    landmarker = fakeLandmarker(() => currentTarget);
+    return;
+  }
   fileset ??= await FilesetResolver.forVisionTasks(WASM);
   landmarker = await FaceLandmarker.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
@@ -433,6 +464,9 @@ function applyValues(sample, raw) {
   }
 }
 
+// Reize laufen auf performance.now(); captureTime liegt auf derselben Uhr, sonst der Callback.
+const eventTime = (timing) => timing.captureMs ?? timing.at;
+
 function recordFrame(timing, faces) {
   const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
                    vMean: null, head: null, irisPx: null, headPoint: null, raw: null, pose: null,
@@ -441,7 +475,7 @@ function recordFrame(timing, faces) {
     sample.reasons.push(faces.length ? "zweite Person" : "kein Gesicht");
     previousHead = null;
     samples.push(sample);
-    collecting?.samples.push({ t: timing.frameMs, rechts: null, links: null, irisPx: null, head: null });
+    collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
     return;
   }
   const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead);
@@ -460,10 +494,10 @@ function recordFrame(timing, faces) {
   sample.reasons = [...new Set([...frame.rechts.reasons, ...frame.links.reasons])];
   if (sample.disagree) sample.reasons.push("Seitendifferenz");
   samples.push(sample);
-  collecting?.samples.push({ t: timing.frameMs, ...sample.raw, irisPx: frame.irisPx, head: frame.head });
+  collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx, head: frame.head });
 }
 
-function analyse(callbackMs, frameMs, stamp) {
+function analyse(callbackMs, frameMs, stamp, captureMs) {
   const analysisStart = performance.now();
   const result = landmarker.detectForVideo(video, stamp);
   const analysisEnd = performance.now();
@@ -478,14 +512,26 @@ function analyse(callbackMs, frameMs, stamp) {
     drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
     drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
   }
-  recordFrame({ at: callbackMs, frameMs, analysisStart, analysisEnd, ms: analysisEnd - analysisStart }, faces);
+  recordFrame({ at: callbackMs, frameMs, captureMs, analysisStart, analysisEnd, ms: analysisEnd - analysisStart }, faces);
   samples = samples.filter((sample) => frameMs - sample.frameMs <= CURVE_MS);
   if (!collecting) drawCurves();
 }
 
+// Der Trockenlauf hat einen eigenen Takt, damit er auch im verdeckten Fenster laeuft.
 function requestFrame(id) {
+  if (DRY_RUN) {
+    setTimeout(() => {
+      const now = performance.now();
+      onFrame(id, now, { presentedFrames: 0, mediaTime: now / 1000 });
+    }, 1000 / 30);
+    return;
+  }
   frameHandle = video.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
 }
+
+const nextPaint = (callback) => (DRY_RUN
+  ? setTimeout(() => callback(performance.now()), 16)
+  : requestAnimationFrame(callback));
 
 function onFrame(id, now, metadata) {
   if (id !== session) return;
@@ -504,7 +550,7 @@ function onFrame(id, now, metadata) {
   }
   lastFrameMs = clock.ms;
   try {
-    analyse(now, clock.ms, taskStamp(clock.ms));
+    analyse(now, clock.ms, taskStamp(clock.ms), metadata.captureTime > 0 ? metadata.captureTime : null);
   } catch (error) {
     stop();
     setStatus(`Analyse abgebrochen: ${error.message}`, true);
@@ -552,6 +598,7 @@ function updateButtons() {
   // Der grobe Rahmen raet nur; der gemessene Abstand hat Vorrang, also sperrt er nicht.
   $("remember").disabled = !running || calibrating || !faceVisible;
   $("calibrate").disabled = !running || calibrating || !reference;
+  $("qualityTest").disabled = !running || calibrating || !faceVisible;
 }
 
 function clearGuide() {
@@ -688,16 +735,14 @@ function showCalibration(result) {
 const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 function placeDot(target) {
+  currentTarget = { ...target };
   const distance = Number($("distance").value);
   const pixel = targetPixels(target, distance, window.innerWidth, window.innerHeight);
   $("calDot").style.left = `${pixel.x}px`;
   $("calDot").style.top = `${pixel.y}px`;
 }
 
-async function runCalibration() {
-  if (busy || calibrating || !running || !reference) return;
-  const id = ++calRun;
-  const active = () => id === calRun;
+async function enterFullscreen(id) {
   calibrating = true;
   for (const control of calControls) $(control).disabled = true;
   updateButtons();
@@ -709,55 +754,283 @@ async function runCalibration() {
       wait(FULLSCREEN_TIMEOUT_MS).then(() => { throw new Error("keine Antwort"); }),
     ]);
   } catch (error) {
-    if (!active()) return;
+    if (id !== calRun) return false;
     endCalibrating();
     invalidateCalibration("keine");
     setStatus(`Vollbild nicht möglich: ${error.message}`, true);
-    return;
+    return false;
   }
   await wait(300);
-  if (!active()) return;
+  if (id !== calRun) return false;
   // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
   if (Math.abs(window.innerWidth - window.screen.width) > 2) {
     abortCalibration("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.");
-    return;
+    return false;
   }
   $("cal").hidden = false;
+  return true;
+}
+
+// Sammelt an einem Ziel. Liefert null, wenn der Lauf abgebrochen oder der Kopf bewegt wurde.
+async function collectTarget(id, target, settleMs, collectMs) {
+  placeDot(target);
+  await wait(settleMs);
+  if (id !== calRun) return null;
+  const entry = { target, samples: [], from: performance.now() };
+  collecting = entry;
+  await wait(collectMs);
+  if (id !== calRun) return null;
+  collecting = null;
+  entry.to = performance.now();
+  const drift = positionDrift(entry.samples, reference, video.videoWidth, video.videoHeight);
+  if (drift?.moved) {
+    abortCalibration("Kopf oder Abstand verändert: Lauf abgebrochen.");
+    return null;
+  }
+  return entry;
+}
+
+async function calibrationSequence(id) {
   placeDot({ h: 0, v: 0 });
   $("calText").textContent = "Kopf still halten, nur mit den Augen dem Punkt folgen. Abbruch mit Esc.";
   await wait(CAL_LEAD_MS);
   const entries = [];
   for (const [index, target] of STEPS.entries()) {
-    if (!active()) return;
-    placeDot(target);
-    $("calText").textContent = `Punkt ${index + 1} von ${STEPS.length}`;
-    await wait(CAL_SETTLE_MS);
-    if (!active()) return;
-    const entry = { target, samples: [] };
-    collecting = entry;
-    await wait(CAL_COLLECT_MS);
-    if (!active()) return;
-    collecting = null;
-    const drift = positionDrift(entry.samples, reference, video.videoWidth, video.videoHeight);
-    if (drift?.moved) {
-      abortCalibration("Kopf oder Abstand verändert: Kalibrierung abgebrochen.");
-      return;
-    }
+    if (id !== calRun) return null;
+    $("calText").textContent = `Kalibrierung: Punkt ${index + 1} von ${STEPS.length}`;
+    const entry = await collectTarget(id, target, CAL_SETTLE_MS, CAL_COLLECT_MS);
+    if (!entry) return null;
     entries.push(entry);
   }
-  endCalibrating();
-  if (document.fullscreenElement) await document.exitFullscreen();
+  return entries;
+}
+
+function finishCalibration(entries) {
   const measured = entries.flatMap((entry) => entry.samples).filter((sample) => sample.head);
   const result = calibrate(entries);
   showCalibration(result);
-  if (!result.passed || !measured.length) {
-    setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
-    return;
-  }
+  if (!result.passed || !measured.length) return result;
   result.irisPx = median(measured.map((sample) => sample.irisPx));
   result.head = { x: median(measured.map((s) => s.head.x)), y: median(measured.map((s) => s.head.y)) };
   setCalibration(result);
-  setStatus("Kalibriert. Kurve in Grad.");
+  return result;
+}
+
+async function leaveFullscreen() {
+  endCalibrating();
+  if (document.fullscreenElement) await document.exitFullscreen();
+}
+
+async function runCalibration() {
+  if (busy || calibrating || !running || !reference) return;
+  const id = ++calRun;
+  if (!await enterFullscreen(id)) return;
+  const entries = await calibrationSequence(id);
+  if (!entries) return;
+  await leaveFullscreen();
+  const result = finishCalibration(entries);
+  if (result.passed) setStatus("Kalibriert. Kurve in Grad.");
+  else setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
+}
+
+async function announce(id, text) {
+  placeDot({ h: 0, v: 0 });
+  $("calText").textContent = text;
+  await wait(PAUSE_MS);
+  return id === calRun;
+}
+
+async function phaseFixation(id) {
+  $("calText").textContent = "Ruhig auf den Punkt schauen, normal blinzeln";
+  const entry = { samples: [] };
+  collecting = entry;
+  await wait(FIXATION_MS);
+  collecting = null;
+  return id === calRun ? entry : null;
+}
+
+async function phaseAccuracy(id) {
+  const entry = { samples: [], windows: [] };
+  for (const [index, target] of ACCURACY_TARGETS.entries()) {
+    $("calText").textContent = `Genauigkeit: Punkt ${index + 1} von ${ACCURACY_TARGETS.length}`;
+    const part = await collectTarget(id, target, TARGET_SETTLE_MS, TARGET_COLLECT_MS);
+    if (!part) return null;
+    entry.samples.push(...part.samples);
+    entry.windows.push({ target, from: part.from, to: part.to });
+  }
+  return entry;
+}
+
+function phasePursuit(id, run) {
+  return new Promise((resolve) => {
+    const entry = { run, samples: [], startTime: performance.now() };
+    collecting = entry;
+    const step = (now) => {
+      if (id !== calRun) {
+        resolve(null);
+        return;
+      }
+      const elapsed = now - entry.startTime;
+      if (elapsed >= run.durationMs) {
+        collecting = null;
+        resolve(entry);
+        return;
+      }
+      const h = run.amplitude * Math.sin(2 * Math.PI * run.frequency * (Math.max(elapsed, 0) / 1000));
+      placeDot({ h, v: 0 });
+      nextPaint(step);
+    };
+    nextPaint(step);
+  });
+}
+
+async function phaseSaccades(id) {
+  const entry = { samples: [], jumps: [] };
+  collecting = entry;
+  const position = { h: 0, v: 0 };
+  for (const jump of SACCADE_JUMPS) {
+    await wait(SACCADE_MIN_MS + Math.random() * (SACCADE_MAX_MS - SACCADE_MIN_MS));
+    if (id !== calRun) return null;
+    const from = position[jump.axis];
+    position[jump.axis] = jump.to;
+    placeDot(position);
+    const at = await new Promise((resolve) => { nextPaint(resolve); });
+    entry.jumps.push({ axis: jump.axis, from, to: jump.to, at });
+  }
+  await wait(SACCADE_MAX_MS);
+  collecting = null;
+  return id === calRun ? entry : null;
+}
+
+async function testPhases(id) {
+  const run = { pursuit: [] };
+  if (!await announce(id, "Teil 2 von 5: Ruhig schauen")) return null;
+  run.fixation = await phaseFixation(id);
+  if (!run.fixation || !await announce(id, "Teil 3 von 5: Neue Punkte")) return null;
+  run.accuracy = await phaseAccuracy(id);
+  if (!run.accuracy) return null;
+  for (const entry of PURSUIT_RUNS) {
+    if (!await announce(id, `Teil 4 von 5: Punkt ${entry.name} folgen`)) return null;
+    const result = await phasePursuit(id, entry);
+    if (!result) return null;
+    run.pursuit.push(result);
+  }
+  if (!await announce(id, "Teil 5 von 5: Dem springenden Punkt sofort folgen")) return null;
+  run.saccades = await phaseSaccades(id);
+  return run.saccades ? run : null;
+}
+
+function showReport(run, report, result) {
+  const number = (value, digits = 1) => (value === null || value === undefined ? "–" : comma(value, digits));
+  const slow = report.pursuit.langsam.mittel;
+  const fast = report.pursuit.schnell.mittel;
+  const fixation = report.fixation.mittel;
+  const accuracy = report.accuracy.mittel;
+  const saccades = report.saccades.mittel;
+  const rows = [
+    ["Gültige Bilder Ruhe", fixation ? `${Math.round(fixation.validShare * 100)} %` : "–"],
+    ["Ruhe SD h / v", `${number(fixation?.sdH, 2)}° / ${number(fixation?.sdV, 2)}°`],
+    ["Drift horizontal", `${number(fixation?.driftH, 2)} °/s`],
+    ["Rauschen aus Seitendifferenz", `${number(report.differenceNoise?.h, 2)}° / ${number(report.differenceNoise?.v, 2)}°`],
+    ["Ziele Fehler h / v", `${number(accuracy?.errorH)}° / ${number(accuracy?.errorV)}°`],
+    ["Ziele größter Fehler", `${number(accuracy?.maxError)}° (${accuracy?.worst ?? "–"})`],
+    ["Folge langsam Gain, Lag", `${number(slow?.gain, 2)}, ${number(slow?.lagMs, 0)} ms`],
+    ["Folge schnell Gain, Lag", `${number(fast?.gain, 2)}, ${number(fast?.lagMs, 0)} ms`],
+    ["Aufholsakkaden je Zyklus", `${number(slow?.catchUpsPerCycle)} / ${number(fast?.catchUpsPerCycle)}`],
+    ["Sakkaden h Gain, Latenz", `${number(saccades?.h?.gain, 2)}, ${number(saccades?.h?.latency, 0)} ms`],
+    ["Sakkaden v Gain, Latenz", `${number(saccades?.v?.gain, 2)}, ${number(saccades?.v?.latency, 0)} ms`],
+    ["Sakkaden erkannt", `${saccades?.h?.detected ?? 0} / ${saccades?.h?.count ?? 0} h, ${saccades?.v?.detected ?? 0} / ${saccades?.v?.count ?? 0} v`],
+  ];
+  const levelRow = ({ name, level }) => {
+    const row = document.createElement("div");
+    row.style.display = "contents";
+    const label = document.createElement("dt");
+    label.textContent = name;
+    const value = document.createElement("dd");
+    value.textContent = level;
+    value.className = level.replace(" ", "-");
+    row.append(label, value);
+    return row;
+  };
+  $("rOverall").textContent = report.grade.overall;
+  $("rOverall").className = `big ${report.grade.overall}`;
+  $("rNote").textContent = report.calibrationPassed
+    ? "Einordnung experimentell, sie bewertet das Werkzeug, nicht die Person."
+    : `Kalibrierung nicht bestanden (${result.rechts.reason ?? "rechts ok"}, ${result.links.reason ?? "links ok"}). Werte nur als Hinweis.`;
+  $("rLevels").replaceChildren(...report.grade.rows.map(levelRow));
+  $("rValues").replaceChildren(...rows.map(([name, value]) => levelRow({ name, level: value })));
+  for (const cell of $("rValues").querySelectorAll("dd")) cell.className = "";
+  $("report").hidden = false;
+  lastRun = {
+    meta: {
+      createdAt: new Date().toISOString(),
+      smoothing: $("smoothing").selectedOptions[0].textContent,
+      distanceCm: Number($("distance").value),
+      mode: $("mMode").textContent,
+      clock: clockSource,
+      duplicates,
+      devicePixelRatio: window.devicePixelRatio,
+      screen: `${window.screen.width}×${window.screen.height}`,
+      reference,
+    },
+    calibration: { rechts: result.rechts, links: result.links, passed: result.passed, best: result.best },
+    report,
+    run,
+    text: [
+      `Gütetest ${new Date().toLocaleString("de-DE")}`,
+      `Gesamt: ${report.grade.overall}${report.calibrationPassed ? "" : " (Kalibrierung nicht bestanden)"}`,
+      `Kalibrierung: rechts ${$("cRechts").textContent}, links ${$("cLinks").textContent}`,
+      `Einstellung: ${$("smoothing").selectedOptions[0].textContent}, ${$("distance").value} cm, ${$("mMode").textContent}, Zeitbasis ${clockSource}`,
+      ...report.grade.rows.map(({ name, level }) => `${name}: ${level}`),
+      ...rows.map(([name, value]) => `${name}: ${value}`),
+    ].join("\n"),
+  };
+}
+
+async function runQualityTest() {
+  if (busy || calibrating || !running) return;
+  if (!reference) {
+    rememberPosition();
+    if (!reference) return;
+  }
+  $("report").hidden = true;
+  const id = ++calRun;
+  if (!await enterFullscreen(id)) return;
+  $("calText").textContent = "";
+  const entries = await calibrationSequence(id);
+  if (!entries) return;
+  const result = calibrate(entries);
+  if (!result.rechts.model && !result.links.model) {
+    await leaveFullscreen();
+    showCalibration(result);
+    setStatus("Gütetest beendet: Kalibrierung ergab für kein Auge ein Modell.", true);
+    return;
+  }
+  const run = await testPhases(id);
+  if (!run) return;
+  await leaveFullscreen();
+  finishCalibration(entries);
+  const models = { rechts: result.rechts.model, links: result.links.model };
+  showReport({ calibration: entries, ...run }, analyseRun(run, models, result.passed), result);
+  setStatus("Gütetest fertig.");
+}
+
+function copyReport() {
+  if (!lastRun) return;
+  navigator.clipboard.writeText(lastRun.text)
+    .then(() => setStatus("Bericht kopiert."))
+    .catch(() => setStatus("Kopieren nicht möglich.", true));
+}
+
+function saveRun() {
+  if (!lastRun) return;
+  const { text, ...data } = lastRun;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
+  link.download = `macvision-guetetest-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  setStatus("Zahlenreihe im Downloads-Ordner gespeichert.");
 }
 
 function renderStats() {
@@ -846,7 +1119,7 @@ function renderStats() {
 async function start() {
   const deviceId = $("camera").value;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    stream = DRY_RUN ? (await import("./trockenlauf.js")).fakeStream() : await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
                ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
@@ -894,7 +1167,7 @@ function stop() {
   session += 1;
   abortCalibration("Kamera gestoppt.");
   invalidateCalibration("keine");
-  if (frameHandle !== null) video.cancelVideoFrameCallback(frameHandle);
+  if (frameHandle !== null && !DRY_RUN) video.cancelVideoFrameCallback(frameHandle);
   frameHandle = null;
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
@@ -943,6 +1216,9 @@ $("toggle").addEventListener("click", () => exclusive(running ? stop : start));
 $("zero").addEventListener("click", setZero);
 $("calibrate").addEventListener("click", runCalibration);
 $("remember").addEventListener("click", rememberPosition);
+$("qualityTest").addEventListener("click", runQualityTest);
+$("rCopy").addEventListener("click", copyReport);
+$("rSave").addEventListener("click", saveRun);
 $("distance").addEventListener("change", () => {
   clearReference();
   invalidateCalibration("keine");
@@ -979,6 +1255,7 @@ window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) =>
 window.addEventListener("resize", drawCurves);
 setInterval(renderStats, 500);
 drawCurves();
+if (DRY_RUN) document.querySelector("h1").textContent = "Mac Vision Augen, TROCKENLAUF ohne Kamera";
 </script>
 </body>
 </html>

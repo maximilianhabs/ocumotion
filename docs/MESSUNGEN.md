@@ -84,3 +84,10 @@ danach weiter, alle Videospuren endeten. Der Zweig „bestanden“ braucht ein e
 `make test`: 39 von 39 bestanden. Mit Testvideo: Zielrahmen wird gezeichnet, Hinweis „Kein Gesicht im
 Bild“, Kalibrieren ohne gemerkte Position gesperrt, Stopp räumt alles ab. Hinweise, Merken, geschätzter
 Abstand und Abbruch bei Bewegung sind in der Oberfläche mit echtem Gesicht ungeprüft.
+
+## 31.10.2026 — Gütetest, Trockenlauf
+
+`make test`: 50 von 50 bestanden. Ein vollständiger Trockenlauf mit simuliertem Gesicht, das dem Punkt
+exakt folgt, lief durch alle fünf Teile: Kalibrierung bestanden, Zielfehler 0,0°, Blickfolge-Gain 1,00,
+Sakkaden-Gain 1,00. Die Sakkadenlatenz blieb leer, weil das simulierte Auge ohne Latenz springt. Export
+und Bericht geprüft, die Datei enthält keine Bilder. Das belegt nur den Ablauf, nichts über echte Augen.

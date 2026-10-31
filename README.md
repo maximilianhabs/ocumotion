@@ -10,6 +10,7 @@ MacBook Pro M1. Schwesterprojekt des Vision Lab auf dem Beelink.
 | [docs/KONZEPT.md](docs/KONZEPT.md) | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
 | [docs/KONZEPT_AUGEN.md](docs/KONZEPT_AUGEN.md) | Blickrichtung, Irismitte, Nystagmus |
 | [docs/KONZEPT_OKULOMOTORIK.md](docs/KONZEPT_OKULOMOTORIK.md) | Kalibrierung, beide Augen, Okulomotorik-Untersuchung |
+| [docs/KONZEPT_GUETETEST.md](docs/KONZEPT_GUETETEST.md) | Geführter Gütetest mit Start-Button |
 | [docs/UEBERGABE_CODE_REVIEW.md](docs/UEBERGABE_CODE_REVIEW.md) | Einstieg für eine prüfende KI |
 | [docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md](docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md) | Technischer Bauplan für den Messplatz |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Etappen E0–E8 und A0–A7 |

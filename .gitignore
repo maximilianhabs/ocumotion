@@ -3,6 +3,7 @@ data/*
 !data/.gitkeep
 
 # --- Bild und Video nie versionieren ---
+macvision-guetetest-*.json
 *.mp4
 *.mov
 *.jpg

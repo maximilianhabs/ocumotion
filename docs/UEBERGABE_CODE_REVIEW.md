@@ -36,8 +36,11 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/augen.html` | Augenseite: Erkennung, Kurven, Kalibrierablauf |
 | `testseite/augen-logik.js` | Augenposition x und y aus den Gesichtspunkten |
 | `testseite/kalibrierung-logik.js` | Ziele, Modellanpassung, Bewertung, gewichteter Mittelwert |
+| `docs/KONZEPT_GUETETEST.md` | Geführter Gütetest mit Start-Button |
+| `testseite/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
+| `testseite/trockenlauf.js` | Simuliertes Gesicht, `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
-| `testseite/*.test.mjs` | 39 Logiktests mit konstruierten Daten |
+| `testseite/*.test.mjs` | 50 Logiktests mit konstruierten Daten |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 
 ## Bitte besonders prüfen

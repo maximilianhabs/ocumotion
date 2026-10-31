@@ -65,7 +65,7 @@ function solve3(matrix, vector) {
 }
 
 // Kleinste Quadrate fuer wert = c0 + c1 * x + c2 * y.
-function fitPlane(points, key) {
+export function fitPlane(points, key) {
   const normal = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   const right = [0, 0, 0];
   for (const point of points) {
@@ -91,7 +91,7 @@ export function median(values) {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
-function spread(values) {
+export function spread(values) {
   if (values.length < 2) return 0;
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
   return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1));
