@@ -254,3 +254,8 @@ Ob die Erkennung echten Nystagmus findet, ist nur an konstruierten Signalen gepr
 `make test`: 98 von 98 bestanden, darunter Ruhe, Rauschen, reiner Sinus, Antwort gegen die Reizrichtung und bekannter
 Gain 0,4 bis 1,0. Trockenlauf mit simulierter Augenbewegung von 6 °/s: gemessen 6,1 und 6,0 °/s, Gain 0,76 und 0,75,
 Schlagrichtung jeweils gegen den Reiz, keine Falschmeldung in der Kontrolle. Mit echten Augen noch nicht gelaufen.
+
+## 31.10.2026 — Maßstab aus Sprüngen
+
+An den vier Läufen, gegen die volle Kalibrierung: horizontal Faktor 0,98, 1,08, 1,03, 0,93, Zielfehler 1,2–2,8°;
+vertikal Faktor 0,97, 0,70, 0,73, 1,12, Zielfehler 2,2–6,2°. Trockenlauf des Kurzlaufs dauerte 78 s.

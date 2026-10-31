@@ -119,6 +119,12 @@ export function controlVerdict(moving, control) {
   };
 }
 
+// Die vier Ergebnisse auf die Berichtsfarben: Ausbleiben bedeutet nicht krank.
+export function oknStatus(state) {
+  if (state === OKN_STATE.conform) return "unauffällig";
+  return state === OKN_STATE.uncertain ? "grenzwertig" : "nicht beurteilbar";
+}
+
 export function directionWord(sign) {
   return sign > 0 ? "rechts" : "links";
 }

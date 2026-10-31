@@ -30,6 +30,7 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 |---|---|
 | `docs/KONZEPT_OKULOMOTORIK.md` | **Hauptdokument:** Kalibrierung, Zusammenführung, Untersuchungen, Reihenfolge |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/PROTOKOLLE.md` | Kurzlauf und ausführlicher Lauf |
 | `docs/KONZEPT_OKN_MODUS.md` | Optokinetischer Test H40, mit Prüfvermerk |
 | `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus, Pipeline |
 | `docs/KONZEPT_UEBERTRAGBARKEIT.md` | Andere Geräte und Kameras: Stand, Bindungen, Reihenfolge |
@@ -45,6 +46,7 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/trockenlauf.js` | Simuliertes Gesicht, `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
 | `testseite/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
+| `testseite/protokolle.js` | Definition der Protokolle |
 | `testseite/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
 | `testseite/befund-logik.js` | Nystagmus-, SWJ-, Blickfolge- und Sakkaden-Einordnung mit Grenzen |
 | `testseite/*.test.mjs` | Logiktests mit konstruierten Daten, `make test` |

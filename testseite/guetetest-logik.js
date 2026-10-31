@@ -4,7 +4,7 @@
 // und bewertet keine Person. Alle Bewertungsgrenzen sind experimentell.
 // Zeiten in Millisekunden auf der Uhr von performance.now().
 
-import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, spread, toDegrees } from "./kalibrierung-logik.js";
+import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, midpoint, spread, toDegrees } from "./kalibrierung-logik.js";
 
 export const FIXATION_MS = 20000;
 export const TARGET_SETTLE_MS = 1200;
@@ -280,6 +280,17 @@ function axisUsable(report, accuracy, fixation, axis) {
 
 // Klartext statt Gesamtnote: Genauigkeit und Datenabdeckung stehen immer zusammen.
 function summarise(report) {
+  if (report.calibration?.selfScaled) {
+    return {
+      headline: "Kurzlauf ohne Kalibrierung: Muster beurteilt, Grad nur grob",
+      lines: [
+        "Der Maßstab stammt aus den Sprüngen selbst: horizontal grob brauchbar, vertikal nur als Hinweis.",
+        "Zielgenauigkeit und Sakkaden-Metrik sind hier nicht beurteilbar, dafür braucht es den ausführlichen Lauf.",
+      ],
+      usableH: false,
+      usableV: false,
+    };
+  }
   const fixation = report.fixation?.mittel;
   const accuracy = report.accuracy?.mittel;
   const usableH = axisUsable(report, accuracy, fixation, "h");
@@ -302,6 +313,53 @@ function summarise(report) {
   return { headline, lines, usableH, usableV };
 }
 
+// Grober Maßstab ohne Kalibrierung: Die Endlagen der Sprünge liegen bei bekannten Winkeln. An echten
+// Läufen traf das horizontal auf 2–8 %, vertikal nur auf rund 30 %. Die Sakkaden-Metrik fällt damit aus.
+function fitLine(pairs) {
+  if (pairs.length < 3) return null;
+  const meanX = pairs.reduce((sum, [x]) => sum + x, 0) / pairs.length;
+  const meanY = pairs.reduce((sum, [, y]) => sum + y, 0) / pairs.length;
+  const spreadX = pairs.reduce((sum, [x]) => sum + (x - meanX) ** 2, 0);
+  if (spreadX === 0) return null;
+  const slope = pairs.reduce((sum, [x, y]) => sum + (x - meanX) * (y - meanY), 0) / spreadX;
+  return [meanY - slope * meanX, slope];
+}
+
+function scaleFor(points, jumps) {
+  const filtered = medianFilter(points, ["x", "y"]);
+  const pairs = { h: [], v: [] };
+  jumps.forEach((jump, index) => {
+    const end = jumps[index + 1]?.at ?? jump.at + 1300;
+    const settled = filtered.filter((p) => p.time >= jump.at + 500 && p.time < end);
+    if (settled.length < 3) return;
+    pairs[jump.axis].push([median(settled.map((p) => (jump.axis === "h" ? p.x : p.y))), jump.to]);
+  });
+  const h = fitLine(pairs.h);
+  const v = fitLine(pairs.v);
+  if (!h && !v) return { passedH: false, passedV: false };
+  return {
+    model: { h: h ? [h[0], h[1], 0] : [0, 0, 0], v: v ? [v[0], 0, v[1]] : [0, 0, 0] },
+    passedH: Boolean(h),
+    passedV: Boolean(v),
+    errorH: null,
+    errorV: null,
+  };
+}
+
+export function scaleFromSaccades(run) {
+  const samples = run.saccades?.samples ?? [];
+  const jumps = run.saccades?.jumps ?? [];
+  const side = (read) => scaleFor(samples.map((s) => ({ time: s.time, point: read(s) }))
+    .filter((p) => p.point).map((p) => ({ time: p.time, ...p.point })), jumps);
+  return {
+    passed: false,
+    selfScaled: true,
+    rechts: side((s) => s.rechts),
+    links: side((s) => s.links),
+    mittel: side((s) => midpoint(s.rechts, s.links)),
+  };
+}
+
 export function analyseRun(run, calibration) {
   const perChannel = (fn) => {
     const result = {};
@@ -310,7 +368,7 @@ export function analyseRun(run, calibration) {
   };
   const seriesOf = (samples) => toSeries(samples, calibration);
   const fixationSeries = seriesOf(run.fixation.samples);
-  const accuracySeries = seriesOf(run.accuracy.samples);
+  const accuracySeries = seriesOf(run.accuracy?.samples ?? []);
   const saccadeSeries = seriesOf(run.saccades.samples);
   const pursuitSeries = run.pursuit.map((entry) => seriesOf(entry.samples));
   const pursuit = {};
@@ -320,10 +378,10 @@ export function analyseRun(run, calibration) {
   });
   const report = {
     calibration: { passed: calibration.passed, passedH: Boolean(calibration.mittel?.passedH),
-                   passedV: Boolean(calibration.mittel?.passedV) },
+                   passedV: Boolean(calibration.mittel?.passedV), selfScaled: Boolean(calibration.selfScaled) },
     fixation: perChannel((c) => analyseFixation(fixationSeries[c], run.fixation.samples.length)),
     differenceNoise: differenceNoise(toSeries(run.fixation.samples, calibration, { filter: false })),
-    accuracy: perChannel((c) => analyseTargets(run.accuracy.windows, accuracySeries[c])),
+    accuracy: perChannel((c) => analyseTargets(run.accuracy?.windows ?? [], accuracySeries[c])),
     pursuit,
     saccades: perChannel((c) => analyseSaccades(saccadeSeries[c], run.saccades.jumps)),
   };

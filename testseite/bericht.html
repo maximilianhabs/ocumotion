@@ -131,6 +131,21 @@ function pursuitChart(entry) {
     ${line(entry.series.rechts, COLOR.right, 0.8, "")}${line(entry.series.links, COLOR.left, 0.8, "3 2")}${line(entry.series.mittel, COLOR.mean, 1.3, "")}</svg>`;
 }
 
+function oknChart(item) {
+  const width = 600;
+  const height = 70;
+  const middle = (item.block.from + item.block.to) / 2;
+  const from = middle - 3000;
+  const points = item.points.filter((p) => p.h !== null && p.time >= from && p.time <= from + 6000);
+  if (points.length < 2) return "";
+  const center = points.map((p) => p.h).sort((a, b) => a - b)[Math.floor(points.length / 2)];
+  const x = (time) => ((time - from) / 6000) * width;
+  const y = (value) => height / 2 - ((value - center) / 12) * (height / 2);
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Augenposition, ${escapeHtml(item.label)}">
+    <rect width="${width}" height="${height}" fill="none" stroke="${COLOR.line}"/>
+    ${polyline(points.map((p) => ({ time: p.time, value: p.h })), x, y, COLOR.mean, 1.2, "")}</svg>`;
+}
+
 function eventChart(timeline) {
   const phases = timeline.phases;
   if (!phases.length) return "";
@@ -184,7 +199,7 @@ function render(data) {
   const [fixation, targets, saccades, pursuit] = report.sections;
   const { meta, calibration, summary, findings } = report;
   const { limits } = findings;
-  const eye = (item) => (!item ? "in dieser Datei nicht berechnet" : item.errorH === null ? item.reason
+  const eye = (item) => (!item ? "in dieser Datei nicht berechnet" : (item.errorH ?? null) === null ? (item.reason ?? "ohne Kalibrierung")
     : `${number(item.errorH)}° / ${number(item.errorV)}°${item.reason ? `, ${item.reason}` : ""}`);
   const pursuitBlocks = pursuit.runs.map((entry, index) => {
     const judged = findings.pursuit[index];
@@ -192,7 +207,7 @@ function render(data) {
   }).join("");
   const main = document.getElementById("report");
   main.innerHTML = `
-    <h1>Okulomotorischer Befundbericht</h1>
+    <h1>Okulomotorischer Befundbericht${meta?.protocol ? `: ${escapeHtml(meta.protocol)}` : ""}</h1>
     <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} ·
       ${escapeHtml(meta?.smoothing ?? "")} · ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
     <div class="banner">Forschungsprototyp. Maschinelle Einordnung gegen vorläufige Grenzen, keine Diagnose, ärztliche Beurteilung erforderlich.</div>
@@ -226,12 +241,20 @@ function render(data) {
 
     ${finding(5, "Sakkaden und Zielgenauigkeit", findings.saccadeStatus, `<div class="split"><div>
       ${findings.saccades.map((item) => line(item.status, item.text)).join("")}
+      ${calibration.selfScaled ? `<p class="muted">Ohne Kalibrierung keine Metrik: Der Maßstab stammt aus diesen Sprüngen, die Aussage wäre ein Kreisschluss. Die Bewegung selbst ist unten in der Ablaufleiste und im Export erhalten.</p>` : ""}
       ${facts([
         ["Zielfehler neue Ziele h / v", `${number(targets.stats?.errorH)}° / ${number(targets.stats?.errorV)}°`],
         ["Größter Zielfehler", `${number(targets.stats?.maxError)}°`],
         ["Latenz horizontal, mit Verarbeitung", `${number(saccades.stats?.h?.latency, 0)} ms`],
       ])}</div><div>${targetChart(targets)}<p class="muted">Kreuz Ziel, Punkt Messung.</p></div></div>
       <p class="limit">Metrisch gilt von ${number(limits.saccade.normalLow, 2)} bis ${number(limits.saccade.normalHigh, 2)}. ${escapeHtml(limits.saccade.source)}. Vertikal nur bei freigegebener Vertikale.</p>`)}
+
+    ${findings.okn ? finding(6, "Optokinetik", findings.okn.status, `
+      <p>${findings.okn.conform} von ${findings.okn.total} Richtungen reizkonform.</p>
+      ${findings.okn.items.map((item) => `${line(item.status, `${item.label}: ${item.text}`)}${oknChart(item)}`).join("")}
+      ${findings.okn.control ? `<p>${escapeHtml(findings.okn.control.text)}</p>` : `<p class="muted">Ohne Kontrollblock: Ein Messartefakt durch Hornhautreflexe ist nicht ausgeschlossen.</p>`}
+      <p class="limit">Antwort auf einen Bildschirmreiz, kein Ganzfeldtest. Ausbleiben bedeutet keine Störung; Gain 1 ist keine Norm.</p>`)
+      : `<section class="finding"><header><h2>6. Optokinetik</h2>${chip("nicht beurteilbar")}</header><p class="muted">In diesem Lauf nicht untersucht.</p></section>`}
 
     <section class="finding"><header><h2>Messqualität</h2></header>
       ${summary.lines.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}

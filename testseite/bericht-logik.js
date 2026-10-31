@@ -4,11 +4,12 @@
 // Beschreibt Beobachtungen und ihre Grenzen. Keine Interpretation, keine Normbereiche, keine Diagnose.
 
 import { calibrate, median } from "./kalibrierung-logik.js";
-import { analyseRun, toSeries } from "./guetetest-logik.js";
+import { analyseRun, scaleFromSaccades, toSeries } from "./guetetest-logik.js";
+import { analyseBlock, controlVerdict, directionWord, oknStatus } from "./okn-logik.js";
 import { analyseNystagmus, analyseSaccadeMetrics, analyseSmoothPursuit, analyseSwj, judgeNystagmus, judgePursuit,
          judgeSaccades, judgeSwj, LIMITS, STATUS, withoutLidEvents } from "./befund-logik.js";
 
-export const REPORT_VERSION = "bericht-2";
+export const REPORT_VERSION = "bericht-3";
 const SPAN_GAP_MS = 150;
 const LID_LOW_SHARE = 0.75;
 const ENDPOINT_SETTLE_MS = 600;
@@ -22,7 +23,6 @@ export const NOT_EXAMINED = [
   "Torsion",
   "Vergenz",
   "Vestibulookuläre Funktionen",
-  "Optokinetik",
 ];
 
 // Fasst Zeitpunkte zu Spannen zusammen; ein einzelner Punkt bleibt eine kurze Spanne.
@@ -46,6 +46,7 @@ function phases(run) {
     ...span("Neue Ziele", run.accuracy?.samples),
     ...(run.pursuit ?? []).flatMap((entry) => span(`Folge ${entry.run.name}`, entry.samples)),
     ...span("Sprünge", run.saccades?.samples),
+    ...(run.okn ?? []).flatMap((entry) => span(entry.block.label, entry.samples)),
   ];
 }
 
@@ -57,6 +58,7 @@ function eventRows(run, meta) {
     ...(run.accuracy?.samples ?? []),
     ...(run.pursuit ?? []).flatMap((entry) => entry.samples),
     ...(run.saccades?.samples ?? []),
+    ...(run.okn ?? []).flatMap((entry) => entry.samples),
   ].sort((a, b) => a.time - b.time);
   const invalid = samples.filter((s) => !s.rechts || !s.links).map((s) => s.time);
   const apertures = samples.flatMap((s) => [s.rechts?.aperture, s.links?.aperture])
@@ -129,6 +131,39 @@ function gazeFindings(run, calibration, lidSpans) {
   });
 }
 
+const number = (value, digits = 1) => value.toFixed(digits).replace(".", ",");
+
+function oknFindings(run, calibration) {
+  const blocks = (run.okn ?? []).filter((entry) => entry.block.kind === "moving" || entry.block.kind === "control");
+  if (!blocks.length) return null;
+  const analysed = blocks.map((entry) => {
+    const series = toSeries(entry.samples, calibration);
+    const raw = toSeries(entry.samples, calibration, { filter: false }).mittel;
+    const result = analyseBlock(series, raw, entry.block, Math.round(entry.block.durationMs / (1000 / 30)));
+    const beat = result.beats ? `${result.beats} Schläge nach ${directionWord(result.beatDirection)}, ${number(result.rate)}/s` : "keine Schläge";
+    const speed = result.spv === null ? "langsame Phase nicht messbar"
+      : `langsame Phase ${number(result.spv)} °/s, ${result.phases} Phasen${result.quantifiable ? "" : ", zu wenige für einen Wert"}`;
+    return {
+      label: entry.block.label,
+      kind: entry.block.kind,
+      block: entry.block,
+      points: series.mittel,
+      result,
+      status: oknStatus(result.state),
+      text: `${result.state}. ${beat}; ${speed}.`,
+    };
+  });
+  const moving = analysed.filter((item) => item.kind === "moving");
+  const control = analysed.find((item) => item.kind === "control");
+  return {
+    items: analysed,
+    status: worstOf(moving),
+    conform: moving.filter((item) => item.status === STATUS.normal).length,
+    total: moving.length,
+    control: control ? controlVerdict(moving.map((item) => item.result), control.result) : null,
+  };
+}
+
 function findings(run, calibration, summary, timeline) {
   const releasedH = Boolean(calibration.mittel?.passedH);
   const releasedV = Boolean(calibration.mittel?.passedV);
@@ -157,9 +192,10 @@ function findings(run, calibration, summary, timeline) {
   });
   const saccadeSeries = toSeries(run.saccades.samples, calibration);
   const metrics = analyseSaccadeMetrics(saccadeSeries.mittel, run.saccades.jumps);
+  const calibrated = !calibration.selfScaled;
   const saccades = [
-    judgeSaccades("Rechts", metrics.rechts, releasedH),
-    judgeSaccades("Links", metrics.links, releasedH),
+    judgeSaccades("Rechts", metrics.rechts, calibrated && releasedH),
+    judgeSaccades("Links", metrics.links, calibrated && releasedH),
     judgeSaccades("Oben", metrics.oben, summary.usableV),
     judgeSaccades("Unten", metrics.unten, summary.usableV),
   ];
@@ -176,6 +212,7 @@ function findings(run, calibration, summary, timeline) {
     pursuitStatus: worstOf(pursuit),
     saccades,
     saccadeStatus: worstOf(saccades),
+    okn: oknFindings(run, calibration),
     limits: LIMITS,
   };
 }
@@ -186,12 +223,12 @@ function section(id, title, status, extra = {}) {
 
 export function buildReport(data) {
   const { run, meta } = data;
-  const calibration = calibrate(run.calibration);
+  const calibration = run.calibration?.length ? calibrate(run.calibration) : scaleFromSaccades(run);
   const analysis = analyseRun(run, calibration);
   const { summary } = analysis.grade;
   const seriesOf = (samples) => toSeries(samples, calibration);
   const fixationSeries = seriesOf(run.fixation.samples);
-  const accuracySeries = seriesOf(run.accuracy.samples);
+  const accuracySeries = seriesOf(run.accuracy?.samples ?? []);
   const saccadeSeries = seriesOf(run.saccades.samples);
   const fixation = analysis.fixation.mittel;
   const centerOf = (key) => {
@@ -199,7 +236,7 @@ export function buildReport(data) {
     return values.length ? median(values) : 0;
   };
   const center = { h: centerOf("h"), v: centerOf("v") };
-  const targets = targetEstimates(run.accuracy.windows, accuracySeries.mittel);
+  const targets = targetEstimates(run.accuracy?.windows ?? [], accuracySeries.mittel);
   const endpoints = saccadeEndpoints(run.saccades.jumps, saccadeSeries.mittel);
   const pursuit = run.pursuit.map((entry) => {
     const series = seriesOf(entry.samples);
@@ -230,7 +267,7 @@ export function buildReport(data) {
         stats: fixation,
       }),
       section("targets", "Neue Ziele", status(summary.usableH, targets.length > 0), {
-        targets, stats: analysis.accuracy.mittel, planned: run.accuracy.windows.length,
+        targets, stats: analysis.accuracy.mittel, planned: run.accuracy?.windows.length ?? 0,
       }),
       section("saccades", "Sprünge", status(summary.usableH, endpoints.length > 0), {
         endpoints, stats: analysis.saccades.mittel,

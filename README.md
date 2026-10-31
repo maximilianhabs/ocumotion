@@ -11,6 +11,7 @@ MacBook Pro M1. Schwesterprojekt des Vision Lab auf dem Beelink.
 | [docs/KONZEPT_AUGEN.md](docs/KONZEPT_AUGEN.md) | Blickrichtung, Irismitte, Nystagmus |
 | [docs/KONZEPT_OKULOMOTORIK.md](docs/KONZEPT_OKULOMOTORIK.md) | Kalibrierung, beide Augen, Okulomotorik-Untersuchung |
 | [docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md](docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md) | Zielbild Bericht und Kurzprofile |
+| [docs/PROTOKOLLE.md](docs/PROTOKOLLE.md) | Kurzlauf und ausführlicher Lauf |
 | [docs/KONZEPT_OKN_MODUS.md](docs/KONZEPT_OKN_MODUS.md) | Optokinetischer Test H40 |
 | [docs/KONZEPT_IPHONE_MODUS.md](docs/KONZEPT_IPHONE_MODUS.md) | Eigenständiger iPhone-Modus, Pipeline |
 | [docs/KONZEPT_UEBERTRAGBARKEIT.md](docs/KONZEPT_UEBERTRAGBARKEIT.md) | Andere Geräte und Kameras |

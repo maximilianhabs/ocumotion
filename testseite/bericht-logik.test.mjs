@@ -149,3 +149,45 @@ test("Blickhalten erkennt Downbeat und nennt die Position", () => {
   assert.deepEqual(findings.upbeat, []);
   assert.equal(findings.gaze[0].vertical.status, "unauffällig");
 });
+
+test("Ohne Kalibrierung gibt der Kurzlauf Muster, aber keine Metrik aus", () => {
+  const run = fullRun();
+  delete run.calibration;
+  delete run.accuracy;
+  const jumps = [
+    { axis: "h", from: 0, to: 10 }, { axis: "h", from: 10, to: -10 }, { axis: "h", from: -10, to: 10 }, { axis: "h", from: 10, to: 0 },
+    { axis: "v", from: 0, to: 8 }, { axis: "v", from: 8, to: -8 }, { axis: "v", from: -8, to: 0 },
+  ].map((jump, index) => ({ ...jump, at: 500000 + index * 1500 }));
+  run.saccades = {
+    jumps,
+    samples: samples(11000, 500000, (time) => {
+      const last = jumps.filter((jump) => time >= jump.at + 200);
+      const pick = (axis) => last.filter((jump) => jump.axis === axis).at(-1)?.to ?? 0;
+      return { h: pick("h"), v: pick("v") };
+    }),
+  };
+  const report = buildReport({ run, meta: META });
+  assert.equal(report.calibration.selfScaled, true);
+  assert.ok(report.summary.headline.startsWith("Kurzlauf ohne Kalibrierung"));
+  assert.equal(report.findings.saccades[0].status, "nicht beurteilbar");
+  assert.equal(report.findings.spontaneous.horizontal.status, "unauffällig");
+  assert.equal(report.findings.pursuit[0].status, "unauffällig");
+});
+
+test("Optokinetik erscheint als eigener Befund mit Kontrolle", () => {
+  const run = fullRun();
+  const start = 800000;
+  const blocks = [["rechts", "moving", 1, 0], ["links", "moving", -1, 20000], ["kontrolle", "control", 1, 40000]];
+  run.okn = blocks.map(([id, kind, direction, offset]) => {
+    const from = start + offset;
+    const list = samples(12000, from, (time) => {
+      const slow = (((time - from) / 1000) % 0.6) * 6;
+      return { h: kind === "control" ? 0 : direction * (slow - 1.8), v: 0 };
+    });
+    return { block: { id, label: id, kind, direction, durationMs: 12000, from, to: from + 12000 }, samples: list };
+  });
+  const { okn } = buildReport({ run, meta: META }).findings;
+  assert.equal(okn.conform, 2);
+  assert.equal(okn.total, 2);
+  assert.equal(okn.control.suspicious, false);
+});
