@@ -1,0 +1,25 @@
+# --- Messdaten: Landmarken sind personenbezogen ---
+data/*
+!data/.gitkeep
+
+# --- Bild und Video nie versionieren ---
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.png
+
+# --- Modelle werden geladen, nicht versioniert ---
+models/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- System ---
+.DS_Store
+
+# --- Zugangsdaten ---
+.env
