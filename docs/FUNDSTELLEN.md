@@ -41,6 +41,9 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `testseite/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
 | `tools/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
 | `tools/kamera_details.swift` | Belichtung, Fokus und Bildwinkel abfragen, `make kamera-details` |
+| `tools/kamera_takt.swift` | Echte Bilder je Sekunde vom iPhone ohne Browser, `make kamera-takt` |
+| `tools/kamera_bruecke.swift` | iPhone mit 60 fps an die Testseite, nur `127.0.0.1:5601`, `make kamera-bruecke` |
+| `testseite/bruecke.js` | Bildquelle der Seite für die Kamerabrücke |
 | `.claude/launch.json` | Startkonfiguration `mac-vision-test`, Port 5600 |
 
 Start der Testseite: `make test-web`, dann <http://127.0.0.1:5600>. Für die Kamera einen

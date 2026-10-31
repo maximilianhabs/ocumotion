@@ -34,6 +34,7 @@ noch einmal geprüft werden.
 | Eigene Messwerte in `MESSUNGEN.md` | Einzige Testperson ist der Autor. Entscheiden: veröffentlichen, oder nur als Muster und Methode |
 | Lokale Pfade und Sitzungsdetails in `FUNDSTELLEN.md`, `UEBERGABE_CODE_REVIEW.md` | Für Public herauslösen oder kürzen; der Benutzername ist kein Geheimnis, gehört aber nicht in die Außendarstellung |
 | Name | „Mac“ ist eine Apple-Marke, und das Projekt soll plattformübergreifend werden. Vor Public über einen eigenen Namen entscheiden |
+| Streifenwarnung | Im Eigentest entfernt. Für fremde Personen wieder nötig, dann als Text auf der Karte, nicht als `window.confirm` |
 | Patienten | Bleibt: keine Patientendaten, auch nicht in Issues oder Beispielen. In `CONTRIBUTING.md` als erste Regel |
 
 ## Stufe 2 — Erster Eindruck

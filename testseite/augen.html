@@ -108,6 +108,7 @@
   <div>
     <div class="stage">
       <video id="video" playsinline muted></video>
+      <canvas id="bridgeView" hidden></canvas>
       <canvas id="overlay"></canvas>
       <canvas id="guide"></canvas>
       <div id="guideHint" role="status" hidden></div>
@@ -139,6 +140,7 @@
       <button id="runShort" class="primary" disabled>Kurzlauf, rund 1,5 Minuten</button>
       <button id="runLong" class="second" disabled>Ausführlicher Lauf, rund 3,5 Minuten</button>
       <button id="runOkn" class="second" disabled>Optokinetik, rund 1,5 Minuten</button>
+      <button id="runPhone" class="second" disabled>iPhone-Test Optokinetik, ohne Kopfprüfung</button>
       <div class="legend">Kurzlauf und Optokinetik enthalten bewegte Streifen. Jeder Lauf besteht aus Etappen; vor jeder erscheint eine Karte, das Tempo bestimmen Sie mit der Leertaste. Kurzlauf und Optokinetik brauchen keine Kalibrierung und messen keine Metrik. Kopf aufstützen, nur den Augen folgen.</div>
     </section>
     <section id="report" hidden>
@@ -161,7 +163,7 @@
     </section>
     <section>
       <h2>Steuerung</h2>
-      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
+      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option><option value="bruecke">iPhone über Brücke, 60 fps</option></select>
       <select id="cameraMode" aria-label="Kamera-Modus">
         <option value="1280x720x30">1280×720, 30 fps</option>
         <option value="1280x720x60">1280×720, 60 fps</option>
@@ -258,6 +260,7 @@ import { CAL_COLLECT_MS, CAL_SETTLE_MS, calibrate, combineEyes, median, SCREEN_W
   from "./kalibrierung-logik.js";
 import { buildReport } from "./bericht-logik.js";
 import { PROTOCOLS } from "./protokolle.js";
+import { openBridge } from "./bruecke.js";
 import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stepText } from "./etappen-logik.js";
 import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./okn-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
@@ -275,6 +278,7 @@ const DEGREE_RANGE = 25;
 const HEAD_IN_DEGREES = 10;
 const DIRECTION_DEGREES = 5;
 const FULLSCREEN_TIMEOUT_MS = 2000;
+const FULLSCREEN_SETTLE_MS = 1500;
 const POSE_WINDOW_MS = 1000;
 const REMEMBER_WINDOW_MS = 2000;
 const CAL_LEAD_MS = 3000;
@@ -286,6 +290,8 @@ const BOOK_ASPECT = 1.6;
 
 const $ = (id) => document.getElementById(id);
 const video = $("video");
+// Bildquelle: das Videoelement oder die Brücke mit denselben Feldern.
+let source = video;
 const overlay = $("overlay");
 const ctx = overlay.getContext("2d");
 const controls = ["toggle", "camera", "cameraMode", "smoothing", "distance", "screenCm"];
@@ -321,6 +327,9 @@ let pauseProbe = null;
 let cancelCard = null;
 let lastRun = null;
 let runUnsaved = false;
+let discardArmed = false;
+// Nur iPhone-Test: Kopflage sperrt nichts, Abweichungen werden weiter vermerkt.
+let headFree = false;
 let headEvents = [];
 let currentTarget = { h: 0, v: 0 };
 let reference = null;
@@ -404,15 +413,15 @@ function drawEyeMarks(points, eye, color) {
 // Vergroesserter Ausschnitt nur zur Anzeige; er wird nirgends abgelegt.
 function drawEyeCrop(points, eye, canvas, color) {
   const target = canvas.getContext("2d");
-  const w = video.videoWidth;
-  const h = video.videoHeight;
+  const w = source.videoWidth;
+  const h = source.videoHeight;
   const a = points[eye.imageLeft];
   const b = points[eye.imageRight];
   const spanX = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h) * 1.7;
   const spanY = spanX / 2;
   const sx = ((a.x + b.x) / 2) * w - spanX / 2;
   const sy = ((a.y + b.y) / 2) * h - spanY / 2;
-  target.drawImage(video, sx, sy, spanX, spanY, 0, 0, canvas.width, canvas.height);
+  target.drawImage(source.image ?? video, sx, sy, spanX, spanY, 0, 0, canvas.width, canvas.height);
   const scale = canvas.width / spanX;
   const cx = (points[eye.center].x * w - sx) * scale;
   const cy = (points[eye.center].y * h - sy) * scale;
@@ -541,7 +550,7 @@ function recordFrame(timing, faces) {
     pushProbe(null, null);
     return;
   }
-  const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead,
+  const frame = measureFrame(faces[0], source.videoWidth, source.videoHeight, previousHead,
                              previousHeadMs === null ? undefined : timing.frameMs - previousHeadMs);
   previousHead = frame.head;
   previousHeadMs = timing.frameMs;
@@ -550,7 +559,7 @@ function recordFrame(timing, faces) {
   sample.raw = { rechts: point(frame.rechts), links: point(frame.links) };
   sample.irisPx = frame.irisPx;
   sample.headPoint = frame.head;
-  sample.pose = analysePose(faces[0], video.videoWidth, video.videoHeight);
+  sample.pose = analysePose(faces[0], source.videoWidth, source.videoHeight);
   if (frame.irisPx > 0) {
     const scale = calibration ? HEAD_IN_DEGREES : 1;
     sample.head = (-(frame.head.x - headZero.x) / frame.irisPx) * scale;
@@ -572,7 +581,7 @@ function recordFrame(timing, faces) {
 
 function analyse(callbackMs, frameMs, stamp, captureMs) {
   const analysisStart = performance.now();
-  const result = landmarker.detectForVideo(video, stamp);
+  const result = landmarker.detectForVideo(source.image ?? video, stamp);
   const analysisEnd = performance.now();
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   const faces = result.faceLandmarks;
@@ -592,14 +601,14 @@ function analyse(callbackMs, frameMs, stamp, captureMs) {
 
 // Der Trockenlauf hat einen eigenen Takt, damit er auch im verdeckten Fenster laeuft.
 function requestFrame(id) {
-  if (DRY_RUN) {
+  if (DRY_RUN && source === video) {
     setTimeout(() => {
       const now = performance.now();
       onFrame(id, now, { presentedFrames: 0, mediaTime: now / 1000 });
     }, 1000 / 30);
     return;
   }
-  frameHandle = video.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
+  frameHandle = source.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
 }
 
 const nextPaint = (callback) => (DRY_RUN
@@ -674,6 +683,7 @@ function updateButtons() {
   $("runShort").disabled = !running || calibrating || !faceVisible;
   $("runLong").disabled = !running || calibrating || !faceVisible;
   $("runOkn").disabled = !running || calibrating || !faceVisible;
+  $("runPhone").disabled = !running || calibrating;
 }
 
 function clearGuide() {
@@ -686,9 +696,9 @@ function clearGuide() {
 function drawGuide(target, ok) {
   const canvas = $("guide");
   const context = canvas.getContext("2d");
-  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+  if (canvas.width !== source.videoWidth || canvas.height !== source.videoHeight) {
+    canvas.width = source.videoWidth;
+    canvas.height = source.videoHeight;
   }
   const { width, height } = canvas;
   context.clearRect(0, 0, width, height);
@@ -719,7 +729,8 @@ function updateGuide(now) {
     clearGuide();
     return;
   }
-  const target = targetFor(Number($("distance").value), reference);
+  const roughFrame = /facetime|standardkamera/i.test($("camera").selectedOptions[0]?.textContent ?? "");
+  const target = targetFor(Number($("distance").value), reference, roughFrame);
   const poses = samples.filter((sample) => now - sample.at <= POSE_WINDOW_MS && sample.pose)
     .map((sample) => sample.pose);
   faceVisible = poses.length > 0;
@@ -742,7 +753,7 @@ function rememberPosition() {
   const recent = samples.filter((sample) => now - sample.at <= REMEMBER_WINDOW_MS && sample.pose);
   const poses = recent.map((sample) => sample.pose);
   if (!isStable(poses)) {
-    setStatus("Position noch nicht ruhig genug: zwei Sekunden stillhalten.", true);
+    setStatus("Bild noch nicht ruhig genug: Kamera fest abstellen, zwei Sekunden stillhalten, dann erneut klicken.", true);
     return;
   }
   reference = makeReference(poses, recent.map((sample) => sample.irisPx), Number($("distance").value));
@@ -766,6 +777,7 @@ function invalidateCalibration(state) {
 
 function endCalibrating() {
   calibrating = false;
+  headFree = false;
   $("cal").hidden = true;
   collecting = null;
   $("calCard").hidden = true;
@@ -824,7 +836,8 @@ function placeDot(target) {
   $("calDot").style.top = `${pixel.y}px`;
 }
 
-async function enterFullscreen(id) {
+// Im iPhone-Test läuft es notfalls im Fenster weiter; Winkel sind dann nur ungefähr.
+async function enterFullscreen(id, lenient = false) {
   calibrating = true;
   for (const control of calControls) $(control).disabled = true;
   updateButtons();
@@ -837,19 +850,24 @@ async function enterFullscreen(id) {
     ]);
   } catch (error) {
     if (id !== calRun) return false;
-    endCalibrating();
-    invalidateCalibration("keine");
-    setStatus(`Vollbild nicht möglich: ${error.message}`, true);
-    return false;
+    if (!lenient) {
+      endCalibrating();
+      invalidateCalibration("keine");
+      setStatus(`Vollbild nicht möglich: ${error.message}`, true);
+      return false;
+    }
   }
   await wait(300);
+  // Safari meldet das Vollbild teils vor dem Ende des Uebergangs.
+  const settled = performance.now() + FULLSCREEN_SETTLE_MS;
+  while (Math.abs(window.innerWidth - window.screen.width) > 2 && performance.now() < settled) await wait(100);
   if (id !== calRun) return false;
   // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
-  if (Math.abs(window.innerWidth - window.screen.width) > 2) {
+  if (!lenient && Math.abs(window.innerWidth - window.screen.width) > 2) {
     abortCalibration("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.");
     return false;
   }
-  if (!targetsFit(Number($("distance").value), window.innerWidth, window.innerHeight, screenWidthCm())) {
+  if (!lenient && !targetsFit(Number($("distance").value), window.innerWidth, window.innerHeight, screenWidthCm())) {
     abortCalibration("Die Blickziele passen bei diesem Abstand nicht auf den Bildschirm.");
     return false;
   }
@@ -876,8 +894,8 @@ async function collectTarget(id, target, settleMs, collectMs) {
   if (id !== calRun) return null;
   collecting = null;
   entry.to = performance.now();
-  const drift = positionDrift(entry.samples, reference, video.videoWidth, video.videoHeight);
-  if (drift?.moved) throw new HeadMoved(drift);
+  const drift = positionDrift(entry.samples, reference, source.videoWidth, source.videoHeight);
+  if (drift?.moved && !headFree) throw new HeadMoved(drift);
   if (drift?.marked) {
     headEvents.push({ time: entry.from, target: target.name, distanceChange: drift.distanceChange, headShift: drift.headShift });
   }
@@ -1081,7 +1099,7 @@ async function showCard(id, card) {
   fillCard({ ...card, key: CARD_KEY });
   pauseProbe = [];
   const shownAt = performance.now();
-  const headOk = () => DRY_RUN || canResume(pauseProbe ?? [], reference, video.videoWidth, video.videoHeight);
+  const headOk = () => DRY_RUN || headFree || canResume(pauseProbe ?? [], reference, source.videoWidth, source.videoHeight);
   const timing = () => {
     const continuedAt = performance.now();
     return { shownAt, continuedAt, waitMs: continuedAt - shownAt };
@@ -1203,7 +1221,8 @@ function oknBlock(id, block, stripes) {
 }
 
 function checkHead(samples) {
-  const drift = positionDrift(samples, reference, video.videoWidth, video.videoHeight);
+  if (headFree) return;
+  const drift = positionDrift(samples, reference, source.videoWidth, source.videoHeight);
   if (drift?.moved) throw new HeadMoved(drift);
 }
 
@@ -1282,7 +1301,7 @@ async function runStage(id, protocol, stage, run, stripes, { skipCard = false } 
         results.push({ part, data });
       }
       const drift = positionDrift(results.flatMap(({ part, data }) => samplesOf(part, data)), reference,
-                                  video.videoWidth, video.videoHeight);
+                                  source.videoWidth, source.videoHeight);
       mergeStage(run, results);
       return { id: stage.id, title: stage.title, shownAt: card?.shownAt ?? null, continuedAt: card?.continuedAt ?? null,
                waitMs, leadSamples, headShift: drift?.headShift ?? null, repeats };
@@ -1352,12 +1371,32 @@ function showResult(protocol, run, meta) {
   lastRun = { kind: protocol.id, meta, run };
 }
 
-async function runExam(protocol) {
+// Nimmt die Position, wie sie gerade ist. Ohne Gesicht gibt es keine Messung, das sagt die Meldung offen.
+function takePositionAsIs() {
+  const now = performance.now();
+  const recent = samples.filter((sample) => now - sample.at <= REMEMBER_WINDOW_MS && sample.pose);
+  if (!recent.length) {
+    const size = `${source.videoWidth}×${source.videoHeight}`;
+    window.alert(`Kein Gesicht erkannt. Bild ${size}, Analysen je Sekunde ${$("mRate").textContent}, Hauptgrund ${$("mReason").textContent}.`);
+    return false;
+  }
+  reference = makeReference(recent.map((sample) => sample.pose), recent.map((sample) => sample.irisPx), Number($("distance").value));
+  invalidateCalibration("keine");
+  return true;
+}
+
+async function runExam(protocol, { lenient = false } = {}) {
   if (busy || calibrating || !running) return;
-  const accepted = window.confirm("Die Untersuchung zeigt bewegte Streifen. Nicht durchführen bei bekannter Anfallsneigung oder Musterempfindlichkeit. Bei Unwohlsein sofort Esc drücken. Fortfahren?");
-  if (!accepted) return;
-  if (runUnsaved && !window.confirm("Der letzte Testlauf ist noch nicht gespeichert. Trotzdem neu starten?")) return;
-  if (!reference) {
+  // Kein window.confirm: Safari wertet den Klick danach nicht mehr als Nutzeraktion und verweigert das Vollbild.
+  if (runUnsaved && !discardArmed) {
+    discardArmed = true;
+    setStatus("Letzter Lauf ist nicht gespeichert. Zum Verwerfen den Lauf erneut starten.", true);
+    return;
+  }
+  discardArmed = false;
+  if (lenient) {
+    if (!takePositionAsIs()) return;
+  } else if (!reference) {
     rememberPosition();
     if (!reference) return;
   }
@@ -1365,7 +1404,10 @@ async function runExam(protocol) {
   runUnsaved = false;
   headEvents = [];
   const id = ++calRun;
-  if (!await enterFullscreen(id)) return;
+  const entered = enterFullscreen(id, lenient);
+  headFree = lenient;
+  if (!await entered) return;
+  const fullscreen = Boolean(document.fullscreenElement);
   $("calText").textContent = "";
   const stripes = hasPart(protocol, "okn") ? prepareStripes() : null;
   const run = await examPhases(id, protocol, stripes);
@@ -1386,6 +1428,10 @@ async function runExam(protocol) {
     distanceCm: Number($("distance").value),
     screenWidthCm: screenWidthCm(),
     cameraWish: $("cameraMode").value,
+    camera: /iphone/i.test($("camera").selectedOptions[0]?.textContent ?? "") ? "iPhone" : "FaceTime oder andere",
+    headCheck: lenient ? "aus" : "an",
+    fullscreen,
+    bridge: source === video ? null : { skippedInPage: source.skipped, droppedInBridge: source.droppedByBridge },
     mode: $("mMode").textContent,
     clock: clockSource,
     duplicates,
@@ -1499,25 +1545,39 @@ function renderStats() {
 async function start() {
   const deviceId = $("camera").value;
   const [wishWidth, wishHeight, wishFps] = $("cameraMode").value.split("x").map(Number);
+  const viaBridge = deviceId === "bruecke";
   try {
-    stream = DRY_RUN ? (await import("./trockenlauf.js")).fakeStream() : await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { width: { ideal: wishWidth }, height: { ideal: wishHeight }, frameRate: { ideal: wishFps },
-               ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
-    });
-    video.srcObject = stream;
-    await video.play();
+    // Vor der Brücke laden: Ihr Bildstrom würde das Laden sonst ausbremsen.
     if (!landmarker) {
       setStatus("Lade Modell …");
       await createLandmarker();
+    }
+    if (viaBridge) {
+      source = await openBridge($("bridgeView"), () => {
+        if (!running) return;
+        stop();
+        setStatus("Brücke getrennt. Messung beendet.", true);
+      });
+      $("bridgeView").hidden = false;
+    } else {
+      const open = (frameRate) => navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { width: { ideal: wishWidth }, height: { ideal: wishHeight }, frameRate,
+                 ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
+      });
+      // Safari bleibt beim iPhone mit ideal bei 30 fps. Erst fest verlangen, sonst so viel wie möglich.
+      stream = DRY_RUN ? (await import("./trockenlauf.js")).fakeStream()
+        : await open({ exact: wishFps }).catch(() => open({ ideal: wishFps }));
+      video.srcObject = stream;
+      await video.play();
     }
   } catch (error) {
     stop();
     setStatus(`Start fehlgeschlagen: ${error.message}`, true);
     return;
   }
-  overlay.width = video.videoWidth;
-  overlay.height = video.videoHeight;
+  overlay.width = source.videoWidth;
+  overlay.height = source.videoHeight;
   $("hint").hidden = true;
   running = true;
   session += 1;
@@ -1528,8 +1588,8 @@ async function start() {
   $("toggle").classList.add("stop");
   $("zero").disabled = false;
   updateButtons();
-  const track = stream.getVideoTracks()[0];
-  track.addEventListener("ended", () => {
+  const track = stream?.getVideoTracks()[0];
+  track?.addEventListener("ended", () => {
     if (!running) return;
     stop();
     setStatus("Kamera getrennt. Messung beendet.", true);
@@ -1538,12 +1598,14 @@ async function start() {
   if (Math.abs(screenAspect - BOOK_ASPECT) > 0.02) {
     setStatus("Anderer Bildschirm erkannt? Bildschirmbreite prüfen, sonst sind die Winkel falsch.", true);
   }
-  const { width, height, frameRate } = track.getSettings();
-  $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0, 1)} fps`;
+  const { width, height, frameRate } = viaBridge
+    ? { width: source.videoWidth, height: source.videoHeight, frameRate: 60 } : track.getSettings();
+  $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0, 1)} fps${viaBridge ? ", Brücke" : ""}`;
   await listCameras();
   resetSegment();
   lastFrameAt = performance.now();
-  setStatus("Läuft. Dem Hinweis im Bild folgen.");
+  if (!viaBridge && (frameRate ?? 0) < wishFps - 1) setStatus(`Kamera liefert nur ${comma(frameRate ?? 0, 0)} statt ${wishFps} fps.`, true);
+  else setStatus("Läuft. Dem Hinweis im Bild folgen.");
   requestFrame(session);
 }
 
@@ -1552,11 +1614,14 @@ function stop() {
   session += 1;
   abortCalibration("Kamera gestoppt.");
   invalidateCalibration("keine");
-  if (frameHandle !== null && !DRY_RUN) video.cancelVideoFrameCallback(frameHandle);
+  if (frameHandle !== null && (!DRY_RUN || source !== video)) source.cancelVideoFrameCallback(frameHandle);
   frameHandle = null;
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
   video.srcObject = null;
+  source.close?.();
+  source = video;
+  $("bridgeView").hidden = true;
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   for (const canvas of [$("eyeRechts"), $("eyeLinks")]) {
     canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
@@ -1581,7 +1646,8 @@ async function listCameras() {
   const devices = (await navigator.mediaDevices.enumerateDevices())
     .filter((device) => device.kind === "videoinput" && device.label);
   if (!devices.length) return;
-  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)));
+  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)),
+                         new Option("iPhone über Brücke, 60 fps", "bruecke"));
   if (current) select.value = current;
 }
 
@@ -1604,6 +1670,12 @@ $("remember").addEventListener("click", rememberPosition);
 $("runShort").addEventListener("click", () => runExam(PROTOCOLS.kurz));
 $("runLong").addEventListener("click", () => runExam(PROTOCOLS.lang));
 $("runOkn").addEventListener("click", () => runExam(PROTOCOLS.okn));
+$("runPhone").addEventListener("click", () => {
+  runExam({ ...PROTOCOLS.okn, title: "iPhone-Test Optokinetik" }, { lenient: true }).catch((error) => {
+    abortCalibration(`iPhone-Test abgebrochen: ${error.message}`);
+    window.alert(`iPhone-Test abgebrochen: ${error.message}`);
+  });
+});
 $("rReport").addEventListener("click", () => {
   if (!lastRun) return;
   window.macVisionRun = lastRun;

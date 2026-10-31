@@ -13,6 +13,91 @@ Mit `make kamera`, ohne die Kamera zu öffnen.
 
 Das sind die vom System gemeldeten Modi. Die tatsächliche Bildrate ist noch nicht gemessen.
 
+## 31.10.2026 — iPhone im Browser
+
+macOS meldet das iPhone als verbundene Kontinuitätskamera (Gerätetyp extern, nicht pausiert). Chrome 156 listet es trotzdem nicht:
+Ein eigener Chrome-Start mit leerem Profil zeigte vor und nach der Kamerafreigabe nur FaceTime HD. Das passt zu zwei offenen
+Fehlermeldungen bei Chromium (436126054, 534781935), die Safari als funktionierend nennen. Am Mac ist für das iPhone also Safari der
+nächste Versuch.
+
+## 31.10.2026 — Erster Lauf mit iPhone-Rückkamera
+
+Safari, Knopf iPhone-Test, Optokinetik, iPhone in der Hand. Vergleich: ausführlicher Lauf mit FaceTime HD, ruhende Kamera. Nicht gleichwertig,
+weil das iPhone nicht fest stand; Abstand nicht gemessen, eingestellt waren 40 cm.
+
+| Kennwert | FaceTime HD | iPhone |
+|---|---:|---:|
+| Ausgehandelt | 1280×720, 30 fps | 1920×1080, 30 fps (gewünscht 60) |
+| Bilder je Sekunde, gemessen | 30,0 | 29,5–30,0 |
+| Bildabstand, Spanne der mittleren 90 % | 32–34 ms | 30–37 ms |
+| Bildabstände über 50 ms | 1 von 1443 | 12 von 1432 |
+| Irisdurchmesser | 37 px | 71 px |
+| Rauschen je Bild, Mittel beider Augen, Irisdurchmesser | 0,0058 | 0,0131 |
+
+**Die Bildrate war nicht höher.** Safari blieb trotz Wunsch bei 30 fps, über zeitliche Auflösung sagt der Lauf also nichts. Die Iris hatte fast doppelt so viele
+Bildpunkte, das Rauschen war trotzdem höher. Das spricht nicht gegen die Kamera, denn die Hand bewegte das Bild: Der Kopf sprang von Bild zu Bild um 2,0 statt 0,4 px.
+Ab rund 13 s wanderte das Gesicht aus dem Bild, die Augenmitte lag dabei bei 80 % der Bildhöhe. Ab rund 20 s gab es keine Erkennung mehr, von 62 s Lauf sind
+nur die ersten rund 15 s brauchbar. Die Streifen nach rechts und die Kontrolle haben keine Daten, eine Aussage zum OKN ist nicht möglich.
+
+Geändert: `getUserMedia` verlangt die Bildrate nun zuerst fest, die Seite warnt, wenn die Kamera weniger liefert.
+
+**Zweiter Lauf, gleicher Abend, mit dieser Änderung:** wieder 1920×1080 mit 30 fps, gemessen 28,7–29,2 Bilder je Sekunde, Bildabstände über 50 ms 56 von 1390.
+Safari liefert das iPhone hier also nicht mit 60 fps. Das Tracking lief dagegen durch: 96–100 % Bilder mit beiden Augen, Iris 90–97 px, Kopf von Bild zu Bild 1,3 px
+oder 0,015 Irisdurchmesser (FaceTime 0,012). Das Rauschen je Bild lag trotzdem bei 0,0143 Irisdurchmessern gegen 0,0058 bei FaceTime. Mehr Bildpunkte haben es also
+nicht gesenkt. Ein Sägezahn ist nicht zu sehen: Sprünge in beide Richtungen etwa gleich häufig, 16 zu 14 und 14 zu 13. Ob das iPhone dem Mac ohne Browser 60 fps liefert, klärt
+`make kamera-takt`; das Werkzeug braucht die Kamerafreigabe im Terminal.
+
+Erste Fassung des Werkzeugs: 30,0 Bilder je Sekunde, Abstand gleichmäßig 33,3 ms. Nicht beweisend, weil das 60-fps-Format vor dem Start gesetzt und nicht zurückgelesen
+wurde. Die zweite Fassung setzt es nach dem Start und nennt, was aktiv ist.
+
+**Zweite Fassung, iPhone 1920×1080:** aktiv 60 fps, 241 Bilder in 4 s, Rate 60,0, Abstand 16,7 ms, längster Abstand 17 ms. Ohne Browser kommen also echte 60 fps am Mac an.
+Die Grenze im Safari-Lauf lag im Browser, nicht in der Kontinuitätskamera. Der zweite Teil mit 1280×720 stand nicht in der übermittelten Ausgabe.
+Safari zeigte auch bei „1280×720, 60 fps“ nur 30 fps, ausgehandelt und in den Analysen je Sekunde.
+
+## 31.10.2026 — Kamerabrücke mit Kunstbild
+
+`tools/kamera_bruecke.swift` reicht Bilder über `ws://127.0.0.1:5601` an die Seite, ungepackt 1280×720, keine Speicherung. Geprüft nur mit Kunstbild, nicht mit dem iPhone.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Fremde Herkunft (`https://example.com`) | abgelehnt, 400 |
+| Eigene Herkunft | angenommen, 101 |
+| Node-Empfänger | 60,0 Bilder/s, 222 MB/s, 0 verworfen |
+| Chrome 156 ohne Fenster, nur Empfang | 60,0 Bilder/s, Bild in die Fläche 0,24 ms |
+| Chrome 156 ohne Fenster, mit MediaPipe | 56–60 Analysen/s, 6–7 ms je Analyse |
+| Eingebautes Fenster der App | nur 6–15 Analysen/s, später keine Bilder |
+
+Das Kunstbild enthält kein Gesicht. Die 6–7 ms decken also die Gesichtspunkte nicht ab. Safari ist mit der Brücke nicht geprüft.
+
+## 31.10.2026 — iPhone über die Brücke, Chrome, echter Lauf
+
+Knopf iPhone-Test, Optokinetik, 64 s, eine Person, Abstand nicht gemessen, eingestellt 40 cm. Grober Maßstab aus Sprüngen, kein Normwert.
+
+| Kennwert | MacBook, Chrome | iPhone, Safari | iPhone, Brücke |
+|---|---:|---:|---:|
+| Bilder je Sekunde im Lauf | 30,0 | 28,7–29,2 | 50,3–52,6 |
+| Häufigster Bildabstand | 33,3 ms | 33 ms | 16,7 ms |
+| Bildabstände über 50 ms | 1 von 1443 | 56 von 1390 | 3 von 2460 |
+| Bilder mit beiden Augen | 99–100 % | 96–100 % | 99–100 % |
+| Irisdurchmesser | 37 px | 90–97 px | 60–63 px |
+| Rauschen je Bild, Irisdurchmesser | 0,0058 | 0,0143 | 0,0072 |
+| Kopf von Bild zu Bild, Irisdurchmesser | 0,012 | 0,015 | 0,011 |
+| Bilder je Sprung, Median | 3 | 3 | 6 |
+
+**Die zeitliche Auflösung ist 1,7-mal so hoch wie am MacBook.** Die Anzeige von 60 Analysen gilt ohne Reiz; im Lauf fielen rund 15 % der Bilder aus, meist einzeln, sodass Abstände von 33 ms entstanden. Über die ganze
+Kamerazeit verwarf die Seite 846 und die Brücke 196 Bilder. Die Seite analysiert im Hauptthread neben dem Reiz; ob das die Ursache ist, ist nicht geprüft. Das Rauschen je Bild halbierte sich gegen den Safari-Weg.
+
+**OKN weiter nicht nachgewiesen.** Geschwindigkeit über 150 ms, langsame Abschnitte unter 20 °/s:
+
+| Block, Reizrichtung | Median | Anteil in Reizrichtung |
+|---|---:|---:|
+| Muster nach links (−) | −1,2 °/s | 0,55 |
+| Muster nach rechts (+) | +1,8 °/s | 0,58 |
+| Kontrolle mit Fixationspunkt | +0,6 °/s | 0,54 |
+
+Erstmals gingen beide Richtungen in Reizrichtung, die Werte liegen aber weit unter den 8 °/s des Reizes und innerhalb einer Streuung von 8–10 °/s; die Kontrolle ist kaum anders. Die Sprünge zeigen keine klare
+Richtung (13 zu 14, 16 zu 24). Ein Lauf, nicht wiederholt.
+
 ## 31.10.2026 — Kameraeigenschaften
 
 Mit `make kamera-details`, ohne die Kamera zu öffnen. FaceTime HD und iPhone melden über

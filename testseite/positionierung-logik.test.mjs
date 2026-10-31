@@ -9,6 +9,14 @@ const HEIGHT = 720;
 const near = (actual, expected, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
 
+test("fremde Kamera: Gesichtsgröße entscheidet nicht, das Bild bleibt mittig", () => {
+  const pose = { x: 0.6, y: 0.6, span: 0.09, roll: 0, yaw: 0 };
+  assert.equal(assess(pose, targetFor(40, null)).ok, false);
+  assert.equal(assess(pose, targetFor(40, null, false)).ok, true);
+  assert.equal(assess({ ...pose, x: 0.9 }, targetFor(40, null, false)).ok, false);
+  assert.equal(assess({ ...pose, roll: 20 }, targetFor(40, null, false)).hint, "Kopf gerade halten");
+});
+
 function face({ x = 640, y = 302, scale = 1, tilt = 0, rightWidth = 60 } = {}) {
   const points = Array.from({ length: 478 }, () => ({ x: 0, y: 0 }));
   const set = (index, offset) => {

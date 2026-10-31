@@ -22,7 +22,9 @@ MacBook Pro M1 mit interner Kamera. Alles andere ist Plan.
 ## Reihenfolge
 
 1. **MacBook plus iPhone als Kamera:** zweite geprüfte Konfiguration mit dem Gütetest. Center Stage und andere
-   automatische Bildausschnitte ausschalten. Der Vergleich zeigt, was mehr Bildrate wirklich bringt.
+   automatische Bildausschnitte ausschalten. Der Vergleich zeigt, was mehr Bildrate wirklich bringt. Chrome listet das iPhone nicht,
+   Safari liefert nur 30 fps; 60 fps kommen über die Kamerabrücke, siehe `MESSUNGEN.md`. Sie nimmt Verbindungen nur von der eigenen Seite an
+   und öffnet die Kamera nur, solange die Seite verbunden ist.
 2. **Eigene Irisrand-Analyse:** Das FaceMesh-Modell arbeitet laut Google mit 256 × 256 Eingang. Mehr Kamerapixel
    kommen dort vermutlich nicht an, die eigene Analyse auf Originalpixeln kann sie nutzen.
 3. **Windows und Safari:** gezielt testen. Die Bildquelle unterscheidet sich je Browser.

@@ -8,6 +8,7 @@ import { median } from "./kalibrierung-logik.js";
 
 export const ROUGH_TARGET = { x: 0.5, y: 0.42, span: 0.18, spanDistanceCm: 40 };
 const ROUGH_TOLERANCE = { x: 0.08, y: 0.14, size: 0.3 };
+const OPEN_TOLERANCE = { x: 0.3, y: 0.35, size: Infinity };
 const PERSONAL_TOLERANCE = { x: 0.06, y: 0.06, size: 0.1 };
 const MAX_ROLL = 6;
 const MAX_YAW = 0.18;
@@ -51,13 +52,14 @@ export function medianPose(poses) {
   return { x: take("x"), y: take("y"), span: take("span"), roll: take("roll"), yaw: take("yaw") };
 }
 
-export function targetFor(distanceCm, reference) {
+// roughFrame nur fuer die FaceTime-Kamera: Lage und Groesse stammen von ihrem Bildwinkel.
+export function targetFor(distanceCm, reference, roughFrame = true) {
   if (reference) {
     return { x: reference.x, y: reference.y, span: reference.span, roll: reference.roll,
              yaw: reference.yaw, tolerance: PERSONAL_TOLERANCE };
   }
   return { x: ROUGH_TARGET.x, y: ROUGH_TARGET.y, span: (ROUGH_TARGET.span * ROUGH_TARGET.spanDistanceCm) / distanceCm,
-           roll: 0, yaw: 0, tolerance: ROUGH_TOLERANCE };
+           roll: 0, yaw: 0, tolerance: roughFrame ? ROUGH_TOLERANCE : OPEN_TOLERANCE };
 }
 
 // Hoechstens ein Hinweis. Wer schon passt, bekommt mehr Spielraum, damit nichts flackert.
