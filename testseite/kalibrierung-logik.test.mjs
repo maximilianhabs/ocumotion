@@ -1,7 +1,7 @@
 // Kalibrierung gegen Augen mit bekannter Abbildung. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calibrate, evaluateEye, fuse, MAX_SIDE_DIFFERENCE, MIN_SAMPLES, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+import { calibrate, evaluateEye, fuse, MAX_SIDE_DIFFERENCE, medianFilter, MIN_SAMPLES, sensitivity, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
 
 const near = (actual, expected, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
@@ -43,8 +43,8 @@ test("Prüfziele fließen nicht in die Anpassung ein", () => {
     for (const sample of entry.samples) sample.rechts = { x: sample.rechts.x + 0.09, y: sample.rechts.y };
   }
   const eye = evaluateEye(entries, "rechts");
-  assert.equal(eye.passed, false);
-  assert.equal(eye.reason, "Prüffehler zu groß");
+  assert.equal(eye.passedH, false);
+  assert.equal(eye.reasonH, "Prüffehler zu groß");
   assert.ok(eye.errorH > 2);
 });
 
@@ -57,7 +57,7 @@ test("Ein schlechtes Auge fällt aus, das gute bleibt", () => {
   assert.equal(result.passed, true);
   assert.equal(result.best, "rechts");
   assert.equal(result.links.weightH, 0);
-  assert.equal(result.links.weightV, 0);
+  assert.ok(result.links.weightV > 0);
   const estimate = fuse({ h: 3, v: 1 }, { h: 30, v: 9 }, result);
   near(estimate.h, 3);
 });
@@ -95,7 +95,7 @@ test("Blickziele liegen im bekannten Abstand auf dem Bildschirm", () => {
 });
 
 test("Alle Ziele passen bei 30 bis 50 cm auf den MacBook-Bildschirm", () => {
-  for (const distance of [30, 40, 50]) {
+  for (const distance of [30, 35, 40, 50]) {
     for (const target of STEPS) {
       const pixel = targetPixels(target, distance, 1440, 900);
       assert.ok(pixel.x > 0 && pixel.x < 1440, `${target.name} bei ${distance}`);
@@ -112,7 +112,8 @@ test("Vertikaler Fehler an horizontalen Prüfzielen lässt die Kalibrierung sche
     for (const sample of entry.samples) sample.rechts = { ...sample.rechts, y: sample.rechts.y + 0.144 };
   }
   const eye = evaluateEye(entries, "rechts");
-  assert.equal(eye.passed, false);
+  assert.equal(eye.passedV, false);
+  assert.equal(eye.passedH, true);
   assert.ok(eye.errorV > 3);
 });
 
@@ -122,7 +123,7 @@ test("Horizontaler Fehler an vertikalen Prüfzielen lässt die Kalibrierung sche
     for (const sample of entry.samples) sample.rechts = { ...sample.rechts, x: sample.rechts.x + 0.18 };
   }
   const eye = evaluateEye(entries, "rechts");
-  assert.equal(eye.passed, false);
+  assert.equal(eye.passedH, false);
   assert.ok(eye.errorH > 2);
 });
 
@@ -131,8 +132,8 @@ test("Ein einzelnes schlechtes Prüfziel fällt über den Maximalfehler auf", ()
   const target = checkEntries(entries)[0];
   for (const sample of target.samples) sample.rechts = { ...sample.rechts, x: sample.rechts.x + 0.09 };
   const eye = evaluateEye(entries, "rechts");
-  assert.ok(eye.maxError > 4);
-  assert.equal(eye.passed, false);
+  assert.ok(eye.maxErrorH > 4);
+  assert.equal(eye.passedH, false);
 });
 
 test("Vertikales Rauschen senkt nur das vertikale Gewicht", () => {
@@ -157,8 +158,8 @@ test("Stark schwankende Einzelwerte bestehen trotz richtigem Median nicht", () =
     });
   }
   const eye = evaluateEye(entries, "rechts");
-  assert.equal(eye.passed, false);
-  assert.equal(eye.reason, "Einzelwerte zu unruhig");
+  assert.equal(eye.passedH, false);
+  assert.equal(eye.reasonH, "Einzelwerte zu unruhig");
 });
 
 test("Eine lange Tracking-Lücke am Ziel besteht nicht", () => {
@@ -180,6 +181,14 @@ test("Zu geringer Anteil gültiger Bilder besteht nicht", () => {
   assert.equal(eye.reason, "zu wenige gültige Bilder");
 });
 
+test("Empfindlichkeit rechnet Modellverstärkung in Grad je Bildpunkt um", () => {
+  const result = sensitivity({ h: [0, 90, 0], v: [0, 0, 240] }, 30);
+  near(result.h, 3);
+  near(result.v, 8);
+  assert.equal(sensitivity(null, 30), null);
+  assert.equal(sensitivity({ h: [0, 1, 0], v: [0, 0, 1] }, 0), null);
+});
+
 test("Bei großer Seitendifferenz wird der Mittelwert der Achse ausgesetzt", () => {
   const calibration = { rechts: { weightH: 1, weightV: 1 }, links: { weightH: 1, weightV: 1 } };
   const apart = fuse({ h: 0, v: 1 }, { h: MAX_SIDE_DIFFERENCE + 1, v: 1.5 }, calibration);
@@ -188,4 +197,25 @@ test("Bei großer Seitendifferenz wird der Mittelwert der Achse ausgesetzt", () 
   assert.equal(apart.disagree, true);
   assert.equal(fuse({ h: 1, v: 1 }, { h: 1.5, v: 1 }, calibration).disagree, false);
   near(fuse(null, { h: 20, v: 1 }, calibration).h, 20);
+});
+
+test("Medianfilter erhält einen Sprung und entfernt Ausreißer", () => {
+  const points = Array.from({ length: 20 }, (_, i) => ({ time: i * 33, h: i < 10 ? 0 : 10 }));
+  const filtered = medianFilter(points, ["h"]);
+  assert.deepEqual(filtered.map((p) => p.h), points.map((p) => p.h));
+  points[5].h = 50;
+  assert.equal(medianFilter(points, ["h"])[5].h, 0);
+});
+
+test("Medianfilter greift nicht über Lücken", () => {
+  const points = [0, 33, 66, 500, 533, 566].map((time, i) => ({ time, h: i < 3 ? 0 : 10 }));
+  assert.deepEqual(medianFilter(points, ["h"]).map((p) => p.h), [0, 0, 0, 10, 10, 10]);
+});
+
+test("Rauschen im Bild besteht nach dem Filter, wenn die Ziele stimmen", () => {
+  let n = 0;
+  const jitter = () => { n = (n * 1103515245 + 12345) % 2147483648; return (n / 2147483648 - 0.5) * 0.03; };
+  const noisy = (h, v) => { const eye = eyeAt(h, v); return { x: eye.x + jitter(), y: eye.y + jitter() * 0.5 }; };
+  const eye = evaluateEye(run({ rechts: noisy, samples: 80 }), "rechts");
+  assert.equal(eye.passedH, true);
 });

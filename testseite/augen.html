@@ -109,9 +109,9 @@
       <div class="axis">Vertikal: oben = nach oben</div>
       <canvas id="curveV" class="curve"></canvas>
       <div class="legend">
-        <span style="--c:var(--mean)">Mittelwert</span>
-        <span style="--c:var(--right)">rechtes Auge</span>
-        <span style="--c:var(--left)">linkes Auge</span>
+        <span style="--c:var(--mean)">Mittelwert, Median aus 5 Bildern</span>
+        <span style="--c:var(--right)">rechtes Auge, roh</span>
+        <span style="--c:var(--left)">linkes Auge, roh</span>
         <span style="--c:var(--head)">Kopf</span>
         <span id="unit">Irisdurchmesser, Lücken = ungültig</span>
       </div>
@@ -148,12 +148,13 @@
       <h2>Steuerung</h2>
       <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
       <select id="smoothing" aria-label="Glättung">
-        <option value="1">Modellglättung an (ein Gesicht)</option>
-        <option value="2">Modellglättung aus (zwei Gesichter)</option>
+        <option value="2">Modellglättung aus (empfohlen)</option>
+        <option value="1">Modellglättung an</option>
       </select>
       <button id="toggle">Kamera starten</button>
       <select id="distance" aria-label="Abstand Augen zum Bildschirm">
         <option value="30">Abstand 30 cm</option>
+        <option value="35">Abstand 35 cm</option>
         <option value="40" selected>Abstand 40 cm (empfohlen)</option>
         <option value="50">Abstand 50 cm</option>
       </select>
@@ -181,6 +182,8 @@
         <dt>Größter Zielfehler r / l</dt><dd id="cMax">–</dd>
         <dt>Gewicht h, r / l</dt><dd id="cWeightH">–</dd>
         <dt>Gewicht v, r / l</dt><dd id="cWeightV">–</dd>
+        <dt>Fehlerverstärkung h, r / l</dt><dd id="cSensH">–</dd>
+        <dt>Fehlerverstärkung v, r / l</dt><dd id="cSensV">–</dd>
         <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
         <dt>Abstand geschätzt</dt><dd id="pDist">–</dd>
         <dt>Seitendifferenz</dt><dd id="mDiff">–</dd>
@@ -220,7 +223,7 @@
 import { FilesetResolver, FaceLandmarker }
   from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
-import { calibrate, fuse, median, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
+import { calibrate, fuse, median, sensitivity, STEPS, targetPixels, toDegrees } from "./kalibrierung-logik.js";
 import { ACCURACY_TARGETS, analyseRun, FIXATION_MS, PAUSE_MS, PURSUIT_RUNS, SACCADE_JUMPS, SACCADE_MAX_MS,
          SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
@@ -244,6 +247,7 @@ const CAL_COLLECT_MS = 2800;
 const STALL_MS = 1500;
 const WARMUP_MS = 1000;
 const ZERO_MS = 1000;
+const LIVE_FILTER_FRAMES = 5;
 
 const $ = (id) => document.getElementById(id);
 const video = $("video");
@@ -278,7 +282,7 @@ let calibrating = false;
 let collecting = null;
 let lastRun = null;
 let runUnsaved = false;
-let headMarks = 0;
+let headEvents = [];
 let currentTarget = { h: 0, v: 0 };
 let reference = null;
 let positionOk = false;
@@ -467,6 +471,14 @@ function applyValues(sample, raw) {
 // Reize laufen auf performance.now(); captureTime liegt auf derselben Uhr, sonst der Callback.
 const eventTime = (timing) => timing.captureMs ?? timing.at;
 
+// Der Mittelwert laeuft live durch denselben Median wie die Auswertung; die Augen bleiben roh.
+function filterLive(sample, key) {
+  sample[`${key}Raw`] = sample[key];
+  if (sample[key] === null) return;
+  const recent = samples.slice(1 - LIVE_FILTER_FRAMES).map((item) => item[`${key}Raw`]);
+  sample[key] = median([...recent.filter((value) => value !== null && value !== undefined), sample[key]]);
+}
+
 function recordFrame(timing, faces) {
   const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
                    vMean: null, head: null, irisPx: null, headPoint: null, raw: null, pose: null,
@@ -481,7 +493,7 @@ function recordFrame(timing, faces) {
   const frame = measureFrame(faces[0], video.videoWidth, video.videoHeight, previousHead);
   previousHead = frame.head;
   headZero ??= frame.head;
-  const point = (eye) => (eye.valid ? { x: eye.x, y: eye.y } : null);
+  const point = (eye) => (eye.valid ? { x: eye.x, y: eye.y, aperture: eye.aperture } : null);
   sample.raw = { rechts: point(frame.rechts), links: point(frame.links) };
   sample.irisPx = frame.irisPx;
   sample.headPoint = frame.head;
@@ -491,10 +503,17 @@ function recordFrame(timing, faces) {
     sample.head = (-(frame.head.x - headZero.x) / frame.irisPx) * scale;
   }
   applyValues(sample, sample.raw);
+  filterLive(sample, "mean");
+  filterLive(sample, "vMean");
   sample.reasons = [...new Set([...frame.rechts.reasons, ...frame.links.reasons])];
   if (sample.disagree) sample.reasons.push("Seitendifferenz");
   samples.push(sample);
-  collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx, head: frame.head });
+  const rejected = (eye) => (eye.valid ? undefined : { aperture: eye.aperture, reasons: eye.reasons });
+  collecting?.samples.push({
+    t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx,
+    irisRechts: frame.rechts.irisPx, irisLinks: frame.links.irisPx, head: frame.head,
+    rejectedRechts: rejected(frame.rechts), rejectedLinks: rejected(frame.links),
+  });
 }
 
 function analyse(callbackMs, frameMs, stamp, captureMs) {
@@ -725,11 +744,19 @@ function showCalibration(result) {
   };
   $("cWeightH").textContent = share("weightH");
   $("cWeightV").textContent = share("weightV");
-  if (!result.passed) $("cState").textContent = "nicht bestanden";
-  else {
-    const both = result.rechts.passed && result.links.passed;
-    $("cState").textContent = both ? "bestanden, beide Augen" : `bestanden, nur ${result.best}`;
-  }
+  const iris = reference?.irisPx ?? 0;
+  const perTenth = (eye, axis) => {
+    const value = sensitivity(eye.model, iris)?.[axis];
+    return value === undefined ? "–" : `${comma(value / 10, 2)}°`;
+  };
+  $("cSensH").textContent = `${perTenth(result.rechts, "h")} / ${perTenth(result.links, "h")}`;
+  $("cSensV").textContent = `${perTenth(result.rechts, "v")} / ${perTenth(result.links, "v")}`;
+  const axis = (name, passed) => (passed ? name : `${name} nicht`);
+  const passedH = result.rechts.passedH || result.links.passedH;
+  const passedV = result.rechts.passedV || result.links.passedV;
+  $("cState").textContent = result.passed
+    ? `bestanden: ${axis("horizontal", passedH)}, ${axis("vertikal", passedV)}`
+    : "nicht bestanden";
 }
 
 const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
@@ -787,7 +814,9 @@ async function collectTarget(id, target, settleMs, collectMs) {
     abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
     return null;
   }
-  if (drift?.marked) headMarks += 1;
+  if (drift?.marked) {
+    headEvents.push({ time: entry.from, target: target.name, distanceChange: drift.distanceChange, headShift: drift.headShift });
+  }
   return entry;
 }
 
@@ -929,8 +958,9 @@ function showReport(run, report, result) {
   const accuracy = report.accuracy.mittel;
   const saccades = report.saccades.mittel;
   const rows = [
-    ["Gültige Bilder Ruhe", fixation ? `${Math.round(fixation.validShare * 100)} %` : "–"],
-    ["Ruhe SD h / v", `${number(fixation?.sdH, 2)}° / ${number(fixation?.sdV, 2)}°`],
+    ["Abdeckung Ruhe h / v", fixation ? `${Math.round(fixation.coverageH * 100)} % / ${Math.round(fixation.coverageV * 100)} %` : "–"],
+    ["Ruhe robust h / v", `${number(fixation?.robustSdH, 2)}° / ${number(fixation?.robustSdV, 2)}°`],
+    ["Ruhe alle Bilder h / v", `${number(fixation?.sdH, 2)}° / ${number(fixation?.sdV, 2)}°`],
     ["Drift horizontal", `${number(fixation?.driftH, 2)} °/s`],
     ["Rauschen aus Seitendifferenz", `${number(report.differenceNoise?.h, 2)}° / ${number(report.differenceNoise?.v, 2)}°`],
     ["Ziele Fehler h / v", `${number(accuracy?.errorH)}° / ${number(accuracy?.errorV)}°`],
@@ -938,9 +968,10 @@ function showReport(run, report, result) {
     ["Folge langsam Gain, Lag", `${number(slow?.gain, 2)}, ${number(slow?.lagMs, 0)} ms`],
     ["Folge schnell Gain, Lag", `${number(fast?.gain, 2)}, ${number(fast?.lagMs, 0)} ms`],
     ["Aufholsakkaden je Zyklus", `${number(slow?.catchUpsPerCycle)} / ${number(fast?.catchUpsPerCycle)}`],
-    ["Sakkaden h Gain, Latenz", `${number(saccades?.h?.gain, 2)}, ${number(saccades?.h?.latency, 0)} ms`],
-    ["Sakkaden v Gain, Latenz", `${number(saccades?.v?.gain, 2)}, ${number(saccades?.v?.latency, 0)} ms`],
-    ["Ziele mit Kopfbewegung", `${headMarks} von ${STEPS.length + ACCURACY_TARGETS.length}`],
+    ["Sakkaden h Endlage, Latenz", `${number(saccades?.h?.endGain, 2)}, ${number(saccades?.h?.latency, 0)} ms`],
+    ["Sakkaden v Endlage, Latenz", `${number(saccades?.v?.endGain, 2)}, ${number(saccades?.v?.latency, 0)} ms`],
+    ["Ziele mit Kopfbewegung", `${headEvents.length} von ${STEPS.length + ACCURACY_TARGETS.length}`],
+    ["Ausgewertete neue Ziele", `${accuracy?.targets ?? 0} von ${ACCURACY_TARGETS.length}`],
     ["Sakkaden erkannt", `${saccades?.h?.detected ?? 0} / ${saccades?.h?.count ?? 0} h, ${saccades?.v?.detected ?? 0} / ${saccades?.v?.count ?? 0} v`],
   ];
   const levelRow = ({ name, level }) => {
@@ -954,11 +985,10 @@ function showReport(run, report, result) {
     row.append(label, value);
     return row;
   };
-  $("rOverall").textContent = report.grade.overall;
-  $("rOverall").className = `big ${report.grade.overall}`;
-  $("rNote").textContent = report.calibrationPassed
-    ? "Einordnung experimentell, sie bewertet das Werkzeug, nicht die Person."
-    : `Kalibrierung nicht bestanden (${result.rechts.reason ?? "rechts ok"}, ${result.links.reason ?? "links ok"}). Werte nur als Hinweis.`;
+  const { summary } = report.grade;
+  $("rOverall").textContent = summary.headline;
+  $("rOverall").className = `big ${summary.usableH && summary.usableV ? "gut" : summary.usableH || summary.usableV ? "mittel" : "schwach"}`;
+  $("rNote").textContent = `${summary.lines.join(" ")} Einordnung experimentell, sie bewertet das Werkzeug, nicht die Person.`;
   $("rLevels").replaceChildren(...report.grade.rows.map(levelRow));
   $("rValues").replaceChildren(...rows.map(([name, value]) => levelRow({ name, level: value })));
   for (const cell of $("rValues").querySelectorAll("dd")) cell.className = "";
@@ -970,11 +1000,16 @@ function showReport(run, report, result) {
     meta: {
       createdAt: new Date().toISOString(),
       smoothing: $("smoothing").selectedOptions[0].textContent,
+      filter: "Median 5 Bilder in Auswertung, Rohwerte im Export",
       distanceCm: Number($("distance").value),
       mode: $("mMode").textContent,
       clock: clockSource,
       duplicates,
-      headMarks,
+      headEvents,
+      sensitivity: {
+        rechts: sensitivity(result.rechts.model, reference?.irisPx),
+        links: sensitivity(result.links.model, reference?.irisPx),
+      },
       devicePixelRatio: window.devicePixelRatio,
       screen: `${window.screen.width}×${window.screen.height}`,
       reference,
@@ -984,7 +1019,8 @@ function showReport(run, report, result) {
     run,
     text: [
       `Gütetest ${new Date().toLocaleString("de-DE")}`,
-      `Gesamt: ${report.grade.overall}${report.calibrationPassed ? "" : " (Kalibrierung nicht bestanden)"}`,
+      summary.headline,
+      ...summary.lines,
       `Kalibrierung: rechts ${$("cRechts").textContent}, links ${$("cLinks").textContent}`,
       `Einstellung: ${$("smoothing").selectedOptions[0].textContent}, ${$("distance").value} cm, ${$("mMode").textContent}, Zeitbasis ${clockSource}`,
       ...report.grade.rows.map(({ name, level }) => `${name}: ${level}`),
@@ -1002,7 +1038,7 @@ async function runQualityTest() {
   if (runUnsaved && !window.confirm("Der letzte Testlauf ist noch nicht gespeichert. Trotzdem neu starten?")) return;
   $("report").hidden = true;
   runUnsaved = false;
-  headMarks = 0;
+  headEvents = [];
   const id = ++calRun;
   if (!await enterFullscreen(id)) return;
   $("calText").textContent = "";
@@ -1019,8 +1055,7 @@ async function runQualityTest() {
   if (!run) return;
   await leaveFullscreen();
   finishCalibration(entries);
-  const models = { rechts: result.rechts.model, links: result.links.model };
-  showReport({ calibration: entries, ...run }, analyseRun(run, models, result.passed), result);
+  showReport({ calibration: entries, ...run }, analyseRun(run, result), result);
   setStatus("Gütetest fertig.");
 }
 

@@ -81,6 +81,22 @@ vor dem Verlassen oder einem neuen Lauf, wenn noch nicht gespeichert wurde:
 `augen.html?trockenlauf` ersetzt Kamera und Modell durch ein simuliertes Gesicht, das dem Punkt exakt
 folgt. So lässt sich der Ablauf mit bekannter Antwort prüfen. Ergebnisse daraus sagen nichts über echte Augen.
 
+## Stand der Auswertung
+
+Standard ist seit dem dritten Lauf `Modellglättung aus` mit Median aus 5 Bildern. Bericht und Anzeige nutzen
+dieselbe Zusammenführung, die Freigabe gilt je Achse. Der Bericht nennt je Achse Zielfehler, Ruhe und
+Abdeckung und nennt eine Achse nur nutzbar, wenn auch die Sakkaden-Endlage höchstens 30 % abweicht. Der Wert
+heißt Endlage, weil er die Position nach der Bewegung misst, nicht die erste Sakkade. Alte Exportdateien
+lassen sich mit dieser Auswertung neu rechnen.
+
+## Nächste Ausbaustufe, aus dem Feedback zu den ersten Läufen
+
+- **Fehlerverstärkung als Freigabe:** bisher nur angezeigt, noch ohne belegte Grenze.
+- **Kurzer Artefakttest:** blinzeln, kneifen, ruhig schauen, mit Lidöffnung, Irisbreite und Augenposition.
+- **Gültigkeit je Zeitabschnitt:** weiter aufnehmen, betroffene Abschnitte markieren und nur diese wiederholen.
+  Die Referenz wird während einer Untersuchung nie nachgeführt.
+- **Glättung gezielt vergleichen:** kurz an–aus–an, später dieselben RAM-Bilder mit beiden Einstellungen.
+
 ## Wie es danach weitergeht
 
 1. Erster Lauf mit Bericht, möglichst mit Zahlenreihe.

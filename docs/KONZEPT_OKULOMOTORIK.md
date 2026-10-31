@@ -31,7 +31,8 @@ Datensammlung.
 **Modell je Auge:** `Grad = c0 + c1·x + c2·y`, getrennt für horizontal und vertikal, als kleinste
 Quadrate über den Median je Ziel. Prüfziele gehen nicht in die Anpassung ein.
 
-**Bestanden:** Das wird je Auge entschieden. Alle Schwellen sind experimentell. An jedem Prüfziel
+**Bestanden:** Das wird je Auge und je Achse entschieden. Eine Achse kann also bestehen, wenn die andere
+scheitert. Die Unruhe wird nach dem Medianfilter gemessen. Alle Schwellen sind experimentell. An jedem Prüfziel
 zählen beide Achsen, auch die erwartete Nullkomponente.
 
 | Prüfung | Schwelle |
@@ -122,7 +123,8 @@ Größe gezogen wird. Das geht ohne Kamera. Ohne sie wären dort alle Gradwerte 
 **Stufe 1, gebaut: gewichteter Mittelwert, je Achse getrennt.** Gewicht je Auge und Achse:
 `1 / (Unruhe² + Prüffehler²)`. Das ist eine Heuristik, keine validierte Unsicherheit. Das genauere Auge zählt mehr, ein durchgefallenes zählt nicht, bei Ausfall trägt das andere
 allein. Durch die Kalibrierung liegen beide auf derselben Gradskala, ein Augenwechsel springt also
-kaum. Weichen beide Augen auf einer Achse um mehr als 3° (vorläufig) ab, bleibt dort der Mittelwert
+kaum. Mittelwert und Auswertung nutzen je Auge denselben Median aus 5 Bildern, die Rohwerte bleiben im
+Export und in der Anzeige. Weichen beide Augen auf einer Achse um mehr als 5° (vorläufig) ab, bleibt dort der Mittelwert
 leer, beide Einzelkurven laufen weiter, und die Ursache wird nicht gedeutet.
 
 **Stufe 2, geplant: Bildgüte je Frame.** Lidöffnung, Randabdeckung und Kontrast verändern das
@@ -140,7 +142,8 @@ Ohne Referenz gibt es kein Lernziel, und ein Modell würde Kurven glätten oder 
 - Keine Glättung, die Sakkaden oder schnelle Phasen abschwächt.
 - Der Mittelwert setzt gleichsinnige Augen voraus. Das stimmt bei Normalbefund und vielen
   Nystagmen, nicht aber bei internukleärer Ophthalmoplegie, Paresen oder dissoziiertem Nystagmus.
-  Unter der Schwelle von 3° kann er solche Unterschiede weiterhin verdecken.
+  Unter der Schwelle von 5° kann er solche Unterschiede weiterhin verdecken. Die Grenze wurde von 3° auf
+  5° erhöht, weil der Messfehler zwischen beiden Augen in den ersten Läufen bis rund 2° betrug.
 
 ## 4. Okulomotorik-Untersuchung (Plan)
 

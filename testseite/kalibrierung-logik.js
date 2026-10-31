@@ -10,11 +10,13 @@ export const MIN_SAMPLES = 10;
 export const MAX_ERROR_H = 2;
 export const MAX_ERROR_V = 3;
 export const MAX_POINT_ERROR = 4;
+export const FILTER_SIZE = 5;
+const FILTER_MAX_GAP_MS = 100;
 export const MAX_NOISE_H = 1.5;
 export const MAX_NOISE_V = 2.5;
 export const MIN_VALID_SHARE = 0.7;
 export const MAX_GAP_MS = 600;
-export const MAX_SIDE_DIFFERENCE = 3;
+export const MAX_SIDE_DIFFERENCE = 5;
 const MIN_NOISE = 0.05;
 
 const step = (name, h, v, role) => ({ name, h, v, role });
@@ -85,10 +87,35 @@ export function toDegrees(model, x, y) {
   };
 }
 
+// Grad je Bildpunkt Positionsfehler: zeigt, wie stark die Kalibrierung kleine Fehler verstaerkt.
+export function sensitivity(model, irisPx) {
+  if (!model || !(irisPx > 0)) return null;
+  return { h: Math.hypot(model.h[1], model.h[2]) / irisPx, v: Math.hypot(model.v[1], model.v[2]) / irisPx };
+}
+
 export function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+// Zentrierter Medianfilter: senkt Rauschen und erhaelt Spruenge. Er greift nicht ueber Luecken.
+export function medianFilter(points, keys, timeKey = "time", size = FILTER_SIZE) {
+  const half = Math.floor(size / 2);
+  return points.map((point, index) => {
+    const result = { ...point };
+    const window = [];
+    for (let i = index; i >= Math.max(0, index - half); i -= 1) {
+      if (i < index && points[i + 1][timeKey] - points[i][timeKey] > FILTER_MAX_GAP_MS) break;
+      window.push(points[i]);
+    }
+    for (let i = index + 1; i <= Math.min(points.length - 1, index + half); i += 1) {
+      if (points[i][timeKey] - points[i - 1][timeKey] > FILTER_MAX_GAP_MS) break;
+      window.push(points[i]);
+    }
+    for (const key of keys) result[key] = median(window.map((item) => item[key]));
+    return result;
+  });
 }
 
 export function spread(values) {
@@ -120,8 +147,9 @@ function longestGap(samples) {
 }
 
 function failure(reason, validShare) {
-  return { passed: false, reason, validShare, model: null, errorH: null, errorV: null, maxError: null,
-           noiseH: null, noiseV: null, longestGap: null, weightH: 0, weightV: 0 };
+  return { passed: false, passedH: false, passedV: false, reason, validShare, model: null, errorH: null,
+           errorV: null, maxError: null, maxErrorH: null, maxErrorV: null, noiseH: null, noiseV: null,
+           longestGap: null, weightH: 0, weightV: 0 };
 }
 
 const weightFor = (noise, error) => 1 / (Math.max(noise, MIN_NOISE) ** 2 + error ** 2);
@@ -149,9 +177,13 @@ export function evaluateEye(entries, side) {
   const errorH = rootMeanSquare(errors.map((error) => error.h));
   const errorV = rootMeanSquare(errors.map((error) => error.v));
   const maxError = Math.max(...errors.map((error) => Math.hypot(error.h, error.v)));
+  const maxErrorH = Math.max(...errors.map((error) => Math.abs(error.h)));
+  const maxErrorV = Math.max(...errors.map((error) => Math.abs(error.v)));
 
+  // Unruhe auf gefilterten Werten: Der Bildfehler ist sonst groesser als das, was ausgewertet wird.
   const spreads = points.map((point) => {
-    const degrees = point.samples.map((sample) => toDegrees(model, sample.x, sample.y));
+    const filtered = medianFilter(point.samples, ["x", "y"], "t");
+    const degrees = filtered.map((sample) => toDegrees(model, sample.x, sample.y));
     return { h: spread(degrees.map((d) => d.h)), v: spread(degrees.map((d) => d.v)) };
   });
   const noiseH = median(spreads.map((value) => value.h));
@@ -160,16 +192,28 @@ export function evaluateEye(entries, side) {
   const worstV = Math.max(...spreads.map((value) => value.v));
   const gap = Math.max(...points.map((point) => longestGap(point.samples)));
 
-  let reason = null;
-  if (validShare < MIN_VALID_SHARE) reason = "zu wenige gültige Bilder";
-  else if (gap > MAX_GAP_MS) reason = "Tracking-Lücke";
-  else if (worstH > MAX_NOISE_H || worstV > MAX_NOISE_V) reason = "Einzelwerte zu unruhig";
-  else if (errorH > MAX_ERROR_H || errorV > MAX_ERROR_V || maxError > MAX_POINT_ERROR) reason = "Prüffehler zu groß";
-  const passed = reason === null;
+  let common = null;
+  if (validShare < MIN_VALID_SHARE) common = "zu wenige gültige Bilder";
+  else if (gap > MAX_GAP_MS) common = "Tracking-Lücke";
+  const axisProblem = (error, worstError, noise, maxError_, maxNoise) => {
+    if (noise > maxNoise) return "Einzelwerte zu unruhig";
+    if (error > maxError_ || worstError > MAX_POINT_ERROR) return "Prüffehler zu groß";
+    return null;
+  };
+  const problemH = common ?? axisProblem(errorH, maxErrorH, worstH, MAX_ERROR_H, MAX_NOISE_H);
+  const problemV = common ?? axisProblem(errorV, maxErrorV, worstV, MAX_ERROR_V, MAX_NOISE_V);
+  const passedH = problemH === null;
+  const passedV = problemV === null;
   return {
-    passed, reason, validShare, model, errorH, errorV, maxError, noiseH, noiseV, longestGap: gap,
-    weightH: passed ? weightFor(noiseH, errorH) : 0,
-    weightV: passed ? weightFor(noiseV, errorV) : 0,
+    passed: passedH || passedV,
+    passedH,
+    passedV,
+    reason: problemH ?? problemV,
+    reasonH: problemH,
+    reasonV: problemV,
+    validShare, model, errorH, errorV, maxError, maxErrorH, maxErrorV, noiseH, noiseV, longestGap: gap,
+    weightH: passedH ? weightFor(noiseH, errorH) : 0,
+    weightV: passedV ? weightFor(noiseV, errorV) : 0,
   };
 }
 

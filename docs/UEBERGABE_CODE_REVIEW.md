@@ -40,7 +40,8 @@ Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausge
 | `testseite/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
 | `testseite/trockenlauf.js` | Simuliertes Gesicht, `augen.html?trockenlauf` |
 | `testseite/positionierung-logik.js` | Lage des Gesichts, Hinweise, persönliche Referenz, Abstand relativ |
-| `testseite/*.test.mjs` | 50 Logiktests mit konstruierten Daten |
+| `testseite/*.test.mjs` | 56 Logiktests mit konstruierten Daten |
+| `tools/guetetest_auswertung.py` | Vertiefte Auswertung einer Exportdatei |
 | `testseite/index.html` | allgemeine Testseite für Hand, Gesicht, Körper |
 
 ## Bitte besonders prüfen
