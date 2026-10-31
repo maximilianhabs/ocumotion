@@ -17,6 +17,7 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/KONZEPT.md` | Ziel, Architektur, Gestensteuerung, Grenzen, Datenschutz |
 | `docs/KONZEPT_AUGEN.md` | Blickrichtung, Irismitte, Nystagmus, Stufen A0–A7 |
 | `docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md` | Zielbild für Bericht und Kurzprofile, mit Prüfvermerk |
+| `docs/ROAD_TO_PUBLIC.md` | Fahrplan für die Veröffentlichung |
 | `docs/PROTOKOLLE.md` | Kurzlauf und ausführlicher Lauf: Inhalt, Aussagekraft, Maßstab |
 | `docs/KONZEPT_OKN_MODUS.md` | Optokinetischer Test H40, mit Prüfvermerk |
 | `docs/KONZEPT_IPHONE_MODUS.md` | Eigenständiger iPhone-Modus mit ARKit, Pipeline, nicht begonnen |
