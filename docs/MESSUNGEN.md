@@ -450,3 +450,37 @@ mit Gain 1,06 und 1,2 Sakkaden je Zyklus.
 
 **Etappen erstmals am echten Gesicht:** 5 Etappen, keine Wiederholung, Wartezeit auf den Karten 2–5 s. Der Kopf wanderte von 0,7 auf 2,5 Irisdurchmesser, mit einer Kopfmarke, aber ohne Abbruch.
 Die Frage nach der Anstrengung wurde übersprungen.
+
+## 01.11.2026 — Stellung beider Augen im ausführlichen Lauf
+
+Nachrechnung aus dem Lauf vom 31.10., kalibriert, eine Person ohne bekannte Fehlstellung, ruhiger Blick 16 s. Differenz rechtes minus linkes Auge.
+
+| Achse | Rauschen je Bild | Mittel je Sekunde, Streuung | Spanne dieser Mittel |
+|---|---:|---:|---:|
+| Horizontal | 0,82° | 0,91° | 3,2° |
+| Vertikal | 0,76° | 0,82° | 2,8° |
+
+Vertikaler Median zu drei Zeitpunkten: +0,09° zu Beginn, +0,86° in Ruhe, −1,07° vor der Optokinetik. Mitteln beseitigt also nicht alles, die Differenz wandert. Kleine Fehlstellungen sind so nicht von Messfehlern zu trennen.
+
+## 01.11.2026 — Erkennung im Worker, ohne echtes Gesicht
+
+Chrome ohne Fenster mit Kunstkamera, 20 fps, Bild ohne Gesicht. Worker 19,0–19,3 Analysen/s bei 9,2–9,7 ms, Hauptthread (`?hauptthread`) 20,0 Analysen/s bei 8,0 ms. Trockenlauf-Kurzlauf: alle Phasen gefüllt, Bilder in richtiger Reihenfolge.
+Das sagt nichts über Rauschen oder Takt mit echtem Gesicht; der Vergleichslauf steht aus. Safari ist nicht geprüft.
+
+## 01.11.2026 — Vergleich Hauptthread gegen Worker, echtes Gesicht
+
+Zwei Kurzläufe in Chrome, MacBook-Kamera, eine Person, wenige Minuten auseinander. Eingestellt 40 cm, Abstand nicht gemessen. Ein Paar, also nur ein erster Hinweis.
+
+| Kennwert | Hauptthread | Worker |
+|---|---:|---:|
+| Bilder im Lauf | 1913 | 1897 |
+| Abstände über 50 ms | 44 von 1903, 2,3 % | 58 von 1887, 3,1 % |
+| Vom Programm verworfene Bilder, ganze Kamerazeit | nicht erfasst | 91 |
+| Bilder mit beiden Augen | 99,9 % | 99,8 % |
+| Irisdurchmesser | 32 px | 35 px |
+| Rauschen je Bild, Irisdurchmesser | 0,0051 | 0,0047 |
+| Rauschen je Bild, grob horizontal, vertikal | 0,42°, 0,77° | 0,39°, 0,70° |
+| Blickfolge, Gain | 1,06 | 0,97 |
+
+**Der Worker verschlechtert die Messung nicht erkennbar.** Rauschen gleich oder knapp besser, Aussetzer ähnlich. Die Aussetzer kommen in beiden Läufen gebündelt in einzelnen Phasen, bei wechselnden Aufgaben: im ersten Lauf Blickfolge 13 und Sprünge 31, im zweiten Ruhe 40 und Blickfolge 17.
+Die Streifen liefen beide Male ohne Lücke. Die Ursache ist offen. Der Worker hat sie nicht beseitigt, die Hauptthread-Erkennung ist also nicht die alleinige Ursache. Die Lücken betragen rund 66 ms, also ein fehlendes Bild.

@@ -86,6 +86,21 @@ Sakkaden und Blickfolge; Optokinetik ist Ergänzung, Antisakkaden gehören nicht
 
 - **Pupillenreaktion mit dem iPhone:** Rückkamera und Lampe messen je Auge Größe und Reaktion, Tonsignal für Abstand und erkanntes Auge. Offen: Kontrast bei dunkler Iris im sichtbaren Licht, Augensicherheit der Lampe, Vergleichbarkeit einzeln gemessener Augen, Zweckbestimmung. Braucht eine native App.
 
+### B5 — Orthoptische und neuroorthoptische Module
+
+Vorrecherche vom 01.11.2026, nur Suchtreffer, kein Original gelesen. Nichts davon ist gebaut.
+
+| Baustein | Einschätzung |
+|---|---|
+| Cover-Uncover, Hand als Abdeckung | Vortest zuerst: Bleibt die Erkennung bei Hand vor einem Auge stabil? Messbar ist nur die Einstellbewegung nach dem Aufdecken. Größere horizontale Abweichungen wirken erreichbar |
+| Horizontale Stellung beider Augen | Rechnerisch möglich, aber Differenz rechts minus links wanderte im eigenen Lauf; siehe `MESSUNGEN.md` |
+| Vertikaldifferenz, Skew | Eigene Daten: Differenz wanderte über einen Lauf um rund 2°, ohne echten Befund. Kleine Werte sind nicht messbar, 3° sind der in der Literatur genannte Bereich |
+| INO, Adduktion gegen Abduktion | Interessant, solange es um Verhältnisse geht. Spitzengeschwindigkeit bleibt gesperrt, siehe B3; eine Normquelle fehlt |
+| Strabismus sursoadductorius | Größere Fotowerte, aber Lid und Blick nach oben stören; der Reiz müsste gezielt in Adduktion führen. Nur als spätere Prüfung |
+| Torsion, Kopfneigetest, Fusionsbreite, Nahpunkt | mit dieser Kamera nicht geplant |
+
+Offen: Volltexte zu automatisiertem Cover-Test (Morrison 2022, PMC9072275), VIOMA, Normwerte vertikaler Phorien.
+
 ### Quellen, noch nicht im Original gelesen
 
 British Society of Audiology, Recommended Procedure Vestibular Assessment – Eye Movement Recordings (2015) · Kullmann et al., PLOS ONE 2021

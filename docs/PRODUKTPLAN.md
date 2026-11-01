@@ -1,6 +1,6 @@
 # Produktplan: vom Prototyp zur öffentlichen Software
 
-Stand 01.11.2026. Etappe 1 ist gebaut und mit einem echten Kurzlauf bestätigt, siehe `MESSUNGEN.md`; die CI läuft erst nach dem Push. Das Repo bleibt privat, bis der Nutzer die Sichtbarkeit selbst ändert.
+Stand 01.11.2026. Etappe 1 ist gebaut und mit einem echten Kurzlauf bestätigt, siehe `MESSUNGEN.md`; die CI ist grün. Etappe 2 ist gebaut und mit einem Vergleichslauf geprüft, in Safari noch nicht. Das Repo bleibt privat, bis der Nutzer die Sichtbarkeit selbst ändert.
 Die Prüfpunkte für die Veröffentlichung stehen in `ROAD_TO_PUBLIC.md`, dieser Plan legt die Reihenfolge fest.
 
 ## Ziel
@@ -65,7 +65,51 @@ Heute liegen Knöpfe, Anleitung, Kurven und Einstellungen auf einer Seite. Künf
 **Gerätecheck:** Kamera, tatsächliche Bildrate, Aussetzer, Bildschirmgröße, Vollbild, Modell geladen, Irisgröße im Bild. Ergebnis je Prüfung, mit Grund. Grenzen aus den
 Kennwerten von dieser Kamera sind als Arbeitsgrenzen benannt, solange kein zweites Gerät gemessen ist.
 
-Gestaltung: ruhige, eigene Oberfläche, helles und dunkles Schema außerhalb der Messung, Reizbildschirm unverändert. Sprache: Deutsch und Englisch aus einer Textdatei, von Beginn an.
+Sprache: Deutsch und Englisch aus einer Textdatei, von Beginn an.
+
+## Gestaltung
+
+Wünsche des Nutzers vom 01.11.2026 für Etappe 3. Eigene, elegante Gestaltung statt Standardoptik.
+
+| Bereich | Entscheidung |
+|---|---|
+| Hauptfläche | Kamerabild mit rechtem und linkem Auge bleibt, das Prinzip hat sich bewährt |
+| Steuerung | wandert nach oben und bekommt mehr Gewicht |
+| Module | klickbare Kacheln, thematisch gegliedert. „Kurzlauf“ und „Ausführlicher Lauf“ verschwinden als Namen |
+| Text | sehr wenig auf der Startfläche. Anleitung und Hinweise hinter Info-Knopf oder Aufklapper |
+| Messwerte, Kalibrierdaten, Kurven | nicht in der Hauptansicht, nur unter „Messdetails“ |
+| Forschungshinweis | bleibt unten |
+| Glättung | Auswahl entfällt, immer aus |
+| Auflösung und Bildrate | Auswahl entfällt, die App wählt den besten Modus und nennt ihn nur bei Problemen |
+| Kameraauswahl | nur sichtbar, wenn mehr als eine Kamera da ist |
+| Durchführungshinweise | Licht, Abstand, Brille, Augen-Make-up wie Kajal und Lidschatten, Bildschirmhelligkeit. Der Einfluss von Make-up ist nicht gemessen |
+| Bericht | zuerst ein bis zwei Seiten Visualisierung, danach Tabellen mit Messwerten, Grenzen und Referenzen. Erweitert `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`, Abschnitt 6, das bisher nur eine Übersichtsseite vorsieht |
+
+Themen für die Kacheln, Vorschlag: **Vorbereitung** (Kalibrierung), **Augen in Ruhe** (Spontan- und Blickrichtungsnystagmus), **Folgebewegungen** (Blickfolge, Optokinetik), **Schnelle Bewegungen** (Sakkaden), später **Augenstellung** (Cover-Test). Dazu Zusammenstellungen mit einem Klick.
+
+**Dunkle Oberfläche und dunkler Reizhintergrund:** Oberfläche dunkel ist eine reine Gestaltungsfrage. Der Reizhintergrund ist eine Messfrage: Gemessen wird die Irismitte, nicht die Pupille, eine weite Pupille hilft also nicht direkt. Der Bildschirm beleuchtet zudem das Gesicht; dunkler heißt weniger Licht für die Kamera,
+aber auch weniger Spiegelung. Entschieden wird das erst nach einem Vergleich: gleiche Person, gleiches Modul, heller gegen dunkler Hintergrund, verglichen werden Rauschen, gültige Bilder und Irisbreite. Die empfohlene Bildschirmhelligkeit folgt aus demselben Vergleich.
+
+## Werkzeugkasten
+
+Idee des Nutzers vom 01.11.2026, noch nicht gebaut: Statt fester Läufe gibt es einzelne Module. Jedes hat eine eigene kurze Messung und eine eigene Auswertung; am Ende entsteht daraus auf Wunsch ein Gesamtbericht.
+Kurzlauf und ausführlicher Lauf werden dann zu Zusammenstellungen dieser Module. Das ändert den Zuschnitt von Etappe 3.
+
+| Modul | Inhalt | Stand |
+|---|---|---|
+| Einrichtung | Gerätecheck, Bildschirm, Abstand, Position | geplant |
+| Kalibrierung | nur das Nötigste, siehe unten, abwählbar | vorhanden, zu kürzen |
+| Spontan- und Blickrichtungsnystagmus | Punkte Mitte, rechts, links, oben, unten | vorhanden |
+| Blickfolge | langsam, optional schnell | vorhanden |
+| Sakkaden | Sprünge | vorhanden |
+| Optokinetik | experimentell | vorhanden |
+| Cover-Test | geplant, erst nach Vortest, siehe `ROADMAP.md` B5 | offen |
+| Orthoptische Feinheiten | spätere Bausteine, siehe B5 | offen |
+
+**Messen ohne Kalibrierung:** Der grobe Maßstab kommt heute aus Sprüngen. Ein Modul ohne Sprünge hat also keinen eigenen Maßstab, und ein Maßstab aus der Blickfolge selbst würde ihren Gain vorwegnehmen.
+Vorschlag: ein kurzer Maßstabsschritt je Sitzung, den alle Module nutzen, solange der Kopf in der Grenze bleibt. Wie kurz er sein darf, ist aus den vorhandenen Läufen nachzurechnen. Jede Zahl nennt ihren Maßstab: kalibriert, grob oder Irisdurchmesser.
+
+**Gesamtbericht:** setzt sich aus den Abschnitten der gelaufenen Module zusammen und sagt, was nicht untersucht wurde. Jedes Modul speichert sein Ergebnis so, dass es einzeln lesbar bleibt.
 
 ## Aufbau des Codes
 
@@ -93,7 +137,7 @@ Das Dateiformat bekommt eine Versionsnummer; alte eigene Dateien bleiben lesbar 
 |---|---|---|
 | 1 Kern sichern | Ordner neu, Laufzeit und Modell lokal, Experimente ausgelagert, Tests und CI | Trockenlauf und ein echter Lauf wie vorher, keine Abrufe nach außen, `make test` grün in CI |
 | 2 Erkennung im Worker | Bildschleife und Zeitbasis getrennt, Fehler sichtbar | Vergleichslauf: Bildrate, Aussetzer und Rauschen nicht schlechter |
-| 3 Geführte Oberfläche | vier Schritte, Gerätecheck, Bildschirmgröße, Sprache | eine fremde Person schafft Einrichtung und Kurzlauf ohne Hilfe |
+| 3 Geführte Oberfläche | Einrichtung, Werkzeugkasten mit Modulen, Gesamtbericht, Gerätecheck, Bildschirmgröße, Sprache | eine fremde Person schafft Einrichtung und ein Modul ohne Hilfe |
 | 4 Messbericht und Zweck | Zweckbestimmung, Bericht umbenannt, Hinweis in jedem Export, Status je Kennwert | jede Zahl im Bericht hat Gütewert und Status, kein Satz klingt nach Diagnose |
 | 5 Zweites Gerät, zweite Person | mindestens ein weiterer Laptop und eine weitere Person | Ergebnisse in `MESSUNGEN.md`, Grenzen angepasst oder als nicht übertragbar benannt |
 | 6 Öffentliche Fassung | README mit Bildern aus dem Trockenlauf, Englisch, `LICENSE`, `NOTICE`, `CITATION.cff`, `SECURITY.md`, `CONTRIBUTING.md`, Version, Regelsatz für Branches | alle Stufen aus `ROAD_TO_PUBLIC.md` abgehakt |

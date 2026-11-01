@@ -53,7 +53,7 @@ noch einmal geprüft werden.
 
 ## Stufe 4 — Gepflegt und reproduzierbar
 
-- `.github/workflows`: `make test` bei jedem Push. **Angelegt**, läuft nach dem nächsten Push.
+- `.github/workflows`: `make test` bei jedem Push. **Erledigt.**
 - Versionsnummer und Änderungsprotokoll.
 - Laufzeit fest, Modell nicht mehr über `latest`. **Erledigt:** Version und Prüfsumme stehen in `app/vendor/mediapipe/`, `make test` prüft sie.
 - Branch- und Tag-Schutz wie bei EDF-Analyzer und NeuroVoice AI.

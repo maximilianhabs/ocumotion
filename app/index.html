@@ -254,8 +254,7 @@
 </div>
 
 <script type="module">
-import { FilesetResolver, FaceLandmarker }
-  from "./vendor/mediapipe/vision_bundle.mjs";
+import { fakeDetector, openDetector } from "./kamera/erkennung.js";
 import { direction, EYES, measureFrame, meanX, standardDeviation } from "./auswertung/augen-logik.js";
 import { CAL_COLLECT_MS, CAL_SETTLE_MS, calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
   from "./auswertung/kalibrierung-logik.js";
@@ -271,8 +270,8 @@ const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
 const DRY_KEYS = new URLSearchParams(window.location.search).has("tasten");
 // Mit ?experimente erscheinen iPhone-Brücke und iPhone-Test. Sie gehören nicht zur Hauptsoftware.
 const EXPERIMENTS = new URLSearchParams(window.location.search).has("experimente");
-const WASM = new URL("./vendor/mediapipe/wasm", import.meta.url).href;
-const MODEL = new URL("./vendor/mediapipe/face_landmarker.task", import.meta.url).href;
+// Mit ?hauptthread läuft die Erkennung ohne Worker, für Vergleichsläufe.
+const MAIN_THREAD = new URLSearchParams(window.location.search).has("hauptthread");
 const WINDOW_MS = 3000;
 const CURVE_MS = 10000;
 const IRIS_RANGE = 0.6;
@@ -299,8 +298,8 @@ const ctx = overlay.getContext("2d");
 const controls = ["toggle", "camera", "cameraMode", "smoothing", "distance", "screenCm"];
 const calControls = ["camera", "cameraMode", "smoothing", "distance", "screenCm", "zero"];
 
-let fileset = null;
-let landmarker = null;
+let detector = null;
+let skippedFrames = 0;
 let stream = null;
 let running = false;
 let busy = false;
@@ -346,31 +345,27 @@ function setStatus(text, warn = false) {
   $("status").classList.toggle("warn", warn);
 }
 
-async function createLandmarker() {
+async function createDetector() {
   if (DRY_RUN) {
     const { fakeLandmarker } = await import("./pruefung/trockenlauf.js");
-    landmarker = fakeLandmarker(() => currentTarget);
+    detector = fakeDetector(fakeLandmarker(() => currentTarget));
     return;
   }
-  fileset ??= await FilesetResolver.forVisionTasks(WASM);
-  landmarker = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
-    runningMode: "VIDEO",
-    numFaces: Number($("smoothing").value),
-    outputFaceBlendshapes: false,
-    outputFacialTransformationMatrixes: false,
-  });
+  const opened = await openDetector(Number($("smoothing").value), { forceMainThread: MAIN_THREAD });
+  detector = opened.detector;
+  if (opened.workerError) setStatus(`Worker nicht verfügbar, Erkennung im Hauptthread: ${opened.workerError}`, true);
 }
 
-function closeLandmarker() {
-  landmarker?.close();
-  landmarker = null;
+function closeDetector() {
+  detector?.close();
+  detector = null;
 }
 
 function resetSegment() {
   segmentStart = performance.now() + WARMUP_MS;
   samples = [];
   duplicates = 0;
+  skippedFrames = 0;
   previousHead = null;
   headZero = null;
   zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
@@ -534,13 +529,14 @@ function filterLive(sample, key) {
   sample[key] = median([...recent, sample[key]]);
 }
 
-function pushProbe(head, irisPx) {
-  if (!pauseProbe) return;
-  pauseProbe.push({ head, irisPx });
-  if (pauseProbe.length > PAUSE_PROBE_FRAMES) pauseProbe.shift();
+function pushProbe(probe, head, irisPx) {
+  if (!probe) return;
+  probe.push({ head, irisPx });
+  if (probe.length > PAUSE_PROBE_FRAMES) probe.shift();
 }
 
-function recordFrame(timing, faces) {
+// target und probe stammen aus dem Moment der Aufnahme: Das Ergebnis kommt später, die Messphase kann dann schon gewechselt haben.
+function recordFrame(timing, faces, target, probe) {
   const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
                    vMean: null, head: null, irisPx: null, headPoint: null, raw: null, pose: null,
                    disagree: false, reasons: [] };
@@ -548,8 +544,8 @@ function recordFrame(timing, faces) {
     sample.reasons.push(faces.length ? "zweite Person" : "kein Gesicht");
     previousHead = null;
     samples.push(sample);
-    collecting?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
-    pushProbe(null, null);
+    target?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
+    pushProbe(probe, null, null);
     return;
   }
   const frame = measureFrame(faces[0], source.videoWidth, source.videoHeight, previousHead,
@@ -573,20 +569,29 @@ function recordFrame(timing, faces) {
   if (sample.disagree) sample.reasons.push("Seitendifferenz");
   samples.push(sample);
   const rejected = (eye) => (eye.valid ? undefined : { aperture: eye.aperture, reasons: eye.reasons });
-  pushProbe(frame.head, frame.irisPx);
-  collecting?.samples.push({
+  pushProbe(probe, frame.head, frame.irisPx);
+  target?.samples.push({
     t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx,
     irisRechts: frame.rechts.irisPx, irisLinks: frame.links.irisPx, head: frame.head,
     rejectedRechts: rejected(frame.rechts), rejectedLinks: rejected(frame.links),
   });
 }
 
-function analyse(callbackMs, frameMs, stamp, captureMs) {
+async function analyse(id, callbackMs, frameMs, stamp, captureMs) {
+  const target = collecting;
+  const probe = pauseProbe;
   const analysisStart = performance.now();
-  const result = landmarker.detectForVideo(source.image ?? video, stamp);
+  detector.busy = true;
+  let result = null;
+  try {
+    result = await detector.detect(source.image ?? video, stamp);
+  } finally {
+    detector.busy = false;
+  }
   const analysisEnd = performance.now();
+  if (id !== session) return;
   ctx.clearRect(0, 0, overlay.width, overlay.height);
-  const faces = result.faceLandmarks;
+  const { faces } = result;
   if (faces.length === 1) {
     const style = getComputedStyle(document.documentElement);
     const right = style.getPropertyValue("--right");
@@ -596,7 +601,8 @@ function analyse(callbackMs, frameMs, stamp, captureMs) {
     drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
     drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
   }
-  recordFrame({ at: callbackMs, frameMs, captureMs, analysisStart, analysisEnd, ms: analysisEnd - analysisStart }, faces);
+  recordFrame({ at: callbackMs, frameMs, captureMs, analysisStart, analysisEnd, ms: result.ms, roundMs: analysisEnd - analysisStart },
+              faces, target, probe);
   samples = samples.filter((sample) => frameMs - sample.frameMs <= CURVE_MS);
   if (!collecting) drawCurves();
 }
@@ -633,13 +639,17 @@ function onFrame(id, now, metadata) {
     return;
   }
   lastFrameMs = clock.ms;
-  try {
-    analyse(now, clock.ms, taskStamp(clock.ms), metadata.captureTime > 0 ? metadata.captureTime : null);
-  } catch (error) {
-    stop();
-    setStatus(`Analyse abgebrochen: ${error.message}`, true);
+  // Die Kamera wartet nie auf die Erkennung. Ist sie belegt, entfällt dieses Bild und wird gezählt.
+  if (detector.busy) {
+    skippedFrames += 1;
+    requestFrame(id);
     return;
   }
+  analyse(id, now, clock.ms, taskStamp(clock.ms), metadata.captureTime > 0 ? metadata.captureTime : null).catch((error) => {
+    if (id !== session) return;
+    stop();
+    setStatus(`Analyse abgebrochen: ${error.message}`, true);
+  });
   requestFrame(id);
 }
 
@@ -1433,6 +1443,8 @@ async function runExam(protocol, { lenient = false } = {}) {
     camera: /iphone/i.test($("camera").selectedOptions[0]?.textContent ?? "") ? "iPhone" : "FaceTime oder andere",
     headCheck: lenient ? "aus" : "an",
     fullscreen,
+    detector: detector.mode,
+    skippedFrames,
     bridge: source === video ? null : { skippedInPage: source.skipped, droppedInBridge: source.droppedByBridge },
     mode: $("mMode").textContent,
     clock: clockSource,
@@ -1550,9 +1562,9 @@ async function start() {
   const viaBridge = deviceId === "bruecke";
   try {
     // Vor der Brücke laden: Ihr Bildstrom würde das Laden sonst ausbremsen.
-    if (!landmarker) {
+    if (!detector) {
       setStatus("Lade Modell …");
-      await createLandmarker();
+      await createDetector();
     }
     if (viaBridge) {
       const { openBridge } = await import("./kamera/bruecke.js");
@@ -1696,12 +1708,12 @@ document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement) abortCalibration("Vollbild beendet: Kalibrierung abgebrochen.");
 });
 $("smoothing").addEventListener("change", () => exclusive(async () => {
-  closeLandmarker();
+  closeDetector();
   invalidateCalibration("verworfen, Modell gewechselt");
   if (!running) return;
   setStatus("Lade Modell …");
   try {
-    await createLandmarker();
+    await createDetector();
   } catch (error) {
     stop();
     setStatus(`Modell ließ sich nicht laden: ${error.message}`, true);
