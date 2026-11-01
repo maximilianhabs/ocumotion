@@ -1,6 +1,6 @@
-# Mac Vision — Konzept Gütetest
+# Ocumotion — Konzept Gütetest
 
-Stand 31.10.2026. Gebaut in `app/index.html` und `app/auswertung/guetetest-logik.js`, mit echtem
+Stand 31.10.2026. Gebaut in `app/index.html` und `app/messung/guetetest-logik.js`, mit echtem
 Gesicht noch nicht gelaufen. Alle Bewertungsgrenzen sind experimentell.
 
 ## Ziel

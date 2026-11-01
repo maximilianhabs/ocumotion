@@ -36,3 +36,13 @@ test("Fremddateien stimmen mit ihren Prüfsummen überein", () => {
     assert.equal(actual, sum, file);
   }
 });
+
+test("Alle Elemente, die die App anspricht, stehen in der Seite", () => {
+  const html = readFileSync(join(APP, "index.html"), "utf8");
+  const script = readFileSync(join(APP, "app.js"), "utf8");
+  const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]));
+  const used = [...script.matchAll(/\$\("([^"]+)"\)/g)].map((match) => match[1]);
+  assert.ok(used.length > 50);
+  assert.deepEqual([...new Set(used)].filter((id) => !ids.has(id)), []);
+  assert.equal(ids.size, [...html.matchAll(/ id="/g)].length, "doppelte Kennung");
+});

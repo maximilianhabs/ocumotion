@@ -5,7 +5,7 @@ WERKZEUGE = experimente/werkzeuge
 
 # App im Browser, nur lokal erreichbar: http://127.0.0.1:5600
 start:
-	$(PYTHON) -m http.server 5600 --bind 127.0.0.1 --directory app
+	$(PYTHON) serve.py
 
 # Rechenlogik gegen konstruierte Daten, dazu die Pruefung auf Fremdabrufe
 test:
@@ -25,10 +25,10 @@ kamera-takt:
 	swift $(WERKZEUGE)/kamera_takt.swift
 
 kamera-bruecke:
-	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
-	"$(TMPDIR)mac-vision-bruecke"
+	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)ocumotion-bruecke"
+	"$(TMPDIR)ocumotion-bruecke"
 
 # Wie kamera-bruecke, aber mit Kunstbild ohne Kamera
 kamera-bruecke-test:
-	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
-	"$(TMPDIR)mac-vision-bruecke" --testbild
+	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)ocumotion-bruecke"
+	"$(TMPDIR)ocumotion-bruecke" --testbild

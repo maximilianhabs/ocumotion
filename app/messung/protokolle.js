@@ -3,7 +3,7 @@
 import { ACCURACY_TARGETS, GAZE_HOLDS, GAZE_HOLD_MS, GAZE_RETURN_MS, GAZE_SETTLE_MS, FIXATION_MS, PURSUIT_RUNS,
          SACCADE_JUMPS, SACCADE_MAX_MS, SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { OKN_BLOCKS } from "./okn-logik.js";
-import { CAL_COLLECT_MS, CAL_SETTLE_MS, STEPS } from "./kalibrierung-logik.js";
+import { CAL_COLLECT_MS, CAL_SETTLE_MS, QUICK_COLLECT_MS, QUICK_SETTLE_MS, QUICK_STEPS, STEPS } from "./kalibrierung-logik.js";
 import { stagesMs } from "./etappen-logik.js";
 
 const SUPPORT = "Stützen Sie den Kopf an, wenn möglich. ";
@@ -89,3 +89,48 @@ export const PROTOCOLS = {
 
 // Geplante Dauer: Messung und Hinführung, ohne Wartezeit auf den Karten.
 export const plannedMs = (protocol) => stagesMs(protocol.stages);
+
+// Nur Maßstab: Ohne Kalibrierung braucht jedes Modul Grad. Die Sprünge gelten nicht als Sakkaden-Untersuchung.
+// Vier Richtungen mit je vier Sprüngen. Mit zwei je Richtung fiel die Vertikale regelmäßig aus.
+const MODULE_JUMPS = [
+  { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: -10 },
+  { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: 0 },
+  { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: -8 },
+  { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: 0 },
+];
+
+const SCALE_JUMPS = [
+  { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: 0 },
+  { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 0 },
+];
+export const SCALE_STAGE = stage("massstab", "Kurze Einstellung", `${SUPPORT}Der Punkt springt. Schauen Sie jeweils sofort zum neuen Punkt.`,
+                                 saccades(SCALE_JUMPS, 900, 1300));
+
+const fromLong = (...ids) => ids.map((id) => PROTOCOLS.lang.stages.find((item) => item.id === id));
+const fromOkn = (...ids) => ids.map((id) => PROTOCOLS.okn.stages.find((item) => item.id === id));
+
+// Der Werkzeugkasten. Jedes Modul lässt sich einzeln starten und liefert einen Abschnitt für Oculytics.
+export const MODULES = [
+  { id: "kalibrierung", theme: "Vorbereitung", title: "Kalibrierung",
+    stages: [stage("kalibrierung", "Kalibrierung", `${SUPPORT}Schauen Sie auf jeden neuen Punkt, nur mit den Augen.`,
+                   { kind: "calibration", targets: QUICK_STEPS, settleMs: QUICK_SETTLE_MS, collectMs: QUICK_COLLECT_MS })] },
+  { id: "nystagmus", theme: "Augen in Ruhe", title: "Spontan- und Blickrichtungsnystagmus", stages: fromLong("ruhe", "blick-seite", "blick-vertikal") },
+  { id: "blickfolge", theme: "Folgebewegungen", title: "Blickfolge", stages: fromLong("folge-langsam", "folge-schnell") },
+  { id: "sakkaden", theme: "Schnelle Bewegungen", title: "Sakkaden",
+    stages: [stage("sprünge", "Sakkaden", "Der Punkt springt. Schauen Sie sofort zum neuen Punkt.", saccades(MODULE_JUMPS, SACCADE_MIN_MS, SACCADE_MAX_MS))] },
+  { id: "optokinetik", theme: "Folgebewegungen", title: "Optokinetik", experimental: true, stages: fromOkn("streifen", "kontrolle") },
+];
+
+export const moduleById = (id) => MODULES.find((item) => item.id === id);
+
+// Ein Lauf aus einem oder mehreren Modulen, bei Bedarf mit vorangestellter Maßstabsetappe.
+export function sessionProtocol(moduleIds, { needsScale = false } = {}) {
+  const modules = moduleIds.map(moduleById);
+  return {
+    id: moduleIds.join("-"),
+    title: modules.map((item) => item.title).join(", "),
+    modules: moduleIds,
+    scaleOnly: needsScale,
+    stages: [...(needsScale ? [SCALE_STAGE] : []), ...modules.flatMap((item) => item.stages)],
+  };
+}

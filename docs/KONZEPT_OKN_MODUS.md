@@ -25,7 +25,7 @@ Vertikal, 12°/s und HV73 sind zurückgestellt.
 
 ---
 
-# Mac Vision – Optokinetischer Modus: Reiz, Antwort und Messprüfung
+# Ocumotion – Optokinetischer Modus: Reiz, Antwort und Messprüfung
 Stand 31.10.2026 · Entwurf für eine implementierende KI · Noch nicht validiert
 
 Zielort im Repository: docs/KONZEPT_OKN_MODUS.md.

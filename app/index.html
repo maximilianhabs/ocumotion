@@ -3,240 +3,215 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:5601; base-uri 'none'; form-action 'none'">
-<title>Mac Vision Augen</title>
-<style>
-  :root {
-    --bg: #f5f5f4; --panel: #ffffff; --text: #1c1917; --muted: #78716c;
-    --line: #e7e5e4; --accent: #0f766e; --warn: #b45309; --stage: #1c1917;
-    --right: #0f766e; --left: #c2410c; --head: #a8a29e; --mean: #1c1917;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1c1917; --panel: #292524; --text: #f5f5f4; --muted: #a8a29e;
-      --line: #44403c; --accent: #2dd4bf; --warn: #fbbf24; --stage: #0c0a09;
-      --right: #2dd4bf; --left: #fb923c; --head: #78716c; --mean: #f5f5f4;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px;
-         max-width: 1320px; margin: 0 auto; padding: 16px; }
-  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 20px; margin: 0; }
-  header p { margin: 0; color: var(--muted); font-size: 13px; }
-  a { color: var(--accent); }
-  .stage { position: relative; aspect-ratio: 16 / 9; background: var(--stage);
-           border-radius: 10px; overflow: hidden; }
-  .stage video, .stage > canvas { position: absolute; inset: 0; width: 100%; height: 100%;
-           object-fit: contain; transform: scaleX(-1); }
-  #hint { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
-          color: #d6d3d1; text-align: center; }
-  #hint[hidden] { display: none; }
-  #guideHint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); padding: 5px 12px;
-               border-radius: 999px; background: rgba(12, 10, 9, .72); color: #fafaf9; font-size: 15px;
-               font-weight: 600; white-space: nowrap; }
-  #guideHint.ok { background: #15803d; }
-  #guideHint[hidden] { display: none; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-            padding: 12px 14px; margin-bottom: 12px; }
-  h2 { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 8px;
-       text-transform: uppercase; letter-spacing: .04em; }
-  .eyes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-  .eyes figure { margin: 0; }
-  .eyes canvas { width: 100%; aspect-ratio: 2 / 1; background: var(--stage); border-radius: 8px;
-                 display: block; transform: scaleX(-1); }
-  figcaption { color: var(--muted); font-size: 12px; margin-top: 3px; }
-  .curve { width: 100%; height: 170px; display: block; }
-  .axis { color: var(--muted); font-size: 12px; margin: 8px 0 2px; }
-  #cal { position: fixed; inset: 0; z-index: 10; background: #e7e5e4; color: #1c1917; }
-  #cal[hidden] { display: none; }
-  #calDot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
-            background: #dc2626; box-shadow: 0 0 0 7px #e7e5e4, 0 0 0 9px #1c1917; }
-  #calDot[hidden], #calStripes[hidden] { display: none; }
-  #calStripes { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .result-line { margin: 4px 0; font-size: 13px; }
-  #calDot::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: #1c1917; }
-  #calCard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(760px, 90vw);
-             text-align: center; }
-  #calCard[hidden], #calCard [hidden] { display: none; }
-  #calCard p { margin: 0; }
-  #cardStep { font-size: 16px; color: #57534e; margin-bottom: 14px !important; }
-  #cardTitle { font-size: 30px; font-weight: 600; margin: 0 0 14px; text-transform: none; letter-spacing: 0; color: #1c1917; }
-  #cardText { font-size: 22px; line-height: 1.4; margin-bottom: 14px !important; }
-  #cardDuration { font-size: 16px; color: #57534e; margin-bottom: 22px !important; }
-  #cardNotice, #cardHead { font-size: 18px; color: #b45309; margin-bottom: 14px !important; }
-  #cardKey { font-size: 16px; color: #57534e; }
-  #calText { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; font-size: 14px; }
-  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 4px; }
-  .legend span::before { content: ""; display: inline-block; width: 12px; height: 3px;
-                         margin-right: 5px; vertical-align: middle; background: var(--c); }
-  ol { margin: 0; padding-left: 18px; font-size: 13px; }
-  select, button, input { font: inherit; color: inherit; }
-  input { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
-          border-radius: 6px; margin-bottom: 6px; }
-  select { width: 100%; padding: 5px; background: var(--bg); border: 1px solid var(--line);
-           border-radius: 6px; margin-bottom: 6px; }
-  button { width: 100%; padding: 8px; border: 0; border-radius: 6px; background: var(--accent);
-           color: var(--panel); font-weight: 600; cursor: pointer; margin-bottom: 6px; }
-  button.stop { background: var(--warn); }
-  button.second { background: var(--bg); color: var(--text); border: 1px solid var(--line); }
-  button:disabled { opacity: .5; cursor: default; }
-  dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; }
-  dt { color: var(--muted); }
-  dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
-  .big { font-size: 30px; font-weight: 700; color: var(--accent); min-height: 44px; }
-  #status { color: var(--muted); font-size: 13px; min-height: 19px; }
-  #status.warn { color: var(--warn); }
-  button.primary { background: #15803d; color: #fafaf9; font-size: 17px; padding: 11px; }
-  #report[hidden] { display: none; }
-  .levels { margin-top: 8px; }
-  .gut { color: #15803d; }
-  .mittel { color: var(--warn); }
-  .schwach, .nicht-auswertbar { color: #dc2626; }
-  footer { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
-  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } }
-</style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:5601; base-uri 'none'; form-action 'none'">
+<title>Ocumotion</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./styles.css?v=3">
 </head>
 <body>
-<main>
-  <header>
-    <h1>Mac Vision Augen</h1>
-    <p>Lokale Okulomotorik-Messung mit der Laptop-Kamera. Forschungsprototyp, keine Diagnose.</p>
-  </header>
-
-  <div>
-    <div class="stage">
-      <video id="video" playsinline muted></video>
-      <canvas id="bridgeView" hidden></canvas>
-      <canvas id="overlay"></canvas>
-      <canvas id="guide"></canvas>
-      <div id="guideHint" role="status" hidden></div>
-      <div id="hint">Auf „Kamera starten“ klicken und die Freigabe erlauben.</div>
-    </div>
-    <div class="eyes">
-      <figure><canvas id="eyeLinks" width="240" height="120"></canvas><figcaption>Linkes Auge der Person</figcaption></figure>
-      <figure><canvas id="eyeRechts" width="240" height="120"></canvas><figcaption>Rechtes Auge der Person</figcaption></figure>
-    </div>
-    <section style="margin-top:12px">
-      <h2>Augenposition, letzte 10 s</h2>
-      <div class="axis">Horizontal: oben = rechts der Person</div>
-      <canvas id="curve" class="curve"></canvas>
-      <div class="axis">Vertikal: oben = nach oben</div>
-      <canvas id="curveV" class="curve"></canvas>
-      <div class="legend">
-        <span style="--c:var(--mean)">Mittelwert, Median aus 5 Bildern</span>
-        <span style="--c:var(--right)">rechtes Auge, roh</span>
-        <span style="--c:var(--left)">linkes Auge, roh</span>
-        <span style="--c:var(--head)">Kopf</span>
-        <span id="unit">Irisdurchmesser, Lücken = ungültig</span>
-      </div>
-    </section>
-  </div>
-
+<div class="app" id="app">
   <aside>
-    <section>
-      <h2>Untersuchung starten</h2>
-      <button id="runShort" class="primary" disabled>Kurzlauf, rund 1,5 Minuten</button>
-      <button id="runLong" class="second" disabled>Ausführlicher Lauf, rund 3,5 Minuten</button>
-      <button id="runOkn" class="second" disabled>Optokinetik, rund 1,5 Minuten</button>
-      <button id="runPhone" class="second" disabled hidden>iPhone-Test Optokinetik, ohne Kopfprüfung</button>
-      <div class="legend">Kurzlauf und Optokinetik enthalten bewegte Streifen. Jeder Lauf besteht aus Etappen; vor jeder erscheint eine Karte, das Tempo bestimmen Sie mit der Leertaste. Kurzlauf und Optokinetik brauchen keine Kalibrierung und messen keine Metrik. Kopf aufstützen, nur den Augen folgen.</div>
-    </section>
-    <section id="report" hidden>
-      <h2>Ergebnis</h2>
-      <div class="big" id="rOverall">–</div>
-      <div id="rLines"></div>
-      <button id="rSave" class="primary" style="margin-top:10px">Testlauf speichern</button>
-      <button id="rReport" class="second">Bericht ansehen</button>
-      <div class="legend">Nichts wird automatisch gespeichert. Die Datei kommt in den Downloads-Ordner, enthält Augenwerte ohne Bilder und ist personenbezogen.</div>
-    </section>
-    <section>
-      <h2>So testest du</h2>
-      <ol>
-        <li>Helles, gleichmäßiges Licht von vorn. Brille abnehmen.</li>
-        <li>Augen <strong>40 cm</strong> vom Bildschirm messen, zum Beispiel A4-Blatt längs (30 cm) plus Handbreite (10 cm). Kopf möglichst aufstützen.</li>
-        <li>Kamera starten und dem Hinweis im Bild folgen. Der Rahmen ist vor dem Merken nur grob; der gemessene Abstand geht vor.</li>
-        <li>„Position merken“, dann „Kalibrieren“. Dauer rund eine Minute.</li>
-        <li>Kopf still, nur mit den Augen dem Punkt folgen. Abbruch mit Esc.</li>
-      </ol>
-    </section>
-    <section>
-      <h2>Steuerung</h2>
-      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
-      <select id="cameraMode" aria-label="Kamera-Modus">
-        <option value="1280x720x30">1280×720, 30 fps</option>
-        <option value="1280x720x60">1280×720, 60 fps</option>
-        <option value="1920x1080x60">1920×1080, 60 fps</option>
-      </select>
-      <select id="smoothing" aria-label="Glättung">
-        <option value="2">Modellglättung aus (empfohlen)</option>
-        <option value="1">Modellglättung an</option>
-      </select>
-      <button id="toggle">Kamera starten</button>
-      <select id="distance" aria-label="Abstand Augen zum Bildschirm">
-        <option value="30">Abstand 30 cm</option>
-        <option value="35">Abstand 35 cm</option>
-        <option value="40" selected>Abstand 40 cm (empfohlen)</option>
-        <option value="50">Abstand 50 cm</option>
-      </select>
-      <label class="legend" for="screenCm">Sichtbare Bildschirmbreite in cm</label>
-      <input id="screenCm" type="number" min="5" max="150" step="0.1" value="28.6">
-      <button id="remember" class="second" disabled>Position merken</button>
-      <button id="calibrate" disabled>Kalibrieren</button>
-      <button id="zero" class="second" disabled>Nullpunkt ohne Kalibrierung</button>
-      <div id="status" role="status"></div>
-    </section>
-    <section>
-      <h2>Blickrichtung</h2>
-      <div class="big" id="direction">–</div>
-      <dl>
-        <dt>Position rechts / links</dt><dd id="mPos">–</dd>
-        <dt>Nullpunkt</dt><dd id="mZero">nicht gesetzt</dd>
-      </dl>
-    </section>
-    <section>
-      <h2>Kalibrierung</h2>
-      <dl>
-        <dt>Ergebnis</dt><dd id="cState">keine</dd>
-        <dt>Prüffehler rechts h / v</dt><dd id="cRechts">–</dd>
-        <dt>Prüffehler links h / v</dt><dd id="cLinks">–</dd>
-        <dt>Unruhe h, r / l</dt><dd id="cNoiseH">–</dd>
-        <dt>Unruhe v, r / l</dt><dd id="cNoiseV">–</dd>
-        <dt>Größter Zielfehler r / l</dt><dd id="cMax">–</dd>
-        <dt>Prüffehler Mittel h / v</dt><dd id="cMitte">–</dd>
-        <dt>Fehlerverstärkung h, r / l</dt><dd id="cSensH">–</dd>
-        <dt>Fehlerverstärkung v, r / l</dt><dd id="cSensV">–</dd>
-        <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
-        <dt>Abstand geschätzt</dt><dd id="pDist">–</dd>
-        <dt>Seitendifferenz</dt><dd id="mDiff">–</dd>
-      </dl>
-    </section>
-    <section>
-      <h2>Messwerte (letzte 3 s)</h2>
-      <dl>
-        <dt>Ausgehandelt</dt><dd id="mMode">–</dd>
-        <dt>Analysen/s</dt><dd id="mRate">–</dd>
-        <dt>Gültige Bilder</dt><dd id="mValid">–</dd>
-        <dt>Grund für Ausfälle</dt><dd id="mReason">–</dd>
-        <dt>Streuung</dt><dd id="mNoise">–</dd>
-        <dt>Irisbreite</dt><dd id="mIris">–</dd>
-        <dt>Analysedauer</dt><dd id="mMs">–</dd>
-        <dt>Doppelte Bildzeiten</dt><dd id="mDup">–</dd>
-        <dt>Zeitbasis</dt><dd id="mClock">–</dd>
-      </dl>
-    </section>
+    <div class="brand">
+      <strong>Ocu<b>motion</b></strong>
+      <button class="toggle" id="sidebar" aria-label="Seitenleiste ein- oder ausklappen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 3 5 8l5 5"/></svg></button>
+    </div>
+    <nav aria-label="Schritte">
+      <button class="step" data-view="camView" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10Z"/><circle cx="10" cy="10" r="2.6"/></svg><span>Kamera</span></button>
+      <button class="step" data-view="hints"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.3"/></svg><span>Hinweise</span></button>
+      <button class="step" data-view="calView"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="10" cy="10" r="2"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3"/></svg><span>Kalibrierung</span><small id="calState">optional</small></button>
+      <button class="step" data-view="tools"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg><span>Untersuchungen</span></button>
+      <button class="step" data-view="report"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 2.5h7l3.5 3.5v11.5H5zM7.5 10h5M7.5 13h5"/></svg><span>Oculytics</span><small id="count">0 von 4</small></button>
+    </nav>
+    <div class="dock">
+      <div class="mini-slot"></div>
+      <div class="live"><i id="liveDot" class="off"></i><span id="liveText">Kamera aus</span></div>
+      <button class="step" id="openDetails"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 15V9M8 15V5M13 15v-4M17 15V7"/></svg><span>Messdetails</span></button>
+    </div>
   </aside>
 
-  <footer>
-    Forschungsprototyp, keine Diagnose. Grad gelten nur für den gemessenen Abstand und nur, solange der
-    Kopf ruhig bleibt; die Kalibrierung liegt im Arbeitsspeicher und endet mit dem Stopp. Bilder und Augenausschnitte bleiben im Browser und werden weder
-    gespeichert noch gesendet, auch die Kurve verschwindet mit der Seite. Streuung in Irisdurchmessern;
-    sie beweist keine Genauigkeit, weil Modellglättung sie senken kann.
-    Die Schwellen sind vorläufig. Programmcode und Modell kommen aus dem Netz.
-  </footer>
-</main>
+  <main>
+    <section class="view" id="camView">
+      <div>
+        <p class="eyebrow">Okulomotorik im Browser</p>
+        <h1 id="camTitle">Bereit, wenn Sie es sind.</h1>
+      </div>
+      <div class="bench">
+        <div class="stage-slot">
+          <div class="stage off" id="stage">
+            <video id="video" playsinline muted></video>
+            <canvas id="bridgeView" hidden></canvas>
+            <canvas id="overlay"></canvas>
+            <canvas id="guide"></canvas>
+            <div id="guideHint" role="status" hidden></div>
+            <div id="hint">Die Kamera startet erst auf Ihren Klick.</div>
+          </div>
+        </div>
+        <div class="eyes" id="eyes">
+          <figure><canvas id="eyeRechts" width="240" height="120"></canvas><figcaption>rechtes Auge</figcaption></figure>
+          <figure><canvas id="eyeLinks" width="240" height="120"></canvas><figcaption>linkes Auge</figcaption></figure>
+        </div>
+      </div>
+      <div class="fields">
+        <label class="field" id="cameraRow" hidden>Kamera<select id="camera"><option value="">Standardkamera</option></select></label>
+        <label class="field">Abstand zum Bildschirm
+          <select id="distance"><option value="30">30 cm</option><option value="35">35 cm</option><option value="40" selected>40 cm, empfohlen</option><option value="50">50 cm</option></select>
+        </label>
+        <label class="field">Bildschirmbreite in cm<input id="screenCm" type="number" min="5" max="150" step="0.1" value="28.6"></label>
+      </div>
+      <div class="actions">
+        <button class="pill" id="toggle">Kamera starten</button>
+        <button class="pill" id="cameraNext" data-go="hints" hidden>Weiter</button>
+      </div>
+    </section>
+
+    <section class="view" id="hints" hidden>
+      <div>
+        <p class="eyebrow">Hinweise</p>
+        <h1>So gelingt die Messung.</h1>
+      </div>
+      <ul class="hints">
+        <li><strong>Abstand</strong><span>Rund 40 cm zum Bildschirm, am besten gemessen.</span></li>
+        <li><strong>Licht</strong><span>Hell und gleichmäßig von vorn, kein Fenster im Rücken.</span></li>
+        <li><strong>Kopf</strong><span>Anlehnen oder abstützen, nur die Augen bewegen.</span></li>
+        <li><strong>Brille</strong><span>Tragen, wenn der Punkt sonst unscharf ist. Sie kann die Erkennung erschweren.</span></li>
+        <li><strong>Augen-Make-up</strong><span>Kajal und kräftiger Lidschatten können die Erkennung stören.</span></li>
+        <li><strong>Bewegte Muster</strong><span>Bei bekannter Anfallsneigung nicht durchführen. Abbruch jederzeit mit Esc.</span></li>
+      </ul>
+      <div class="actions"><button class="pill" data-go="calView">Weiter</button></div>
+    </section>
+
+    <section class="view" id="calView" hidden>
+      <div>
+        <p class="eyebrow">Kalibrierung</p>
+        <h1>20 Sekunden für Ihren Maßstab.</h1>
+        <p class="lead">Sie schauen auf acht Punkte. Ohne Kalibrierung geht es auch, dann kommt eine kurze Sprung-Etappe davor.</p>
+      </div>
+      <div class="actions">
+        <button class="pill" id="startCal">Kalibrieren</button>
+        <button class="pill ghost" data-go="tools">Überspringen</button>
+      </div>
+      <details class="info">
+        <summary>Wie funktioniert die Kalibrierung?</summary>
+        <p>Fünf Punkte lernen, wie Ihre Augen im Kamerabild auf den Bildschirm abbilden. Drei weitere prüfen das Ergebnis, ihre Abweichung ergibt die Bewertung. Die Grade gelten für diesen Abstand und diese Sitzposition.</p>
+      </details>
+      <div id="savedBox" hidden>
+        <p class="eyebrow">Gemerkte Kalibrierungen</p>
+        <ul class="report saved" id="savedCals"></ul>
+      </div>
+    </section>
+
+    <section class="view" id="outcome" hidden>
+      <div>
+        <p class="eyebrow" id="oEyebrow"></p>
+        <h1 id="oTitle"></h1>
+        <p class="lead" id="oQuality"></p>
+      </div>
+      <div class="chart" id="oChart"></div>
+      <p class="note" id="oNote"></p>
+      <ul class="report" id="oLines"></ul>
+      <div id="oCal" hidden>
+        <dl class="grade-table" id="oCalRows"></dl>
+        <div class="fields" id="calSaveRow">
+          <label class="field">Name oder Kürzel<input id="calName" type="text" maxlength="40" placeholder="Kalibrierung"></label>
+          <button class="pill ghost" id="calSave">Kalibrierung merken</button>
+        </div>
+        <p class="note">Gemerkte Kalibrierungen bleiben nur in diesem Browser und lassen sich einzeln löschen.</p>
+      </div>
+      <div class="actions">
+        <button class="pill" data-go="tools">Weiter</button>
+        <button class="pill ghost" id="oReport">Bericht öffnen</button>
+        <button class="pill ghost" id="oRepeat">Wiederholen</button>
+      </div>
+    </section>
+
+    <section class="view" id="tools" hidden>
+      <div>
+        <p class="eyebrow">Untersuchungen</p>
+        <h1>Was möchten Sie prüfen?</h1>
+      </div>
+      <div class="tools">
+        <button class="tool" data-module="nystagmus"><span><span class="theme">Augen in Ruhe</span><strong>Spontan- und Blickrichtungs&shy;nystagmus</strong><em></em></span>
+          <svg viewBox="0 0 132 90" fill="currentColor" aria-hidden="true"><circle cx="66" cy="45" r="5"/><circle cx="14" cy="45" r="3.5" opacity=".6"/><circle cx="118" cy="45" r="3.5" opacity=".6"/><circle cx="66" cy="8" r="3.5" opacity=".6"/><circle cx="66" cy="82" r="3.5" opacity=".6"/></svg></button>
+        <button class="tool" data-module="blickfolge"><span><span class="theme">Folgebewegungen</span><strong>Blickfolge</strong><em></em></span>
+          <svg viewBox="0 0 132 90" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 45C24 -8 42 -8 66 45S108 98 130 45"/></svg></button>
+        <button class="tool" data-module="sakkaden"><span><span class="theme">Schnelle Bewegungen</span><strong>Sakkaden</strong><em></em></span>
+          <svg viewBox="0 0 132 90" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 68H34V22H68V68H100V22H130"/></svg></button>
+        <button class="tool" data-module="optokinetik"><span><span class="theme">Folgebewegungen · experimentell</span><strong>Optokinetik</strong><em></em></span>
+          <svg viewBox="0 0 132 90" fill="currentColor" opacity=".8" aria-hidden="true"><rect x="4" y="6" width="14" height="78"/><rect x="34" y="6" width="14" height="78"/><rect x="64" y="6" width="14" height="78"/><rect x="94" y="6" width="14" height="78"/></svg></button>
+        <div class="tool planned"><span><span class="theme">Augenstellung</span><strong>Cover-Test</strong><em>geplant</em></span>
+          <svg viewBox="0 0 132 90" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="40" cy="45" r="20"/><circle cx="92" cy="45" r="20" fill="currentColor" opacity=".5"/></svg></div>
+      </div>
+      <div class="actions">
+        <button class="pill ghost" id="runAll" data-all></button>
+        <button class="pill ghost" id="runPhone" hidden>iPhone-Test ohne Kopfprüfung</button>
+      </div>
+    </section>
+
+    <section class="view" id="report" hidden>
+      <div>
+        <p class="eyebrow">Oculytics</p>
+        <h1 id="rOverall">Noch keine Messung.</h1>
+      </div>
+      <ul class="report" id="rLines"></ul>
+      <div class="actions">
+        <button class="pill" id="rReport" disabled>Bericht öffnen</button>
+        <button class="pill ghost" id="rSave" disabled>Messung speichern</button>
+      </div>
+    </section>
+
+    <div id="status" role="status" hidden></div>
+    <footer>Forschungsprototyp, keine Diagnose. Kamerabilder bleiben auf diesem Gerät. <span id="dryMark" hidden>Trockenlauf ohne Kamera.</span></footer>
+  </main>
+</div>
+
+<dialog id="details">
+  <h2>Messdetails</h2>
+  <dl>
+    <dt>Kamera</dt><dd id="mMode">–</dd>
+    <dt>Analysen je Sekunde</dt><dd id="mRate">–</dd>
+    <dt>Gültige Bilder</dt><dd id="mValid">–</dd>
+    <dt>Grund für Ausfälle</dt><dd id="mReason">–</dd>
+    <dt>Streuung</dt><dd id="mNoise">–</dd>
+    <dt>Irisbreite</dt><dd id="mIris">–</dd>
+    <dt>Analysedauer</dt><dd id="mMs">–</dd>
+    <dt>Doppelte Bildzeiten</dt><dd id="mDup">–</dd>
+    <dt>Zeitbasis</dt><dd id="mClock">–</dd>
+    <dt>Blickrichtung</dt><dd id="direction">–</dd>
+    <dt>Position rechts / links</dt><dd id="mPos">–</dd>
+    <dt>Nullpunkt</dt><dd id="mZero">nicht gesetzt</dd>
+    <dt>Abstand geschätzt</dt><dd id="pDist">–</dd>
+  </dl>
+  <h3>Kalibrierung</h3>
+  <dl>
+    <dt>Ergebnis</dt><dd id="cState">keine</dd>
+    <dt>Prüffehler rechts h / v</dt><dd id="cRechts">–</dd>
+    <dt>Prüffehler links h / v</dt><dd id="cLinks">–</dd>
+    <dt>Prüffehler Mittel h / v</dt><dd id="cMitte">–</dd>
+    <dt>Größter Zielfehler r / l</dt><dd id="cMax">–</dd>
+    <dt>Unruhe h, r / l</dt><dd id="cNoiseH">–</dd>
+    <dt>Unruhe v, r / l</dt><dd id="cNoiseV">–</dd>
+    <dt>Fehlerverstärkung h, r / l</dt><dd id="cSensH">–</dd>
+    <dt>Fehlerverstärkung v, r / l</dt><dd id="cSensV">–</dd>
+    <dt>Abstand zur Kalibrierung</dt><dd id="cDrift">–</dd>
+    <dt>Seitendifferenz</dt><dd id="mDiff">–</dd>
+  </dl>
+  <h3>Augenposition, letzte 10 s</h3>
+  <div class="axis">Horizontal: oben = rechts der Person</div>
+  <canvas id="curve" class="curve"></canvas>
+  <div class="axis">Vertikal: oben = nach oben</div>
+  <canvas id="curveV" class="curve"></canvas>
+  <div class="legend">
+    <span style="--c:var(--mean)">Mittelwert</span>
+    <span style="--c:var(--right)">rechtes Auge, roh</span>
+    <span style="--c:var(--left)">linkes Auge, roh</span>
+    <span style="--c:var(--head)">Kopf</span>
+    <span id="unit">Irisdurchmesser, Lücken = ungültig</span>
+  </div>
+  <div class="dialog-actions">
+    <button class="pill ghost" id="zero" disabled>Nullpunkt setzen</button>
+    <button class="pill ghost" id="closeDetails">Schließen</button>
+  </div>
+</dialog>
 
 <div id="cal" hidden>
   <canvas id="calStripes" hidden></canvas>
@@ -253,1500 +228,6 @@
   </div>
 </div>
 
-<script type="module">
-import { fakeDetector, openDetector } from "./kamera/erkennung.js";
-import { direction, EYES, measureFrame, meanX, standardDeviation } from "./auswertung/augen-logik.js";
-import { CAL_COLLECT_MS, CAL_SETTLE_MS, calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
-  from "./auswertung/kalibrierung-logik.js";
-import { buildReport } from "./auswertung/bericht-logik.js";
-import { PROTOCOLS } from "./auswertung/protokolle.js";
-import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stepText } from "./auswertung/etappen-logik.js";
-import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./auswertung/okn-logik.js";
-import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
-         canResume, medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./auswertung/positionierung-logik.js";
-
-const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
-// Mit ?trockenlauf&tasten warten die Karten auf die echte Taste, damit sich die Bedienung ohne Kamera prüfen lässt.
-const DRY_KEYS = new URLSearchParams(window.location.search).has("tasten");
-// Mit ?experimente erscheinen iPhone-Brücke und iPhone-Test. Sie gehören nicht zur Hauptsoftware.
-const EXPERIMENTS = new URLSearchParams(window.location.search).has("experimente");
-// Mit ?hauptthread läuft die Erkennung ohne Worker, für Vergleichsläufe.
-const MAIN_THREAD = new URLSearchParams(window.location.search).has("hauptthread");
-const WINDOW_MS = 3000;
-const CURVE_MS = 10000;
-const IRIS_RANGE = 0.6;
-const DEGREE_RANGE = 25;
-const HEAD_IN_DEGREES = 10;
-const DIRECTION_DEGREES = 5;
-const FULLSCREEN_TIMEOUT_MS = 2000;
-const FULLSCREEN_SETTLE_MS = 1500;
-const POSE_WINDOW_MS = 1000;
-const REMEMBER_WINDOW_MS = 2000;
-const CAL_LEAD_MS = 3000;
-const STALL_MS = 1500;
-const WARMUP_MS = 1000;
-const ZERO_MS = 1000;
-const LIVE_FILTER_MS = 140;
-const BOOK_ASPECT = 1.6;
-
-const $ = (id) => document.getElementById(id);
-const video = $("video");
-// Bildquelle: das Videoelement oder die Brücke mit denselben Feldern.
-let source = video;
-const overlay = $("overlay");
-const ctx = overlay.getContext("2d");
-const controls = ["toggle", "camera", "cameraMode", "smoothing", "distance", "screenCm"];
-const calControls = ["camera", "cameraMode", "smoothing", "distance", "screenCm", "zero"];
-
-let detector = null;
-let skippedFrames = 0;
-let stream = null;
-let running = false;
-let busy = false;
-let session = 0;
-let frameHandle = null;
-let segmentStart = 0;
-let lastFrameAt = null;
-let lastFrameMs = null;
-let clockOffset = null;
-let lastStamp = 0;
-let clockSource = "–";
-let duplicates = 0;
-let stalled = false;
-let previousHead = null;
-let previousHeadMs = null;
-let headZero = null;
-let zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
-let zeroSet = false;
-let samples = [];
-let calibration = null;
-let calRun = 0;
-let calibrating = false;
-let collecting = null;
-// Nur während der Pause: Kopflage der letzten Bilder, keine Messdaten.
-let pauseProbe = null;
-let cancelCard = null;
-let lastRun = null;
-let runUnsaved = false;
-let discardArmed = false;
-// Nur iPhone-Test: Kopflage sperrt nichts, Abweichungen werden weiter vermerkt.
-let headFree = false;
-let headEvents = [];
-let currentTarget = { h: 0, v: 0 };
-let reference = null;
-let positionOk = false;
-let faceVisible = false;
-
-const comma = (value, digits = 2) => value.toFixed(digits).replace(".", ",");
-const signed = (value) => (value === null ? "–" : `${value > 0 ? "+" : ""}${comma(value)}`);
-
-function setStatus(text, warn = false) {
-  $("status").textContent = text;
-  $("status").classList.toggle("warn", warn);
-}
-
-async function createDetector() {
-  if (DRY_RUN) {
-    const { fakeLandmarker } = await import("./pruefung/trockenlauf.js");
-    detector = fakeDetector(fakeLandmarker(() => currentTarget));
-    return;
-  }
-  const opened = await openDetector(Number($("smoothing").value), { forceMainThread: MAIN_THREAD });
-  detector = opened.detector;
-  if (opened.workerError) setStatus(`Worker nicht verfügbar, Erkennung im Hauptthread: ${opened.workerError}`, true);
-}
-
-function closeDetector() {
-  detector?.close();
-  detector = null;
-}
-
-function resetSegment() {
-  segmentStart = performance.now() + WARMUP_MS;
-  samples = [];
-  duplicates = 0;
-  skippedFrames = 0;
-  previousHead = null;
-  headZero = null;
-  zero = { rechts: { x: 0, y: 0 }, links: { x: 0, y: 0 } };
-  zeroSet = false;
-  $("mZero").textContent = calibration ? "aus Kalibrierung" : "nicht gesetzt";
-  $("direction").textContent = "–";
-  $("mPos").textContent = "–";
-}
-
-function clearRates() {
-  for (const id of ["mRate", "mValid", "mReason", "mNoise", "mIris", "mMs", "mDup", "mDiff", "cDrift"]) {
-    $(id).textContent = "–";
-  }
-}
-
-function frameClock(metadata) {
-  if (metadata.captureTime > 0) return { ms: metadata.captureTime, source: "captureTime" };
-  return { ms: metadata.mediaTime * 1000, source: "mediaTime" };
-}
-
-function taskStamp(frameMs) {
-  clockOffset ??= lastStamp + 1000 - frameMs;
-  lastStamp = Math.max(lastStamp + 1, Math.round(frameMs + clockOffset));
-  return lastStamp;
-}
-
-function drawEyeMarks(points, eye, color) {
-  const px = (index) => ({ x: points[index].x * overlay.width, y: points[index].y * overlay.height });
-  const center = px(eye.center);
-  const rim = px(eye.rimA);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, Math.hypot(rim.x - center.x, rim.y - center.y), 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fillStyle = color;
-  for (const point of [center, px(eye.imageLeft), px(eye.imageRight)]) {
-    ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
-  }
-}
-
-// Vergroesserter Ausschnitt nur zur Anzeige; er wird nirgends abgelegt.
-function drawEyeCrop(points, eye, canvas, color) {
-  const target = canvas.getContext("2d");
-  const w = source.videoWidth;
-  const h = source.videoHeight;
-  const a = points[eye.imageLeft];
-  const b = points[eye.imageRight];
-  const spanX = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h) * 1.7;
-  const spanY = spanX / 2;
-  const sx = ((a.x + b.x) / 2) * w - spanX / 2;
-  const sy = ((a.y + b.y) / 2) * h - spanY / 2;
-  target.drawImage(source.image ?? video, sx, sy, spanX, spanY, 0, 0, canvas.width, canvas.height);
-  const scale = canvas.width / spanX;
-  const cx = (points[eye.center].x * w - sx) * scale;
-  const cy = (points[eye.center].y * h - sy) * scale;
-  const rim = points[eye.rimA];
-  const radius = Math.hypot((rim.x - points[eye.center].x) * w, (rim.y - points[eye.center].y) * h) * scale;
-  target.strokeStyle = color;
-  target.lineWidth = 2;
-  target.beginPath();
-  target.arc(cx, cy, radius, 0, Math.PI * 2);
-  target.stroke();
-}
-
-function drawCurve(id, keys) {
-  const canvas = $(id);
-  const context = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const width = Math.round(canvas.clientWidth * dpr);
-  const height = Math.round(canvas.clientHeight * dpr);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-  const style = getComputedStyle(document.documentElement);
-  const range = calibration ? DEGREE_RANGE : IRIS_RANGE;
-  const marks = calibration ? [-15, -5, 0, 5, 15] : [-0.12, 0, 0.12];
-  context.clearRect(0, 0, width, height);
-  const yOf = (value) => height / 2 - (value / range) * (height / 2);
-  context.strokeStyle = style.getPropertyValue("--line");
-  context.lineWidth = dpr;
-  for (const value of marks) {
-    context.beginPath();
-    context.moveTo(0, yOf(value));
-    context.lineTo(width, yOf(value));
-    context.stroke();
-  }
-  if (!samples.length) return;
-  const newest = samples.at(-1).frameMs;
-  const xOf = (frameMs) => width - ((newest - frameMs) / CURVE_MS) * width;
-  for (const [key, token, thickness] of keys) {
-    context.strokeStyle = style.getPropertyValue(token);
-    context.lineWidth = thickness * dpr;
-    context.beginPath();
-    let open = false;
-    for (const sample of samples) {
-      const value = sample[key];
-      if (value === null) {
-        open = false;
-        continue;
-      }
-      const y = yOf(Math.max(-range, Math.min(range, value)));
-      if (open) context.lineTo(xOf(sample.frameMs), y);
-      else context.moveTo(xOf(sample.frameMs), y);
-      open = true;
-    }
-    context.stroke();
-  }
-}
-
-function drawCurves() {
-  drawCurve("curve", [["head", "--head", 1.5], ["rechts", "--right", 1.5], ["links", "--left", 1.5], ["mean", "--mean", 2.5]]);
-  drawCurve("curveV", [["vRechts", "--right", 1.5], ["vLinks", "--left", 1.5], ["vMean", "--mean", 2.5]]);
-}
-
-function applyValues(sample, raw) {
-  if (calibration) {
-    const degrees = (side) => (raw[side] && calibration[side].model
-      ? toDegrees(calibration[side].model, raw[side].x, raw[side].y) : null);
-    const right = degrees("rechts");
-    const left = degrees("links");
-    const combined = combineEyes(raw.rechts, raw.links, calibration);
-    sample.rechts = right?.h ?? null;
-    sample.links = left?.h ?? null;
-    sample.vRechts = right?.v ?? null;
-    sample.vLinks = left?.v ?? null;
-    sample.mean = combined?.h ?? null;
-    sample.vMean = combined?.v ?? null;
-    sample.disagree = combined?.disagree ?? false;
-    return;
-  }
-  const relative = (side) => (raw[side]
-    ? { x: raw[side].x - zero[side].x, y: raw[side].y - zero[side].y } : null);
-  const right = relative("rechts");
-  const left = relative("links");
-  const present = [right, left].filter(Boolean);
-  sample.rechts = right?.x ?? null;
-  sample.links = left?.x ?? null;
-  sample.vRechts = right?.y ?? null;
-  sample.vLinks = left?.y ?? null;
-  if (present.length) {
-    sample.mean = present.reduce((sum, value) => sum + value.x, 0) / present.length;
-    sample.vMean = present.reduce((sum, value) => sum + value.y, 0) / present.length;
-  }
-}
-
-// Reize laufen auf performance.now(); captureTime liegt auf derselben Uhr, sonst der Callback.
-const eventTime = (timing) => timing.captureMs ?? timing.at;
-const screenWidthCm = () => Number($("screenCm").value) || SCREEN_WIDTH_CM;
-
-// Der Mittelwert laeuft live durch denselben Median wie die Auswertung; die Augen bleiben roh.
-function filterLive(sample, key) {
-  sample[`${key}Raw`] = sample[key];
-  if (sample[key] === null) return;
-  const recent = [];
-  for (let i = samples.length - 1; i >= 0 && sample.frameMs - samples[i].frameMs <= LIVE_FILTER_MS; i -= 1) {
-    const value = samples[i][`${key}Raw`];
-    if (value !== null && value !== undefined) recent.push(value);
-  }
-  sample[key] = median([...recent, sample[key]]);
-}
-
-function pushProbe(probe, head, irisPx) {
-  if (!probe) return;
-  probe.push({ head, irisPx });
-  if (probe.length > PAUSE_PROBE_FRAMES) probe.shift();
-}
-
-// target und probe stammen aus dem Moment der Aufnahme: Das Ergebnis kommt später, die Messphase kann dann schon gewechselt haben.
-function recordFrame(timing, faces, target, probe) {
-  const sample = { ...timing, rechts: null, links: null, mean: null, vRechts: null, vLinks: null,
-                   vMean: null, head: null, irisPx: null, headPoint: null, raw: null, pose: null,
-                   disagree: false, reasons: [] };
-  if (faces.length !== 1) {
-    sample.reasons.push(faces.length ? "zweite Person" : "kein Gesicht");
-    previousHead = null;
-    samples.push(sample);
-    target?.samples.push({ t: timing.frameMs, time: eventTime(timing), rechts: null, links: null, irisPx: null, head: null });
-    pushProbe(probe, null, null);
-    return;
-  }
-  const frame = measureFrame(faces[0], source.videoWidth, source.videoHeight, previousHead,
-                             previousHeadMs === null ? undefined : timing.frameMs - previousHeadMs);
-  previousHead = frame.head;
-  previousHeadMs = timing.frameMs;
-  headZero ??= frame.head;
-  const point = (eye) => (eye.valid ? { x: eye.x, y: eye.y, aperture: eye.aperture } : null);
-  sample.raw = { rechts: point(frame.rechts), links: point(frame.links) };
-  sample.irisPx = frame.irisPx;
-  sample.headPoint = frame.head;
-  sample.pose = analysePose(faces[0], source.videoWidth, source.videoHeight);
-  if (frame.irisPx > 0) {
-    const scale = calibration ? HEAD_IN_DEGREES : 1;
-    sample.head = (-(frame.head.x - headZero.x) / frame.irisPx) * scale;
-  }
-  applyValues(sample, sample.raw);
-  filterLive(sample, "mean");
-  filterLive(sample, "vMean");
-  sample.reasons = [...new Set([...frame.rechts.reasons, ...frame.links.reasons])];
-  if (sample.disagree) sample.reasons.push("Seitendifferenz");
-  samples.push(sample);
-  const rejected = (eye) => (eye.valid ? undefined : { aperture: eye.aperture, reasons: eye.reasons });
-  pushProbe(probe, frame.head, frame.irisPx);
-  target?.samples.push({
-    t: timing.frameMs, time: eventTime(timing), ...sample.raw, irisPx: frame.irisPx,
-    irisRechts: frame.rechts.irisPx, irisLinks: frame.links.irisPx, head: frame.head,
-    rejectedRechts: rejected(frame.rechts), rejectedLinks: rejected(frame.links),
-  });
-}
-
-async function analyse(id, callbackMs, frameMs, stamp, captureMs) {
-  const target = collecting;
-  const probe = pauseProbe;
-  const analysisStart = performance.now();
-  detector.busy = true;
-  let result = null;
-  try {
-    result = await detector.detect(source.image ?? video, stamp);
-  } finally {
-    detector.busy = false;
-  }
-  const analysisEnd = performance.now();
-  if (id !== session) return;
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-  const { faces } = result;
-  if (faces.length === 1) {
-    const style = getComputedStyle(document.documentElement);
-    const right = style.getPropertyValue("--right");
-    const left = style.getPropertyValue("--left");
-    drawEyeMarks(faces[0], EYES.rechts, right);
-    drawEyeMarks(faces[0], EYES.links, left);
-    drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
-    drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
-  }
-  recordFrame({ at: callbackMs, frameMs, captureMs, analysisStart, analysisEnd, ms: result.ms, roundMs: analysisEnd - analysisStart },
-              faces, target, probe);
-  samples = samples.filter((sample) => frameMs - sample.frameMs <= CURVE_MS);
-  if (!collecting) drawCurves();
-}
-
-// Der Trockenlauf hat einen eigenen Takt, damit er auch im verdeckten Fenster laeuft.
-function requestFrame(id) {
-  if (DRY_RUN && source === video) {
-    setTimeout(() => {
-      const now = performance.now();
-      onFrame(id, now, { presentedFrames: 0, mediaTime: now / 1000 });
-    }, 1000 / 30);
-    return;
-  }
-  frameHandle = source.requestVideoFrameCallback((now, metadata) => onFrame(id, now, metadata));
-}
-
-const nextPaint = (callback) => (DRY_RUN
-  ? setTimeout(() => callback(performance.now()), 16)
-  : requestAnimationFrame(callback));
-
-function onFrame(id, now, metadata) {
-  if (id !== session) return;
-  lastFrameAt = now;
-  if (stalled) {
-    stalled = false;
-    resetSegment();
-    setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
-  }
-  const clock = frameClock(metadata);
-  clockSource = clock.source;
-  if (lastFrameMs !== null && clock.ms <= lastFrameMs) {
-    duplicates += 1;
-    requestFrame(id);
-    return;
-  }
-  lastFrameMs = clock.ms;
-  // Die Kamera wartet nie auf die Erkennung. Ist sie belegt, entfällt dieses Bild und wird gezählt.
-  if (detector.busy) {
-    skippedFrames += 1;
-    requestFrame(id);
-    return;
-  }
-  analyse(id, now, clock.ms, taskStamp(clock.ms), metadata.captureTime > 0 ? metadata.captureTime : null).catch((error) => {
-    if (id !== session) return;
-    stop();
-    setStatus(`Analyse abgebrochen: ${error.message}`, true);
-  });
-  requestFrame(id);
-}
-
-function setZero() {
-  const now = performance.now();
-  const recent = samples.filter((sample) => now - sample.at <= ZERO_MS && sample.raw);
-  const center = (side) => {
-    const points = recent.map((sample) => sample.raw[side]).filter(Boolean);
-    if (!points.length) return null;
-    return { x: median(points.map((p) => p.x)), y: median(points.map((p) => p.y)) };
-  };
-  const right = center("rechts");
-  const left = center("links");
-  if (!right || !left) {
-    setStatus("Nullpunkt nicht gesetzt: keine gültigen Augenwerte.", true);
-    return;
-  }
-  zero = { rechts: right, links: left };
-  zeroSet = true;
-  samples = [];
-  previousHead = null;
-  headZero = null;
-  $("mZero").textContent = "gesetzt";
-  setStatus("Nullpunkt gesetzt.");
-}
-
-function setCalibration(next) {
-  calibration = next;
-  samples = [];
-  headZero = null;
-  const degrees = Boolean(next);
-  $("unit").textContent = degrees
-    ? `Grad, Kopf: 1 Irisdurchmesser = ${HEAD_IN_DEGREES} Einheiten, Lücken = ungültig`
-    : "Irisdurchmesser, Lücken = ungültig";
-  $("mZero").textContent = degrees ? "aus Kalibrierung" : "nicht gesetzt";
-  drawCurves();
-}
-
-function updateButtons() {
-  // Der grobe Rahmen raet nur; der gemessene Abstand hat Vorrang, also sperrt er nicht.
-  $("remember").disabled = !running || calibrating || !faceVisible;
-  $("calibrate").disabled = !running || calibrating || !reference;
-  $("runShort").disabled = !running || calibrating || !faceVisible;
-  $("runLong").disabled = !running || calibrating || !faceVisible;
-  $("runOkn").disabled = !running || calibrating || !faceVisible;
-  $("runPhone").disabled = !running || calibrating;
-}
-
-function clearGuide() {
-  const canvas = $("guide");
-  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-  $("guideHint").hidden = true;
-}
-
-// Der Zielbereich bleibt stehen und folgt dem Gesicht nicht.
-function drawGuide(target, ok) {
-  const canvas = $("guide");
-  const context = canvas.getContext("2d");
-  if (canvas.width !== source.videoWidth || canvas.height !== source.videoHeight) {
-    canvas.width = source.videoWidth;
-    canvas.height = source.videoHeight;
-  }
-  const { width, height } = canvas;
-  context.clearRect(0, 0, width, height);
-  const color = ok ? "rgba(34, 197, 94, .95)" : "rgba(250, 250, 249, .7)";
-  const eyeY = target.y * height;
-  const band = target.tolerance.y * height;
-  const radiusX = target.span * width * 0.72;
-  const radiusY = radiusX * 1.38;
-  context.fillStyle = ok ? "rgba(34, 197, 94, .12)" : "rgba(250, 250, 249, .08)";
-  context.fillRect(target.x * width - radiusX, eyeY - band, radiusX * 2, band * 2);
-  context.strokeStyle = color;
-  context.lineWidth = 3;
-  context.beginPath();
-  context.ellipse(target.x * width, eyeY + radiusY * 0.28, radiusX, radiusY, 0, 0, Math.PI * 2);
-  context.moveTo(target.x * width, eyeY - band);
-  context.lineTo(target.x * width, eyeY + band);
-  context.stroke();
-}
-
-function showHint(text, ok) {
-  $("guideHint").textContent = text;
-  $("guideHint").classList.toggle("ok", ok);
-  $("guideHint").hidden = false;
-}
-
-function updateGuide(now) {
-  if (calibrating || calibration) {
-    clearGuide();
-    return;
-  }
-  const roughFrame = /facetime|standardkamera/i.test($("camera").selectedOptions[0]?.textContent ?? "");
-  const target = targetFor(Number($("distance").value), reference, roughFrame);
-  const poses = samples.filter((sample) => now - sample.at <= POSE_WINDOW_MS && sample.pose)
-    .map((sample) => sample.pose);
-  faceVisible = poses.length > 0;
-  if (!faceVisible) {
-    positionOk = false;
-    drawGuide(target, false);
-    showHint("Kein Gesicht im Bild", false);
-    updateButtons();
-    return;
-  }
-  const result = assess(medianPose(poses), target, positionOk);
-  positionOk = result.ok;
-  drawGuide(target, result.ok);
-  showHint(result.hint, result.ok);
-  updateButtons();
-}
-
-function rememberPosition() {
-  const now = performance.now();
-  const recent = samples.filter((sample) => now - sample.at <= REMEMBER_WINDOW_MS && sample.pose);
-  const poses = recent.map((sample) => sample.pose);
-  if (!isStable(poses)) {
-    setStatus("Bild noch nicht ruhig genug: Kamera fest abstellen, zwei Sekunden stillhalten, dann erneut klicken.", true);
-    return;
-  }
-  reference = makeReference(poses, recent.map((sample) => sample.irisPx), Number($("distance").value));
-  invalidateCalibration("keine");
-  setStatus("Position gemerkt. Jetzt kalibrieren.");
-  updateButtons();
-}
-
-function clearReference() {
-  reference = null;
-  positionOk = false;
-  faceVisible = false;
-  $("pDist").textContent = "–";
-  updateButtons();
-}
-
-function invalidateCalibration(state) {
-  if (calibration) setCalibration(null);
-  $("cState").textContent = state;
-}
-
-function endCalibrating() {
-  calibrating = false;
-  headFree = false;
-  $("cal").hidden = true;
-  collecting = null;
-  $("calCard").hidden = true;
-  $("calDot").hidden = false;
-  for (const id of calControls) $(id).disabled = !running;
-  updateButtons();
-}
-
-// Gemeinsamer Abbruch fuer Esc, verdecktes Fenster, Bildstillstand und Stopp.
-function abortCalibration(message) {
-  if (!calibrating) return;
-  calRun += 1;
-  cancelCard?.();
-  $("calStripes").hidden = true;
-  $("calDot").hidden = false;
-  endCalibrating();
-  if (document.fullscreenElement) document.exitFullscreen();
-  invalidateCalibration("abgebrochen");
-  setStatus(message, true);
-}
-
-function showCalibration(result) {
-  const pair = (read) => `${read(result.rechts)} / ${read(result.links)}`;
-  const degrees = (value, digits = 1) => (value === null ? "–" : `${comma(value, digits)}°`);
-  const eyeText = (eye) => (eye.errorH === null
-    ? (eye.reason ?? "–")
-    : `${comma(eye.errorH, 1)}° / ${comma(eye.errorV, 1)}°${eye.passed ? "" : `, ${eye.reason}`}`);
-  $("cRechts").textContent = eyeText(result.rechts);
-  $("cLinks").textContent = eyeText(result.links);
-  $("cMax").textContent = pair((eye) => degrees(eye.maxError));
-  $("cNoiseH").textContent = pair((eye) => degrees(eye.noiseH, 2));
-  $("cNoiseV").textContent = pair((eye) => degrees(eye.noiseV, 2));
-  $("cMitte").textContent = eyeText(result.mittel);
-  const iris = reference?.irisPx ?? 0;
-  const perTenth = (eye, axis) => {
-    const value = sensitivity(eye.model, iris)?.[axis];
-    return value === undefined ? "–" : `${comma(value / 10, 2)}°`;
-  };
-  $("cSensH").textContent = `${perTenth(result.rechts, "h")} / ${perTenth(result.links, "h")}`;
-  $("cSensV").textContent = `${perTenth(result.rechts, "v")} / ${perTenth(result.links, "v")}`;
-  const axis = (name, passed) => (passed ? name : `${name} nicht`);
-  const passedH = result.mittel.passedH;
-  const passedV = result.mittel.passedV;
-  $("cState").textContent = result.passed
-    ? `bestanden: ${axis("horizontal", passedH)}, ${axis("vertikal", passedV)}`
-    : "nicht bestanden";
-}
-
-const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
-
-function placeDot(target) {
-  currentTarget = { ...target };
-  const distance = Number($("distance").value);
-  const pixel = targetPixels(target, distance, window.innerWidth, window.innerHeight, screenWidthCm());
-  $("calDot").style.left = `${pixel.x}px`;
-  $("calDot").style.top = `${pixel.y}px`;
-}
-
-// Im iPhone-Test läuft es notfalls im Fenster weiter; Winkel sind dann nur ungefähr.
-async function enterFullscreen(id, lenient = false) {
-  calibrating = true;
-  for (const control of calControls) $(control).disabled = true;
-  updateButtons();
-  clearGuide();
-  invalidateCalibration("läuft");
-  try {
-    await Promise.race([
-      document.documentElement.requestFullscreen(),
-      wait(FULLSCREEN_TIMEOUT_MS).then(() => { throw new Error("keine Antwort"); }),
-    ]);
-  } catch (error) {
-    if (id !== calRun) return false;
-    if (!lenient) {
-      endCalibrating();
-      invalidateCalibration("keine");
-      setStatus(`Vollbild nicht möglich: ${error.message}`, true);
-      return false;
-    }
-  }
-  await wait(300);
-  // Safari meldet das Vollbild teils vor dem Ende des Uebergangs.
-  const settled = performance.now() + FULLSCREEN_SETTLE_MS;
-  while (Math.abs(window.innerWidth - window.screen.width) > 2 && performance.now() < settled) await wait(100);
-  if (id !== calRun) return false;
-  // Die Winkel stimmen nur, wenn das Fenster den ganzen Bildschirm fuellt.
-  if (!lenient && Math.abs(window.innerWidth - window.screen.width) > 2) {
-    abortCalibration("Vollbild nicht aktiv: Winkel wären falsch. Bitte auf dem MacBook-Bildschirm starten.");
-    return false;
-  }
-  if (!lenient && !targetsFit(Number($("distance").value), window.innerWidth, window.innerHeight, screenWidthCm())) {
-    abortCalibration("Die Blickziele passen bei diesem Abstand nicht auf den Bildschirm.");
-    return false;
-  }
-  $("cal").hidden = false;
-  return true;
-}
-
-// Kopf oder Abstand außerhalb der Abbruchgrenze. Der Aufrufer entscheidet: Etappe wiederholen oder Lauf beenden.
-class HeadMoved extends Error {
-  constructor(drift) {
-    super("Kopf oder Abstand stark verändert");
-    this.drift = drift;
-  }
-}
-
-// Sammelt an einem Ziel. Liefert null, wenn der Lauf abgebrochen wurde; bewegt sich der Kopf, wirft sie HeadMoved.
-async function collectTarget(id, target, settleMs, collectMs) {
-  placeDot(target);
-  await wait(settleMs);
-  if (id !== calRun) return null;
-  const entry = { target, samples: [], from: performance.now() };
-  collecting = entry;
-  await wait(collectMs);
-  if (id !== calRun) return null;
-  collecting = null;
-  entry.to = performance.now();
-  const drift = positionDrift(entry.samples, reference, source.videoWidth, source.videoHeight);
-  if (drift?.moved && !headFree) throw new HeadMoved(drift);
-  if (drift?.marked) {
-    headEvents.push({ time: entry.from, target: target.name, distanceChange: drift.distanceChange, headShift: drift.headShift });
-  }
-  return entry;
-}
-
-async function calibrationSequence(id) {
-  placeDot({ h: 0, v: 0 });
-  $("calText").textContent = "Kopf still halten, nur mit den Augen dem Punkt folgen. Abbruch mit Esc.";
-  await wait(CAL_LEAD_MS);
-  const entries = [];
-  for (const [index, target] of STEPS.entries()) {
-    if (id !== calRun) return null;
-    $("calText").textContent = `Kalibrierung: Punkt ${index + 1} von ${STEPS.length}`;
-    const entry = await collectTarget(id, target, CAL_SETTLE_MS, CAL_COLLECT_MS);
-    if (!entry) return null;
-    entries.push(entry);
-  }
-  return entries;
-}
-
-function finishCalibration(entries) {
-  const measured = entries.flatMap((entry) => entry.samples).filter((sample) => sample.head);
-  const result = calibrate(entries);
-  showCalibration(result);
-  if (!result.passed || !measured.length) return result;
-  result.irisPx = median(measured.map((sample) => sample.irisPx));
-  result.head = { x: median(measured.map((s) => s.head.x)), y: median(measured.map((s) => s.head.y)) };
-  setCalibration(result);
-  return result;
-}
-
-async function leaveFullscreen() {
-  endCalibrating();
-  if (document.fullscreenElement) await document.exitFullscreen();
-}
-
-async function runCalibration() {
-  if (busy || calibrating || !running || !reference) return;
-  const id = ++calRun;
-  if (!await enterFullscreen(id)) return;
-  let entries = null;
-  try {
-    entries = await calibrationSequence(id);
-  } catch (error) {
-    if (!(error instanceof HeadMoved)) throw error;
-    abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
-    return;
-  }
-  if (!entries) return;
-  await leaveFullscreen();
-  const result = finishCalibration(entries);
-  if (result.passed) setStatus("Kalibriert. Kurve in Grad.");
-  else setStatus("Kalibrierung nicht bestanden: Anzeige bleibt ohne Grad. Bitte wiederholen.", true);
-}
-
-async function phaseFixation(id, durationMs) {
-  const entry = { samples: [] };
-  collecting = entry;
-  await wait(durationMs);
-  collecting = null;
-  return id === calRun ? entry : null;
-}
-
-async function phaseGaze(id, part) {
-  const holds = [];
-  for (const target of part.targets) {
-    const hold = await collectTarget(id, target, part.settleMs, part.holdMs);
-    if (!hold) return null;
-    holds.push({ target, samples: hold.samples });
-    placeDot({ h: 0, v: 0 });
-    await wait(part.returnMs);
-    if (id !== calRun) return null;
-  }
-  return holds;
-}
-
-async function phaseAccuracy(id, part) {
-  const entry = { samples: [], windows: [] };
-  for (const target of part.targets) {
-    const hold = await collectTarget(id, target, part.settleMs, part.collectMs);
-    if (!hold) return null;
-    entry.samples.push(...hold.samples);
-    entry.windows.push({ target, from: hold.from, to: hold.to });
-  }
-  return entry;
-}
-
-async function phaseCalibration(id, part) {
-  const entries = [];
-  for (const target of part.targets) {
-    const entry = await collectTarget(id, target, part.settleMs, part.collectMs);
-    if (!entry) return null;
-    entries.push(entry);
-  }
-  return entries;
-}
-
-function phasePursuit(id, run) {
-  return new Promise((resolve) => {
-    const entry = { run, samples: [], startTime: performance.now() };
-    collecting = entry;
-    const step = (now) => {
-      if (id !== calRun) {
-        resolve(null);
-        return;
-      }
-      const elapsed = now - entry.startTime;
-      if (elapsed >= run.durationMs) {
-        collecting = null;
-        resolve(entry);
-        return;
-      }
-      const h = run.amplitude * Math.sin(2 * Math.PI * run.frequency * (Math.max(elapsed, 0) / 1000));
-      placeDot({ h, v: 0 });
-      nextPaint(step);
-    };
-    nextPaint(step);
-  });
-}
-
-async function phaseSaccades(id, saccades) {
-  const entry = { samples: [], jumps: [] };
-  collecting = entry;
-  const position = { h: 0, v: 0 };
-  for (const jump of saccades.jumps) {
-    await wait(saccades.minMs + Math.random() * (saccades.maxMs - saccades.minMs));
-    if (id !== calRun) return null;
-    const from = position[jump.axis];
-    position[jump.axis] = jump.to;
-    placeDot(position);
-    const at = await new Promise((resolve) => { nextPaint(resolve); });
-    entry.jumps.push({ axis: jump.axis, from, to: jump.to, at });
-  }
-  await wait(saccades.maxMs);
-  collecting = null;
-  return id === calRun ? entry : null;
-}
-
-const CARD_POLL_MS = 200;
-const DRY_CARD_MS = 300;
-const PAUSE_PROBE_FRAMES = 15;
-const CARD_KEY = "Weiter mit Leertaste";
-const REPEAT_NOTICE = "Der Kopf hat sich bewegt. Diese Etappe wird wiederholt.";
-
-function fillCard({ step = "", title, text, duration = "", notice = "", key = "" }) {
-  collecting = null;
-  $("calDot").hidden = true;
-  $("calStripes").hidden = true;
-  $("calText").textContent = "";
-  const set = (name, value) => {
-    $(name).textContent = value;
-    $(name).hidden = !value;
-  };
-  set("cardStep", step);
-  set("cardTitle", title);
-  set("cardText", text);
-  set("cardDuration", duration);
-  set("cardNotice", notice);
-  set("cardKey", key);
-  $("cardHead").hidden = true;
-  $("calCard").hidden = false;
-}
-
-// Wartet auf Eingabe. Bei Abbruch (Lauf gewechselt, Esc, Vollbildende) löst sie mit null auf und entfernt
-// in jedem Fall beide Listener und die Zeitgeber. Im Trockenlauf läuft sie nach dryMs von selbst weiter.
-function awaitInput(id, { onKey, onClick, onTick, dryMs, dryValue }) {
-  return new Promise((resolve) => {
-    let timer = null;
-    const keyListener = (event) => {
-      if (!event.repeat) onKey?.(event, finish);
-    };
-    const clickListener = (event) => onClick?.(event, finish);
-    function finish(value) {
-      clearInterval(timer);
-      clearTimeout(timer);
-      document.removeEventListener("keydown", keyListener);
-      document.removeEventListener("click", clickListener);
-      pauseProbe = null;
-      cancelCard = null;
-      resolve(value);
-    }
-    cancelCard = () => finish(null);
-    if (DRY_RUN && !DRY_KEYS) {
-      timer = setTimeout(() => finish(id === calRun ? dryValue() : null), dryMs);
-      return;
-    }
-    document.addEventListener("keydown", keyListener);
-    document.addEventListener("click", clickListener);
-    timer = setInterval(() => {
-      if (id !== calRun) finish(null);
-      else onTick?.();
-    }, CARD_POLL_MS);
-    onTick?.();
-  });
-}
-
-// Karte vor einer Etappe. Keine Messung; die Kopfprüfung läuft nur als Tor für Weiter.
-// Liefert Beginn, Ende und Wartezeit oder null bei Abbruch.
-async function showCard(id, card) {
-  fillCard({ ...card, key: CARD_KEY });
-  pauseProbe = [];
-  const shownAt = performance.now();
-  const headOk = () => DRY_RUN || headFree || canResume(pauseProbe ?? [], reference, source.videoWidth, source.videoHeight);
-  const timing = () => {
-    const continuedAt = performance.now();
-    return { shownAt, continuedAt, waitMs: continuedAt - shownAt };
-  };
-  const attempt = (done) => {
-    if (canContinue(performance.now() - shownAt, headOk())) done(timing());
-  };
-  return awaitInput(id, {
-    onKey: (event, done) => {
-      if (event.code !== "Space") return;
-      event.preventDefault();
-      attempt(done);
-    },
-    onClick: (event, done) => attempt(done),
-    onTick: () => { $("cardHead").hidden = !pauseProbe?.length || headOk(); },
-    dryMs: DRY_CARD_MS,
-    dryValue: timing,
-  });
-}
-
-// Schlusskarte: Taste 1 bis 5 oder Leertaste. Kein Tor durch die Kopfprüfung.
-// Liefert { value } (1 bis 5 oder null) oder null bei Abbruch.
-function askEffort(id) {
-  fillCard({ step: "Geschafft", title: "Wie anstrengend war das?", text: "Taste 1 bis 5, Leertaste überspringt.",
-             duration: "1 = gar nicht anstrengend, 5 = sehr anstrengend" });
-  return awaitInput(id, {
-    onKey: (event, done) => {
-      if (event.code === "Space") {
-        event.preventDefault();
-        done({ value: null });
-        return;
-      }
-      const value = effortFromKey(event.key);
-      if (value !== null) {
-        event.preventDefault();
-        done({ value });
-      }
-    },
-    dryMs: DRY_CARD_MS,
-    dryValue: () => ({ value: null }),
-  });
-}
-
-// Hinführung: Punkt in der Mitte, die Rohwerte dieser Sekunde sind nur für den Nullpunkt.
-async function leadPhase(id) {
-  $("calCard").hidden = true;
-  $("calStripes").hidden = true;
-  placeDot({ h: 0, v: 0 });
-  $("calDot").hidden = false;
-  const entry = { samples: [] };
-  collecting = entry;
-  await wait(LEAD_MS);
-  collecting = null;
-  return id === calRun ? entry.samples : null;
-}
-
-const OKN_LIGHT = "#c8c8c8";
-const OKN_DARK = "#303030";
-const OKN_INSTRUCTION = "Streifen verfolgen, dann den nächsten nehmen. Kopf ruhig.";
-const DRY_BEAT_S = 0.6;
-const DRY_SLOW_SPEED = 6;
-
-// Streifen im Winkelraum: jede Bildspalte bekommt ihren Winkel zur Bildschirmmitte.
-function prepareStripes() {
-  const canvas = $("calStripes");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const distance = Number($("distance").value);
-  const cmPerPx = screenWidthCm() / window.innerWidth;
-  const center = window.innerWidth / 2;
-  const angles = Array.from({ length: Math.ceil(window.innerWidth / 2) }, (_, index) =>
-    Math.atan(((index * 2 + 1 - center) * cmPerPx) / distance) * (180 / Math.PI));
-  return { canvas, context: canvas.getContext("2d"), angles, periodDeg: stripePeriod(fieldDegrees(screenWidthCm(), distance)) };
-}
-
-function drawStripes(stripes, seconds, direction) {
-  const { canvas, context, angles, periodDeg } = stripes;
-  context.fillStyle = OKN_DARK;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = OKN_LIGHT;
-  angles.forEach((theta, index) => {
-    if (stripeOn(theta, seconds, direction, periodDeg)) context.fillRect(index * 2, 0, 2, canvas.height);
-  });
-}
-
-function oknBlock(id, block, stripes) {
-  return new Promise((resolve) => {
-    const moving = block.kind === "moving" || block.kind === "control";
-    $("calStripes").hidden = !moving;
-    $("calDot").hidden = block.kind === "moving" || block.kind === "grey";
-    placeDot({ h: 0, v: 0 });
-    $("calText").textContent = "";
-    const entry = { block: { ...block }, samples: [] };
-    entry.block.from = performance.now();
-    collecting = entry;
-    const step = (now) => {
-      if (id !== calRun) {
-        resolve(null);
-        return;
-      }
-      const elapsed = now - entry.block.from;
-      if (elapsed >= block.durationMs) {
-        collecting = null;
-        entry.block.to = performance.now();
-        $("calStripes").hidden = true;
-        currentTarget = { h: 0, v: 0 };
-        resolve(entry);
-        return;
-      }
-      if (moving) drawStripes(stripes, Math.max(elapsed, 0) / 1000, block.direction);
-      if (DRY_RUN && block.kind === "moving") {
-        const slow = ((elapsed / 1000) % DRY_BEAT_S) * DRY_SLOW_SPEED;
-        currentTarget = { h: block.direction * (slow - (DRY_BEAT_S * DRY_SLOW_SPEED) / 2), v: 0 };
-      }
-      nextPaint(step);
-    };
-    nextPaint(step);
-  });
-}
-
-function checkHead(samples) {
-  if (headFree) return;
-  const drift = positionDrift(samples, reference, source.videoWidth, source.videoHeight);
-  if (drift?.moved) throw new HeadMoved(drift);
-}
-
-function samplesOf(part, data) {
-  switch (part.kind) {
-    case "calibration":
-    case "okn": return data.flatMap((entry) => entry.samples);
-    case "gaze": return data.flatMap((hold) => hold.samples);
-    default: return data.samples;
-  }
-}
-
-// Ein Messteil. Liefert null bei Abbruch; wirft HeadMoved, wenn der Kopf die Grenze überschreitet.
-// Zielpunkte prüfen den Kopf je Ziel (collectTarget), die übrigen Teile am Ende.
-async function measurePart(id, part, stripes) {
-  let data = null;
-  switch (part.kind) {
-    case "calibration": return phaseCalibration(id, part);
-    case "accuracy": return phaseAccuracy(id, part);
-    case "gaze": return phaseGaze(id, part);
-    case "fixation": data = await phaseFixation(id, part.durationMs); break;
-    case "pursuit": data = await phasePursuit(id, part.run); break;
-    case "saccades": data = await phaseSaccades(id, part); break;
-    case "okn":
-      data = [];
-      for (const block of part.blocks) {
-        const entry = await oknBlock(id, block, stripes);
-        if (!entry) return null;
-        data.push(entry);
-      }
-      break;
-    default: throw new Error(`unbekannter Teil: ${part.kind}`);
-  }
-  if (data) checkHead(samplesOf(part, data));
-  return data;
-}
-
-// Die Messdaten behalten ihre Form je Baustein, damit Auswertung und alte Dateien weiter passen.
-function mergeStage(run, results) {
-  for (const { part, data } of results) {
-    switch (part.kind) {
-      case "calibration": run.calibration = [...(run.calibration ?? []), ...data]; break;
-      case "accuracy": run.accuracy = data; break;
-      case "fixation": run.fixation = data; break;
-      case "gaze": run.gaze.push(...data); break;
-      case "pursuit": run.pursuit.push(data); break;
-      case "saccades": run.saccades = data; break;
-      case "okn": run.okn.push(...data); break;
-      default: break;
-    }
-  }
-}
-
-// Eine Etappe: Karte, Hinführung, Messung. Bewegt sich der Kopf, werden nur die Daten dieser Etappe verworfen
-// und ihre Karte erscheint erneut, höchstens zweimal. Alle anderen Abbrüche beenden den Lauf.
-async function runStage(id, protocol, stage, run, stripes, { skipCard = false } = {}) {
-  const position = protocol.stages.indexOf(stage);
-  let repeats = 0;
-  let waitMs = 0;
-  let notice = "";
-  for (;;) {
-    let card = null;
-    if (!skipCard || repeats > 0) {
-      card = await showCard(id, { step: stepText(position, protocol.stages.length), title: stage.title, text: stage.text,
-                                  duration: cardDuration(stageMs(stage)), notice });
-      if (!card) return null;
-      waitMs += card.waitMs;
-    }
-    const leadSamples = await leadPhase(id);
-    if (!leadSamples) return null;
-    try {
-      const results = [];
-      for (const part of stage.parts) {
-        const data = await measurePart(id, part, stripes);
-        if (!data) return null;
-        results.push({ part, data });
-      }
-      const drift = positionDrift(results.flatMap(({ part, data }) => samplesOf(part, data)), reference,
-                                  source.videoWidth, source.videoHeight);
-      mergeStage(run, results);
-      return { id: stage.id, title: stage.title, shownAt: card?.shownAt ?? null, continuedAt: card?.continuedAt ?? null,
-               waitMs, leadSamples, headShift: drift?.headShift ?? null, repeats };
-    } catch (error) {
-      collecting = null;
-      if (!(error instanceof HeadMoved)) throw error;
-      if (!canRepeat(repeats)) {
-        abortCalibration("Kopf oder Abstand stark verändert: Lauf abgebrochen.");
-        return null;
-      }
-      repeats += 1;
-      notice = REPEAT_NOTICE;
-    }
-  }
-}
-
-async function examPhases(id, protocol, stripes) {
-  const run = { pursuit: [], okn: [], gaze: [], stages: [] };
-  const record = (entry) => {
-    const index = run.stages.findIndex((item) => item.id === entry.id);
-    if (index >= 0) run.stages[index] = entry;
-    else run.stages.push(entry);
-  };
-  for (const stage of protocol.stages) {
-    const entry = await runStage(id, protocol, stage, run, stripes);
-    if (!entry) return null;
-    record(entry);
-    if (stage.id !== "kalibrierung-2" || calibrate(run.calibration).mittel.passedH) continue;
-    // Horizontale nicht freigegeben: beide Teile einmal wiederholen. Danach läuft es weiter wie bisher,
-    // auch bei erneutem Misserfolg; die Auswertung kennzeichnet die Kalibrierung dann als nicht bestanden.
-    const parts = ["kalibrierung-1", "kalibrierung-2"].map((name) => protocol.stages.find((item) => item.id === name));
-    const card = await showCard(id, { title: "Kalibrierung wiederholen",
-      text: "Die Kalibrierung hat nicht gepasst. Beide Teile laufen einmal noch einmal. Kopf ruhig, nur mit den Augen folgen.",
-      duration: cardDuration(parts.reduce((sum, item) => sum + stageMs(item), 0)) });
-    if (!card) return null;
-    run.calibrationRetry = card;
-    run.calibration = [];
-    for (const again of parts) {
-      const retried = await runStage(id, protocol, again, run, stripes, { skipCard: true });
-      if (!retried) return null;
-      record({ ...retried, calibrationRetry: true });
-    }
-  }
-  return run;
-}
-
-function showResult(protocol, run, meta) {
-  const report = buildReport({ run, meta });
-  const { summary, findings } = report;
-  const line = (name, status) => `<div class="result-line"><strong>${name}:</strong> ${status}</div>`;
-  const okn = line("Optokinetik", findings.okn ? `${findings.okn.conform} von ${findings.okn.total} reizkonform` : "nicht untersucht");
-  $("rOverall").textContent = summary.headline;
-  $("rOverall").className = "big";
-  // Eine reine Optokinetik-Datei sagt nichts zu den übrigen Befunden.
-  $("rLines").innerHTML = report.oknOnly ? okn : [
-    line("Spontannystagmus", findings.spontaneous.status),
-    line("Blickrichtung", findings.gazeStatus),
-    line("Square-Wave-Jerks", findings.swj.status),
-    line("Blickfolge", findings.pursuitStatus),
-    line("Sakkaden", findings.saccadeStatus),
-    ...(findings.okn || hasPart(protocol, "okn") ? [okn] : []),
-  ].join("");
-  $("report").hidden = false;
-  $("rSave").textContent = "Testlauf speichern";
-  $("report").scrollIntoView({ block: "start" });
-  runUnsaved = true;
-  lastRun = { kind: protocol.id, meta, run };
-}
-
-// Nimmt die Position, wie sie gerade ist. Ohne Gesicht gibt es keine Messung, das sagt die Meldung offen.
-function takePositionAsIs() {
-  const now = performance.now();
-  const recent = samples.filter((sample) => now - sample.at <= REMEMBER_WINDOW_MS && sample.pose);
-  if (!recent.length) {
-    const size = `${source.videoWidth}×${source.videoHeight}`;
-    window.alert(`Kein Gesicht erkannt. Bild ${size}, Analysen je Sekunde ${$("mRate").textContent}, Hauptgrund ${$("mReason").textContent}.`);
-    return false;
-  }
-  reference = makeReference(recent.map((sample) => sample.pose), recent.map((sample) => sample.irisPx), Number($("distance").value));
-  invalidateCalibration("keine");
-  return true;
-}
-
-async function runExam(protocol, { lenient = false } = {}) {
-  if (busy || calibrating || !running) return;
-  // Kein window.confirm: Safari wertet den Klick danach nicht mehr als Nutzeraktion und verweigert das Vollbild.
-  if (runUnsaved && !discardArmed) {
-    discardArmed = true;
-    setStatus("Letzter Lauf ist nicht gespeichert. Zum Verwerfen den Lauf erneut starten.", true);
-    return;
-  }
-  discardArmed = false;
-  if (lenient) {
-    if (!takePositionAsIs()) return;
-  } else if (!reference) {
-    rememberPosition();
-    if (!reference) return;
-  }
-  $("report").hidden = true;
-  runUnsaved = false;
-  headEvents = [];
-  const id = ++calRun;
-  const entered = enterFullscreen(id, lenient);
-  headFree = lenient;
-  if (!await entered) return;
-  const fullscreen = Boolean(document.fullscreenElement);
-  $("calText").textContent = "";
-  const stripes = hasPart(protocol, "okn") ? prepareStripes() : null;
-  const run = await examPhases(id, protocol, stripes);
-  if (!run) return;
-  const effort = await askEffort(id);
-  if (!effort) return;
-  await leaveFullscreen();
-  if (run.calibration) finishCalibration(run.calibration);
-  const field = fieldDegrees(screenWidthCm(), Number($("distance").value));
-  showResult(protocol, run, {
-    createdAt: new Date().toISOString(),
-    protocol: protocol.title,
-    effort: effort.value,
-    okn: stripes ? { instruction: OKN_INSTRUCTION, speedDegPerS: OKN_SPEED, periodDeg: stripes.periodDeg,
-                     stripePairs: field / stripes.periodDeg, fieldDeg: field, colors: [OKN_LIGHT, OKN_DARK] } : null,
-    smoothing: $("smoothing").selectedOptions[0].textContent,
-    filter: "Median rund 140 ms in Auswertung, Rohwerte im Export",
-    distanceCm: Number($("distance").value),
-    screenWidthCm: screenWidthCm(),
-    cameraWish: $("cameraMode").value,
-    camera: /iphone/i.test($("camera").selectedOptions[0]?.textContent ?? "") ? "iPhone" : "FaceTime oder andere",
-    headCheck: lenient ? "aus" : "an",
-    fullscreen,
-    detector: detector.mode,
-    skippedFrames,
-    bridge: source === video ? null : { skippedInPage: source.skipped, droppedInBridge: source.droppedByBridge },
-    mode: $("mMode").textContent,
-    clock: clockSource,
-    duplicates,
-    headEvents,
-    reference,
-  });
-  setStatus("Untersuchung fertig.");
-}
-
-function saveRun() {
-  if (!lastRun) return;
-  const { kind, ...data } = lastRun;
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
-  link.download = `macvision-lauf-${kind}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
-  link.click();
-  // Sofortiges Freigeben kann den Download abbrechen, besonders bei großen Dateien.
-  setTimeout(() => URL.revokeObjectURL(link.href), 60000);
-  runUnsaved = false;
-  $("rSave").textContent = "Gespeichert, nochmal speichern";
-  setStatus(`Gespeichert in Downloads: ${link.download}`);
-}
-
-function renderStats() {
-  if (!running) return;
-  const now = performance.now();
-  if (!stalled && lastFrameAt !== null && now - lastFrameAt > STALL_MS) {
-    stalled = true;
-    resetSegment();
-    setStatus("Keine Bilder: Fenster verdeckt? Messsegment beendet.", true);
-    abortCalibration("Keine Bilder: Kalibrierung abgebrochen.");
-  }
-  updateGuide(now);
-  if (now < segmentStart) {
-    clearRates();
-    return;
-  }
-  const from = Math.max(now - WINDOW_MS, segmentStart);
-  const seconds = Math.max((now - from) / 1000, 0.001);
-  const recent = samples.filter((sample) => sample.at >= from);
-  $("mRate").textContent = comma(recent.length / seconds, 1);
-  $("mDup").textContent = duplicates;
-  $("mClock").textContent = clockSource;
-  if (!recent.length) {
-    for (const id of ["mValid", "mReason", "mNoise", "mIris", "mMs"]) $(id).textContent = "–";
-    return;
-  }
-  const valid = recent.filter((sample) => sample.mean !== null);
-  $("mValid").textContent = `${Math.round((valid.length / recent.length) * 100)} %`;
-  const counts = new Map();
-  for (const sample of recent) {
-    for (const reason of sample.reasons) counts.set(reason, (counts.get(reason) ?? 0) + 1);
-  }
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-  $("mReason").textContent = top ? top[0] : "keine";
-  const noise = standardDeviation(valid.map((sample) => sample.mean));
-  $("mNoise").textContent = noise === null ? "–" : comma(noise, 3);
-  if (reference) {
-    const seen = recent.filter((sample) => sample.pose);
-    const estimate = seen.length
-      ? estimateDistance(reference, median(seen.map((sample) => sample.irisPx)),
-                         median(seen.map((sample) => sample.pose.span)))
-      : null;
-    $("pDist").textContent = estimate === null ? "unsicher" : `${comma(estimate, 0)} cm`;
-  }
-  const widths = recent.map((sample) => sample.irisPx).filter((value) => value !== null);
-  $("mIris").textContent = widths.length ? `${Math.round(median(widths))} px` : "–";
-  $("mMs").textContent = `${comma(recent.reduce((sum, s) => sum + s.ms, 0) / recent.length, 1)} ms`;
-  const latest = valid.slice(-5);
-  const last = samples.at(-1);
-  const unit = calibration ? "°" : "";
-  const value = (number) => (number === null ? "–" : `${signed(number)}${unit}`);
-  $("mPos").textContent = `${value(last.rechts)} / ${value(last.links)}`;
-  if (calibration) {
-    const h = latest.length ? median(latest.map((sample) => sample.mean)) : null;
-    const heights = latest.map((sample) => sample.vMean).filter((value) => value !== null);
-    const v = heights.length ? median(heights) : null;
-    const side = direction(h, DIRECTION_DEGREES);
-    let label = "–";
-    if (side !== null) {
-      const height = v > DIRECTION_DEGREES ? " oben" : v < -DIRECTION_DEGREES ? " unten" : "";
-      label = `${side}${height} ${comma(Math.abs(h), 0)}°`;
-    }
-    $("direction").textContent = label;
-    const both = recent.filter((sample) => sample.rechts !== null && sample.links !== null);
-    $("mDiff").textContent = both.length
-      ? `${comma(median(both.map((sample) => Math.abs(sample.rechts - sample.links))), 1)}°` : "–";
-    const seen = recent.filter((sample) => sample.headPoint);
-    if (seen.length) {
-      const iris = median(seen.map((sample) => sample.irisPx));
-      const change = iris / calibration.irisPx - 1;
-      const headX = median(seen.map((sample) => sample.headPoint.x));
-      const headY = median(seen.map((sample) => sample.headPoint.y));
-      const moved = Math.hypot(headX - calibration.head.x, headY - calibration.head.y) / iris;
-      $("cDrift").textContent = `${change > 0 ? "näher " : "weiter "}${comma(Math.abs(change) * 100, 0)} %`;
-      if (Math.abs(change) > STOP_DISTANCE_CHANGE || moved > STOP_HEAD_SHIFT) {
-        invalidateCalibration("ungültig, Kopf bewegt");
-        setStatus("Kopf hat sich stark bewegt: Kalibrierung ungültig, bitte neu kalibrieren.", true);
-      } else if (Math.abs(change) > MARK_DISTANCE_CHANGE || moved > MARK_HEAD_SHIFT) {
-        setStatus("Kopf hat sich bewegt: Grad ungenauer.", true);
-      } else if ($("status").textContent.startsWith("Kopf hat sich bewegt")) {
-        setStatus("Kalibriert. Kurve in Grad.");
-      }
-    }
-  } else {
-    const smoothed = latest.length ? median(latest.map((sample) => sample.mean)) : null;
-    $("direction").textContent = zeroSet ? (direction(smoothed) ?? "–") : "nicht kalibriert";
-  }
-}
-
-async function start() {
-  const deviceId = $("camera").value;
-  const [wishWidth, wishHeight, wishFps] = $("cameraMode").value.split("x").map(Number);
-  const viaBridge = deviceId === "bruecke";
-  try {
-    // Vor der Brücke laden: Ihr Bildstrom würde das Laden sonst ausbremsen.
-    if (!detector) {
-      setStatus("Lade Modell …");
-      await createDetector();
-    }
-    if (viaBridge) {
-      const { openBridge } = await import("./kamera/bruecke.js");
-      source = await openBridge($("bridgeView"), () => {
-        if (!running) return;
-        stop();
-        setStatus("Brücke getrennt. Messung beendet.", true);
-      });
-      $("bridgeView").hidden = false;
-    } else {
-      const open = (frameRate) => navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { width: { ideal: wishWidth }, height: { ideal: wishHeight }, frameRate,
-                 ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
-      });
-      // Safari bleibt beim iPhone mit ideal bei 30 fps. Erst fest verlangen, sonst so viel wie möglich.
-      stream = DRY_RUN ? (await import("./pruefung/trockenlauf.js")).fakeStream()
-        : await open({ exact: wishFps }).catch(() => open({ ideal: wishFps }));
-      video.srcObject = stream;
-      await video.play();
-    }
-  } catch (error) {
-    stop();
-    setStatus(`Start fehlgeschlagen: ${error.message}`, true);
-    return;
-  }
-  overlay.width = source.videoWidth;
-  overlay.height = source.videoHeight;
-  $("hint").hidden = true;
-  running = true;
-  session += 1;
-  stalled = false;
-  lastFrameMs = null;
-  clockOffset = null;
-  $("toggle").textContent = "Kamera stoppen";
-  $("toggle").classList.add("stop");
-  $("zero").disabled = false;
-  updateButtons();
-  const track = stream?.getVideoTracks()[0];
-  track?.addEventListener("ended", () => {
-    if (!running) return;
-    stop();
-    setStatus("Kamera getrennt. Messung beendet.", true);
-  });
-  const screenAspect = window.screen.width / window.screen.height;
-  if (Math.abs(screenAspect - BOOK_ASPECT) > 0.02) {
-    setStatus("Anderer Bildschirm erkannt? Bildschirmbreite prüfen, sonst sind die Winkel falsch.", true);
-  }
-  const { width, height, frameRate } = viaBridge
-    ? { width: source.videoWidth, height: source.videoHeight, frameRate: 60 } : track.getSettings();
-  $("mMode").textContent = `${width}×${height}, ${comma(frameRate ?? 0, 1)} fps${viaBridge ? ", Brücke" : ""}`;
-  await listCameras();
-  resetSegment();
-  lastFrameAt = performance.now();
-  if (!viaBridge && (frameRate ?? 0) < wishFps - 1) setStatus(`Kamera liefert nur ${comma(frameRate ?? 0, 0)} statt ${wishFps} fps.`, true);
-  else setStatus("Läuft. Dem Hinweis im Bild folgen.");
-  requestFrame(session);
-}
-
-function stop() {
-  running = false;
-  session += 1;
-  abortCalibration("Kamera gestoppt.");
-  invalidateCalibration("keine");
-  if (frameHandle !== null && (!DRY_RUN || source !== video)) source.cancelVideoFrameCallback(frameHandle);
-  frameHandle = null;
-  stream?.getTracks().forEach((track) => track.stop());
-  stream = null;
-  video.srcObject = null;
-  source.close?.();
-  source = video;
-  $("bridgeView").hidden = true;
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-  for (const canvas of [$("eyeRechts"), $("eyeLinks")]) {
-    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-  }
-  resetSegment();
-  drawCurves();
-  clearRates();
-  $("mMode").textContent = "–";
-  $("mClock").textContent = "–";
-  $("hint").hidden = false;
-  $("zero").disabled = true;
-  clearReference();
-  clearGuide();
-  $("toggle").textContent = "Kamera starten";
-  $("toggle").classList.remove("stop");
-  setStatus("Kamera aus.");
-}
-
-function addBridgeOption() {
-  if (EXPERIMENTS) $("camera").add(new Option("iPhone über Brücke, 60 fps", "bruecke"));
-}
-
-async function listCameras() {
-  const select = $("camera");
-  const current = select.value;
-  const devices = (await navigator.mediaDevices.enumerateDevices())
-    .filter((device) => device.kind === "videoinput" && device.label);
-  if (!devices.length) return;
-  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)));
-  addBridgeOption();
-  if (current) select.value = current;
-}
-
-async function exclusive(action) {
-  if (busy) return;
-  busy = true;
-  for (const id of controls) $(id).disabled = true;
-  try {
-    await action();
-  } finally {
-    busy = false;
-    for (const id of controls) $(id).disabled = false;
-  }
-}
-
-$("toggle").addEventListener("click", () => exclusive(running ? stop : start));
-$("zero").addEventListener("click", setZero);
-$("calibrate").addEventListener("click", runCalibration);
-$("remember").addEventListener("click", rememberPosition);
-$("runShort").addEventListener("click", () => runExam(PROTOCOLS.kurz));
-$("runLong").addEventListener("click", () => runExam(PROTOCOLS.lang));
-$("runOkn").addEventListener("click", () => runExam(PROTOCOLS.okn));
-$("runPhone").hidden = !EXPERIMENTS;
-addBridgeOption();
-$("runPhone").addEventListener("click", () => {
-  runExam({ ...PROTOCOLS.okn, title: "iPhone-Test Optokinetik" }, { lenient: true }).catch((error) => {
-    abortCalibration(`iPhone-Test abgebrochen: ${error.message}`);
-    window.alert(`iPhone-Test abgebrochen: ${error.message}`);
-  });
-});
-$("rReport").addEventListener("click", () => {
-  if (!lastRun) return;
-  window.macVisionRun = lastRun;
-  window.open("bericht.html", "_blank");
-});
-$("rSave").addEventListener("click", saveRun);
-$("distance").addEventListener("change", geometryChanged);
-document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement) abortCalibration("Vollbild beendet: Kalibrierung abgebrochen.");
-});
-$("smoothing").addEventListener("change", () => exclusive(async () => {
-  closeDetector();
-  invalidateCalibration("verworfen, Modell gewechselt");
-  if (!running) return;
-  setStatus("Lade Modell …");
-  try {
-    await createDetector();
-  } catch (error) {
-    stop();
-    setStatus(`Modell ließ sich nicht laden: ${error.message}`, true);
-    return;
-  }
-  resetSegment();
-  setStatus("Läuft. Neues Messsegment, Nullpunkt neu setzen.");
-}));
-for (const id of ["camera", "cameraMode"]) {
-  $(id).addEventListener("change", () => {
-    if (running) exclusive(async () => { stop(); await start(); });
-  });
-}
-function geometryChanged() {
-  clearReference();
-  invalidateCalibration("keine");
-}
-$("screenCm").addEventListener("change", geometryChanged);
-document.addEventListener("visibilitychange", () => {
-  if (!running) return;
-  resetSegment();
-  abortCalibration("Fenster verdeckt: Kalibrierung abgebrochen.");
-  if (document.hidden) setStatus("Tab verdeckt: Messsegment beendet.", true);
-  else if (!calibration) setStatus("Läuft. Neues Messsegment.");
-});
-window.addEventListener("beforeunload", (event) => {
-  if (runUnsaved) event.preventDefault();
-});
-window.addEventListener("pagehide", () => stream?.getTracks().forEach((track) => track.stop()));
-window.addEventListener("resize", drawCurves);
-setInterval(renderStats, 500);
-drawCurves();
-if (DRY_RUN) document.querySelector("h1").textContent = "Mac Vision Augen, TROCKENLAUF ohne Kamera";
-</script>
+<script type="module" src="./app.js?v=3"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   analyseNystagmus, analyseSaccadeMetrics, analyseSmoothPursuit, analyseSwj, detectJumps, inBothEyes, judgeNystagmus,
   judgePursuit, judgeSaccades, judgeSwj, STATUS, withoutLidEvents,
-} from "../app/auswertung/befund-logik.js";
+} from "../app/messung/befund-logik.js";
 
 const FRAME_MS = 1000 / 30;
 const times = (durationMs) => Array.from({ length: Math.floor(durationMs / FRAME_MS) }, (_, i) => i * FRAME_MS);
@@ -146,10 +146,16 @@ test("Einordnung metrisch, hypo und hyper", () => {
   const judge = (gain) => judgeSaccades("rechts", { trials: 4, firstGain: gain, endGain: 1 }, true);
   assert.ok(judge(1).text.includes("metrisch"));
   assert.equal(judge(1).status, STATUS.normal);
-  assert.ok(judge(0.8).text.includes("hypometrisch"));
-  assert.equal(judge(0.8).status, STATUS.border);
-  assert.equal(judge(0.6).status, STATUS.abnormal);
+  assert.ok(judge(0.7).text.includes("hypometrisch"));
+  assert.equal(judge(0.7).status, STATUS.border);
+  assert.equal(judge(0.5).status, STATUS.abnormal);
   assert.ok(judge(1.3).text.includes("hypermetrisch"));
+});
+
+test("Unsichere Vertikale zeigt Werte, aber höchstens eine Tendenz", () => {
+  const result = judgeSaccades("Oben", { trials: 4, firstGain: 0.5, endGain: 1 }, true, { uncertain: true });
+  assert.equal(result.status, STATUS.border);
+  assert.match(result.text, /vertikal unsicher/);
 });
 
 test("Zu wenige Versuche ergeben keine Metrik-Aussage", () => {

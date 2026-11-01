@@ -4,7 +4,7 @@ Stand 31.10.2026. Für eine andere KI, die Code und Konzepte prüfen soll.
 
 ## Projekt
 
-Mac Vision: lokales Tracking mit der 30-fps-Kamera eines MacBook Pro M1. Schwerpunkt ist jetzt ein
+Ocumotion: lokales Tracking mit der 30-fps-Kamera eines MacBook Pro M1. Schwerpunkt ist jetzt ein
 Eye-Tracking im Browser, das zu einer geführten Okulomotorik-Untersuchung ausgebaut werden soll.
 
 - Ordner: `/Users/maximilianhabs/Code/mac-vision`

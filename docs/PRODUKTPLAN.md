@@ -1,6 +1,6 @@
 # Produktplan: vom Prototyp zur öffentlichen Software
 
-Stand 01.11.2026. Etappe 1 ist gebaut und mit einem echten Kurzlauf bestätigt, siehe `MESSUNGEN.md`; die CI ist grün. Etappe 2 ist gebaut und mit einem Vergleichslauf geprüft, in Safari noch nicht. Das Repo bleibt privat, bis der Nutzer die Sichtbarkeit selbst ändert.
+Stand 01.11.2026. Etappen 1 und 2 sind abgeschlossen, in Safari ungeprüft. Etappe 3 ist gebaut und im Trockenlauf geprüft: Seitenleiste, Module, Sitzung, Maßstabsetappe, eigener Bereich Oculytics. Dazu Rückmeldung nach jedem Modul, Note der Kalibrierung (Arbeitsgrenzen: Hervorragend bis 1,0° Abweichung und 0,75° Unruhe, Gut bis 1,5° und 1,0°, Mittel bis zur Freigabe, sonst Schlecht) und gemerkte Kalibrierungen je Setting, nur im Browser, benannt und einzeln löschbar. Echter Lauf steht aus. Noch offen in Etappe 3: Sprache, Bildschirmgröße per Kartenvergleich und Gerätecheck. Das Repo bleibt privat, bis der Nutzer die Sichtbarkeit selbst ändert.
 Die Prüfpunkte für die Veröffentlichung stehen in `ROAD_TO_PUBLIC.md`, dieser Plan legt die Reihenfolge fest.
 
 ## Ziel
@@ -85,6 +85,8 @@ Wünsche des Nutzers vom 01.11.2026 für Etappe 3. Eigene, elegante Gestaltung s
 | Durchführungshinweise | Licht, Abstand, Brille, Augen-Make-up wie Kajal und Lidschatten, Bildschirmhelligkeit. Der Einfluss von Make-up ist nicht gemessen |
 | Bericht | zuerst ein bis zwei Seiten Visualisierung, danach Tabellen mit Messwerten, Grenzen und Referenzen. Erweitert `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`, Abschnitt 6, das bisher nur eine Übersichtsseite vorsieht |
 
+**Zweiter Entwurf, Wünsche des Nutzers:** einklappbare Seitenleiste führt durch Kamera, Hinweise, Kalibrierung (überspringbar), Untersuchungen, Bericht. Die Kamera startet nur per Klick der Person, Regel „Kamera nur bei Bedarf“ bleibt; gibt es mehrere Kameras, etwa eine USB-Webcam, erscheint die Auswahl im ersten Schritt. Mini-Augen bleiben in der Leiste. Gestaltung wie die Praxis-Website `neuro-praxis`: Navy und Petrol, Manrope und Geist, leichte große Überschriften, Pillen-Knöpfe. Kein Hell-Dunkel-Schalter. Die App heißt Ocumotion, der Bericht Oculytics. Muster: `app/entwurf.html`, Schriften unter OFL in `app/vendor/schriften/`.
+
 Themen für die Kacheln, Vorschlag: **Vorbereitung** (Kalibrierung), **Augen in Ruhe** (Spontan- und Blickrichtungsnystagmus), **Folgebewegungen** (Blickfolge, Optokinetik), **Schnelle Bewegungen** (Sakkaden), später **Augenstellung** (Cover-Test). Dazu Zusammenstellungen mit einem Klick.
 
 **Dunkle Oberfläche und dunkler Reizhintergrund:** Oberfläche dunkel ist eine reine Gestaltungsfrage. Der Reizhintergrund ist eine Messfrage: Gemessen wird die Irismitte, nicht die Pupille, eine weite Pupille hilft also nicht direkt. Der Bildschirm beleuchtet zudem das Gesicht; dunkler heißt weniger Licht für die Kamera,
@@ -128,7 +130,7 @@ experimente/
 tests/
 ```
 
-Heute, nach Etappe 1, liegen die Rechenlogik und `protokolle.js` zusammen in `app/auswertung/`, und `app/index.html` ist noch ungeteilt. Die Rechenlogik wandert unverändert mit ihren Tests. Die Erkennung gehört in einen Worker: Das erfüllt die Projektregel „Erkennung im eigenen Thread“, die die Seite heute nicht einhält.
+Heute, nach Etappe 1, liegen die Rechenlogik und `protokolle.js` zusammen in `app/messung/`, und `app/index.html` ist noch ungeteilt. Die Rechenlogik wandert unverändert mit ihren Tests. Die Erkennung gehört in einen Worker: Das erfüllt die Projektregel „Erkennung im eigenen Thread“, die die Seite heute nicht einhält.
 Das Dateiformat bekommt eine Versionsnummer; alte eigene Dateien bleiben lesbar oder werden ausdrücklich aufgegeben.
 
 ## Etappen
@@ -173,7 +175,7 @@ Grenzen mit Herkunft. Das ist keine Rechtsberatung; vor der Veröffentlichung so
 |---|---|
 | Zielgruppe und Zweck | Forschung und Lehre, Fachpersonen |
 | Ampel im Bericht | öffentlich keine, Grenzen nur als benannte Vergleichswerte |
-| Name | neuer Name ohne „Mac“, vor Etappe 6 prüfen, ob er frei ist |
+| Name | **Entschieden:** App Ocumotion, Bericht Oculytics. In einer Websuche ohne Treffer, Markenregister für Deutschland, EU und USA noch vor Public prüfen; Repo- und Ordnername heißen noch `mac-vision` |
 | Lizenz | Apache-2.0, wie EDF-Analyzer |
 | Eigene Messwerte | Methode und Kennzahlen öffentlich lassen, Personenbezug benennen; die Rohdateien bleiben privat |
 | Hosting | erst lokal, Pages als eigener Schritt |

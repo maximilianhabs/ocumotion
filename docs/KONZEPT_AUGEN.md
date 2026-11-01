@@ -1,4 +1,4 @@
-# Mac Vision — Konzept Augen, Blickrichtung, Nystagmus
+# Ocumotion — Konzept Augen, Blickrichtung, Nystagmus
 
 Stand 31.10.2026, nach externem Review überarbeitet. Gebaut ist `app/index.html` mit den
 MediaPipe-Irispunkten, ohne eigene Randanalyse. Am Auge ist noch nichts gemessen. Kalibrierung und

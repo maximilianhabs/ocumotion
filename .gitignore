@@ -6,6 +6,7 @@ data/*
 macvision-guetetest-*.json
 macvision-okn-*.json
 macvision-lauf-*.json
+ocumotion-*.json
 *.mp4
 *.mov
 *.jpg

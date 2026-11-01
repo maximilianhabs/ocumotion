@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
-<title>Mac Vision Bericht</title>
+<title>Oculytics</title>
 <style>
   :root {
     --bg: #f5f5f4; --page: #ffffff; --text: #1c1917; --muted: #57534e; --line: #d6d3d1;
@@ -56,14 +56,14 @@
 </head>
 <body>
 <div id="load">
-  <p><label>Gütetest-Datei öffnen: <input id="file" type="file" accept="application/json"></label>
+  <p><label>Messung öffnen: <input id="file" type="file" accept="application/json"></label>
   <button id="print" type="button">Drucken oder als PDF sichern</button></p>
   <p id="message" class="muted"></p>
 </div>
 <main id="report" hidden></main>
 
 <script type="module">
-import { buildReport } from "./auswertung/bericht-logik.js";
+import { buildReport } from "./messung/bericht-logik.js";
 
 const COLOR = { right: "var(--right)", left: "var(--left)", target: "var(--target)", mean: "var(--mean)", line: "var(--line)" };
 const number = (value, digits = 1) => (value === null || value === undefined ? "–" : value.toFixed(digits).replace(".", ","));
@@ -118,7 +118,7 @@ function pursuitChart(entry) {
   const height = 80;
   const start = entry.startTime;
   const x = (time) => ((time - start) / entry.run.durationMs) * width;
-  const y = (value) => height / 2 - (value / 14) * (height / 2);
+  const y = (value) => height / 2 - (value / 18) * (height / 2);
   const line = (points, color, stroke, dash) => polyline(
     points.filter((p) => p.h !== null).map((p) => ({ time: p.time, value: p.h })), x, y, color, stroke, dash);
   const target = Array.from({ length: 201 }, (_, i) => {
@@ -215,7 +215,11 @@ function render(data) {
   const [fixation, targets, saccades, pursuit] = report.sections;
   const { meta, calibration, summary, findings } = report;
   const { limits } = findings;
-  const notExamined = [...report.notExamined, ...(report.oknOnly || findings.okn ? [] : ["Optokinetik (in diesem Lauf nicht untersucht)"])];
+  const { examined } = report;
+  const notExamined = [...report.notExamined, ...[["Spontannystagmus", examined.spontaneous], ["Blickrichtung", examined.gaze], ["Blickfolge", examined.pursuit], ["Sakkaden", examined.saccades], ["Optokinetik", examined.okn]]
+    .filter(([name, done]) => !done && !(report.oknOnly && name !== "Optokinetik")).map(([name]) => `${name} (nicht untersucht)`)];
+  let chapter = 0;
+  const part = (done, title, status, body) => (done ? finding(++chapter, title, status, body) : "");
   const eye = (item) => (!item ? "in dieser Datei nicht berechnet" : (item.errorH ?? null) === null ? (item.reason ?? "ohne Kalibrierung")
     : `${number(item.errorH)}° / ${number(item.errorV)}°${item.reason ? `, ${item.reason}` : ""}`);
   const pursuitBlocks = report.oknOnly ? "" : pursuit.runs.map((entry, index) => {
@@ -224,7 +228,7 @@ function render(data) {
   }).join("");
   const main = document.getElementById("report");
   main.innerHTML = `
-    <h1>Okulomotorischer Befundbericht${meta?.protocol ? `: ${escapeHtml(meta.protocol)}` : ""}</h1>
+    <h1>Oculytics${meta?.protocol ? `: ${escapeHtml(meta.protocol)}` : ""}</h1>
     <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} ·
       ${escapeHtml(meta?.smoothing ?? "")} · ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
     <div class="banner">Forschungsprototyp. Maschinelle Einordnung gegen vorläufige Grenzen, keine Diagnose, ärztliche Beurteilung erforderlich.</div>
@@ -233,7 +237,7 @@ function render(data) {
 
     ${report.oknOnly ? `<p class="muted">Der Maßstab stammt aus den kurzen horizontalen Sprüngen dieses Laufs, nicht aus einer Kalibrierung. Gradwerte sind Näherungen; Aussagen zu Ruhe, Blickrichtung, Blickfolge und Sakkaden macht dieser Lauf nicht.</p>` : ""}
     ${report.oknOnly ? "" : `
-    ${finding(1, "Fixation in Ruhe, Spontannystagmus", findings.spontaneous.status, `<div class="split"><div>
+    ${part(examined.spontaneous, "Fixation in Ruhe, Spontannystagmus", findings.spontaneous.status, `<div class="split"><div>
       ${line(findings.spontaneous.horizontal.status, `Horizontal: ${findings.spontaneous.horizontal.text}`)}
       ${line(findings.spontaneous.vertical.status, `Vertikal: ${findings.spontaneous.vertical.text}`)}
       ${facts([
@@ -243,7 +247,7 @@ function render(data) {
       ])}</div>${fixationChart(fixation)}</div>
       <p class="limit">Unter Fixation; ein unterdrückter Nystagmus bleibt unsichtbar. Grenze: ${escapeHtml(limits.nystagmus.source)}.</p>`)}
 
-    ${finding(2, "Blickrichtung", findings.gazeStatus, `
+    ${part(examined.gaze, "Blickrichtung", findings.gazeStatus, `
       ${line(!findings.gazeExamined ? "nicht beurteilbar" : findings.gazeHits ? "auffällig" : "unauffällig",
         `Blickrichtungsnystagmus: ${!findings.gazeExamined ? "nicht untersucht" : findings.gazeHits ? "Hinweis, siehe Tabelle" : "nein, bis zum geprüften Winkel"}.`)}
       ${beatLine("Downbeat", findings.downbeat, findings.gazeExamined)}
@@ -251,14 +255,14 @@ function render(data) {
       ${gazeTable(findings)}
       <p class="limit">Der Bildschirm begrenzt die Auslenkung auf rund 15° horizontal und 10° vertikal, das liegt unter den üblichen Prüfwinkeln. Ein Blickrichtungsnystagmus bei stärkerer Auslenkung ist damit nicht ausgeschlossen.</p>`)}
 
-    ${finding(3, "Square-Wave-Jerks", findings.swj.status, `${line(findings.swj.status, findings.swj.text)}
+    ${part(examined.spontaneous, "Square-Wave-Jerks", findings.swj.status, `${line(findings.swj.status, findings.swj.text)}
       <p class="limit">Grenze: ${escapeHtml(limits.swj.source)}. Kandidaten nur, wenn beide Augen springen.</p>`)}
 
-    ${finding(4, "Blickfolge", findings.pursuitStatus, `${pursuitBlocks}
+    ${part(examined.pursuit, "Blickfolge", findings.pursuitStatus, `${pursuitBlocks}
       <p class="muted">Violett Ziel, blau rechtes Auge, orange gestrichelt linkes Auge, schwarz Mittel. Lücken bleiben Lücken.</p>
       <p class="limit">Folge-Gain über ${number(limits.pursuit.gainNormal, 1)} und bis ${limits.pursuit.saccadesNormal} Sakkaden je Zyklus gelten als glatt. ${escapeHtml(limits.pursuit.source)}.</p>`)}
 
-    ${finding(5, "Sakkaden und Zielgenauigkeit", findings.saccadeStatus, `<div class="split"><div>
+    ${part(examined.saccades, "Sakkaden und Zielgenauigkeit", findings.saccadeStatus, `<div class="split"><div>
       ${findings.saccades.map((item) => line(item.status, item.text)).join("")}
       ${calibration.selfScaled ? `<p class="muted">Ohne Kalibrierung keine Metrik: Der Maßstab stammt aus diesen Sprüngen, die Aussage wäre ein Kreisschluss. Die Bewegung selbst ist unten in der Ablaufleiste und im Export erhalten.</p>` : ""}
       ${facts([
@@ -269,7 +273,7 @@ function render(data) {
       <p class="limit">Metrisch gilt von ${number(limits.saccade.normalLow, 2)} bis ${number(limits.saccade.normalHigh, 2)}. ${escapeHtml(limits.saccade.source)}. Vertikal nur bei freigegebener Vertikale.</p>`)}
     `}
 
-    ${findings.okn ? finding(report.oknOnly ? 1 : 6, "Optokinetik", findings.okn.status, `
+    ${findings.okn ? finding(++chapter, "Optokinetik", findings.okn.status, `
       <p>${findings.okn.conform} von ${findings.okn.total} Richtungen reizkonform.</p>
       ${findings.okn.items.map((item) => `${line(item.status, `${item.label}: ${item.text}`)}${oknChart(item)}`).join("")}
       ${findings.okn.control ? `<p>${escapeHtml(findings.okn.control.text)}</p>` : `<p class="muted">Ohne Kontrollblock: Ein Messartefakt durch Hornhautreflexe ist nicht ausgeschlossen.</p>`}
@@ -295,13 +299,13 @@ function show(data) {
   }
 }
 
-window.macVisionLoad = show;
+window.ocumotionLoad = show;
 document.getElementById("print").addEventListener("click", () => window.print());
 document.getElementById("file").addEventListener("change", async (event) => {
   const [file] = event.target.files;
   if (file) show(JSON.parse(await file.text()));
 });
-if (window.opener?.macVisionRun) show(window.opener.macVisionRun);
+if (window.opener?.ocumotionRun) show(window.opener.ocumotionRun);
 </script>
 </body>
 </html>

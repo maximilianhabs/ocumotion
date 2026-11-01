@@ -1,7 +1,7 @@
 // OKN-Auswertung gegen konstruierte Augenbewegungen. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { analyseBlock, controlVerdict, fieldDegrees, OKN_BLOCKS, OKN_STATE, stripeOn, stripePeriod } from "../app/auswertung/okn-logik.js";
+import { analyseBlock, controlVerdict, fieldDegrees, OKN_BLOCKS, OKN_STATE, stripeOn, stripePeriod } from "../app/messung/okn-logik.js";
 
 const FRAME_MS = 1000 / 30;
 const times = (durationMs) => Array.from({ length: Math.floor(durationMs / FRAME_MS) }, (_, i) => i * FRAME_MS);

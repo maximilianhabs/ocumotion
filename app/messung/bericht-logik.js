@@ -208,12 +208,14 @@ function findings(run, calibration, summary, timeline) {
   });
   const saccadeSeries = toSeries(run.saccades.samples, calibration);
   const metrics = analyseSaccadeMetrics(saccadeSeries.mittel, run.saccades.jumps);
-  const calibrated = !calibration.selfScaled;
+  // Der grobe Maßstab nutzt die Endlagen. Die erste Landung bleibt deshalb auch ohne Kalibrierung aussagekräftig.
+  const measurable = (item) => item && (!calibration.selfScaled || item.firstGain !== null);
+  const judge = (name, item, released, options) => judgeSaccades(name, measurable(item) ? item : null, released, options);
   const saccades = [
-    judgeSaccades("Rechts", metrics.rechts, calibrated && releasedH),
-    judgeSaccades("Links", metrics.links, calibrated && releasedH),
-    judgeSaccades("Oben", metrics.oben, summary.usableV),
-    judgeSaccades("Unten", metrics.unten, summary.usableV),
+    judge("Rechts", metrics.rechts, releasedH),
+    judge("Links", metrics.links, releasedH),
+    judge("Oben", metrics.oben, true, { uncertain: !summary.usableV }),
+    judge("Unten", metrics.unten, true, { uncertain: !summary.usableV }),
   ];
   return {
     spontaneous: { ...spontaneous, status: worstOf([spontaneous.horizontal, spontaneous.vertical]) },
@@ -270,8 +272,24 @@ function section(id, title, status, extra = {}) {
   return { id, title, status, ...extra };
 }
 
+// Einzelne Module lassen Teile aus. Fehlendes wird leer und zählt als nicht untersucht.
+function withEmptyParts(run) {
+  return { ...run, fixation: run.fixation ?? { samples: [] }, saccades: run.saccades ?? { samples: [], jumps: [] } };
+}
+
+function examinedParts(run) {
+  return {
+    spontaneous: run.fixation.samples.length > 0,
+    gaze: (run.gaze?.length ?? 0) > 0,
+    pursuit: (run.pursuit?.length ?? 0) > 0,
+    saccades: run.saccades.jumps.length > 0 && !run.saccades.scaleOnly,
+    okn: (run.okn?.length ?? 0) > 0,
+  };
+}
+
 export function buildReport(data) {
-  const { run, meta } = data;
+  const { meta } = data;
+  const run = withEmptyParts(data.run);
   const calibration = run.calibration?.length ? calibrate(run.calibration) : scaleFromSaccades(run);
   const analysis = analyseRun(run, calibration);
   const { summary } = analysis.grade;
@@ -308,6 +326,7 @@ export function buildReport(data) {
     meta,
     summary: oknOnly ? { ...summary, headline: "Nur Optokinetik, Maßstab aus Sprüngen" } : summary,
     oknOnly,
+    examined: examinedParts(run),
     calibration,
     analysis,
     condition: "Beobachtung unter visueller Fixation. Testperson nicht klinisch beurteilt.",

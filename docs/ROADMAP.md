@@ -1,4 +1,4 @@
-# Mac Vision — Fahrplan
+# Ocumotion — Fahrplan
 
 Stand 31.10.2026. Begründungen stehen in `KONZEPT.md`. Jede Etappe endet mit einer
 Messung oder einer sichtbaren Funktion, nicht mit Code allein.
@@ -100,6 +100,23 @@ Vorrecherche vom 01.11.2026, nur Suchtreffer, kein Original gelesen. Nichts davo
 | Torsion, Kopfneigetest, Fusionsbreite, Nahpunkt | mit dieser Kamera nicht geplant |
 
 Offen: Volltexte zu automatisiertem Cover-Test (Morrison 2022, PMC9072275), VIOMA, Normwerte vertikaler Phorien.
+
+### B6 — Weitere Messfragen, Stand 01.11.2026
+
+Berichtsplan und Stufen stehen in `KONZEPT_OCULYTICS.md`.
+
+| Punkt | Inhalt |
+|---|---|
+| Frenzelbrille oder Plusgläser | Prüfen, ob die Erkennung durch eine starke Linse noch arbeitet. Ohne Fixation wäre Spontannystagmus viel besser sichtbar |
+| Rotation | Viele Nystagmen haben eine Drehkomponente, heute nicht gemessen. Möglicher Weg über das Irismuster; Machbarkeit und Mindestauflösung unbekannt, bei 30–37 Bildpunkten Iris fraglich |
+| Optokinetik vertikal | Zusätzlich zur horizontalen Prüfung |
+| Antisakkaden | Eigenes Modul, laut Suchtreffern bei kognitiven Störungen aussagekräftiger als einfache Sakkaden |
+| Blickrichtungsnystagmus | Exzentrizität und Abgrenzung des Endstellungsnystagmus belegen |
+| Muster und Lokalisation | Literatur-Tiefenrecherche: welcher Befund passt zu welcher Region, wie spezifisch ist das |
+
+### B7 — Bringt die Kalibrierung etwas?
+
+Planmäßige Messreihe: dieselben Module mit Kalibrierung, mit grobem Maßstab aus Sprüngen und nur in Irisdurchmessern, mehrere Personen, Abstand gemessen. Verglichen werden Abweichung an neuen Zielen, Gain, Rauschen und Wiederholbarkeit. Erst danach steht fest, ob Kalibrierung Standard, optional oder überflüssig ist. Erster Hinweis in `MESSUNGEN.md`, 01.11.2026.
 
 ### Quellen, noch nicht im Original gelesen
 

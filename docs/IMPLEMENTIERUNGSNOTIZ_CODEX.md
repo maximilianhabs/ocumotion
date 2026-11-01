@@ -33,7 +33,7 @@ mit echter Kamera, normales Chrome und Safari. Das klärt ein kleiner Vortest vo
 
 ---
 
-# Mac Vision – technische Übergabe
+# Ocumotion – technische Übergabe
 
 31.10.2026 · Zielort: `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` im Repository.
 Empfehlungen nach Code-Review, keine neuen Kameramessungen. `CLAUDE.md` gilt weiterhin.

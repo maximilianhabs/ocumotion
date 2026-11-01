@@ -23,11 +23,11 @@ export const LIMITS = {
     source: "Bei Sprüngen über 1°: Kontrollen 2,3 ± 2,4 je Minute, über 10 je Minute auffällig (Rascol 1991); über 9 je Minute bei Jüngeren (Herishanu 1981). Bei Älteren häufiger",
   },
   pursuit: {
-    gainNormal: 0.8, gainAbnormal: 0.6, saccadesNormal: 2, saccadesAbnormal: 4, minSaccade: 1.5,
+    gainNormal: 0.7, gainAbnormal: 0.5, saccadesNormal: 4, saccadesAbnormal: 7, minSaccade: 2,
     source: "Arbeitsgrenze; junge Gesunde um 0,92 bei 0,3 Hz, altersabhängig, kein belegter Grenzwert für Sakkadierung",
   },
   saccade: {
-    normalLow: 0.85, normalHigh: 1.1, borderLow: 0.75, borderHigh: 1.2, minTrials: 3,
+    normalLow: 0.75, normalHigh: 1.25, borderLow: 0.6, borderHigh: 1.4, minTrials: 3,
     source: "Arbeitsgrenze; kein belegter Grenzwert gefunden, leichte Hypometrie ist auch bei Gesunden üblich",
   },
 };
@@ -274,7 +274,8 @@ export function judgePursuit(result, released) {
   return { status: gain < gainNormal || saccades > saccadesNormal ? STATUS.border : STATUS.normal, text };
 }
 
-export function judgeSaccades(direction, summary, released) {
+// uncertain: Die Achse ist schwach gemessen. Dann gibt es Werte, aber höchstens eine Tendenz.
+export function judgeSaccades(direction, summary, released, { uncertain = false } = {}) {
   if (!released || !summary) return { status: STATUS.unknown, text: `${direction}: nicht beurteilbar.` };
   const { normalLow, normalHigh, borderLow, borderHigh, minTrials } = LIMITS.saccade;
   const gain = summary.firstGain ?? summary.endGain;
@@ -284,6 +285,6 @@ export function judgeSaccades(direction, summary, released) {
   if (gain < normalLow) word = "hypometrisch";
   if (gain > normalHigh) word = "hypermetrisch";
   let status = STATUS.normal;
-  if (word !== "metrisch") status = gain < borderLow || gain > borderHigh ? STATUS.abnormal : STATUS.border;
-  return { status, text: `${direction}: ${word}, ${figures}.` };
+  if (word !== "metrisch") status = !uncertain && (gain < borderLow || gain > borderHigh) ? STATUS.abnormal : STATUS.border;
+  return { status, text: `${direction}: ${word}, ${figures}${uncertain ? ", vertikal unsicher" : ""}.` };
 }

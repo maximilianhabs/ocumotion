@@ -1,9 +1,9 @@
 // Berichtsmodell gegen einen konstruierten Lauf. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ACCURACY_TARGETS, PURSUIT_RUNS } from "../app/auswertung/guetetest-logik.js";
-import { STEPS } from "../app/auswertung/kalibrierung-logik.js";
-import { buildReport, NOT_EXAMINED, toSpans } from "../app/auswertung/bericht-logik.js";
+import { ACCURACY_TARGETS, PURSUIT_RUNS } from "../app/messung/guetetest-logik.js";
+import { STEPS } from "../app/messung/kalibrierung-logik.js";
+import { buildReport, NOT_EXAMINED, toSpans } from "../app/messung/bericht-logik.js";
 
 const FRAME_MS = 1000 / 30;
 const eyeAt = (h, v) => ({ x: 0.04 + 0.018 * h, y: 0.018 * v, aperture: 0.36 });
@@ -168,7 +168,7 @@ test("Ohne Kalibrierung gibt der Kurzlauf Muster, aber keine Metrik aus", () => 
   };
   const report = buildReport({ run, meta: META });
   assert.equal(report.calibration.selfScaled, true);
-  assert.ok(report.summary.headline.startsWith("Kurzlauf ohne Kalibrierung"));
+  assert.ok(report.summary.headline.startsWith("Ohne Kalibrierung"));
   assert.equal(report.findings.saccades[0].status, "nicht beurteilbar");
   assert.equal(report.findings.spontaneous.horizontal.status, "unauffällig");
   assert.equal(report.findings.pursuit[0].status, "unauffällig");

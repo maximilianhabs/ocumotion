@@ -1,7 +1,7 @@
-# Mac Vision — Untersuchungsprotokolle
+# Ocumotion — Untersuchungsprotokolle
 
-Stand 31.10.2026. Drei Protokolle mit je einem Start-Button in `app/index.html`, definiert in
-`app/auswertung/protokolle.js`. Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
+Stand 01.11.2026. Die App startet einzelne Module aus `MODULES`, die Etappen stammen aus diesen Protokollen. Fehlt der Maßstab, kommt eine kurze Sprung-Etappe davor. Blickfolge seit dem 01.11. ±12° mit 0,2 und 0,4 Hz. Definiert in
+`app/messung/protokolle.js`. Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
 
 | Baustein | Kurzlauf, rund 1,5 min | Ausführlich, rund 3,5 min | Optokinetik, rund 1,5 min |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-# Mac Vision — Konzept Kalibrierung und Okulomotorik-Untersuchung
+# Ocumotion — Konzept Kalibrierung und Okulomotorik-Untersuchung
 
 Stand 31.10.2026. Baut auf `KONZEPT_AUGEN.md` auf. Gebaut ist nur die Kalibrierung in
 `app/index.html`, mit echtem Gesicht noch unbestätigt. Die Untersuchungen aus Abschnitt 4

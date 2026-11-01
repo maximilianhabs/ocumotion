@@ -1,4 +1,4 @@
-# Mac Vision — Konzept
+# Ocumotion — Konzept
 
 Stand 31.10.2026. Noch ist keine Erkennung gebaut. Abschnitt 2 ist gemessen, alle
 Leistungsangaben darüber hinaus sind Erwartungen, bis Etappe E1 sie bestätigt.
@@ -15,7 +15,7 @@ Die eingebaute Kamera des MacBook Pro M1 wird zum lokalen Sensor für drei Dinge
 Alles läuft auf dem Gerät. Kein Bild und keine Landmarke verlässt den Mac.
 
 **Abgrenzung zum Vision Lab:** Das Vision Lab bleibt der stationäre Messplatz (C922,
-720p60, Beelink, `homeserver/services/vision-lab/`). Mac Vision ist das interaktive
+720p60, Beelink, `homeserver/services/vision-lab/`). Ocumotion ist das interaktive
 Gegenstück: spontan am Arbeitsplatz, mit mehr Rechenleistung, aber schwächerer Kamera.
 Beide Projekte bleiben getrennt.
 
@@ -37,7 +37,7 @@ Bild und die Frage, ob MediaPipe in Python auf dem Mac die GPU nutzt.
 
 ## 3. Was sich gegenüber dem Vision Lab ändert
 
-| Thema | Vision Lab | Mac Vision |
+| Thema | Vision Lab | Ocumotion |
 |---|---|---|
 | Engpass | Rechenleistung (N150, vier Kerne, keine GPU) | **Kamera** (30 fps, 720p, Weitwinkel) |
 | Modelle | immer nur eines gleichzeitig | vermutlich mehrere, in E2 zu messen |

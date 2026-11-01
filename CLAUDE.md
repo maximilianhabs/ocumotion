@@ -1,4 +1,4 @@
-# Projektregeln mac-vision
+# Projektregeln Ocumotion
 
 Lokales Tracking und Gestensteuerung mit der internen Kamera des MacBook Pro M1.
 Konzept: `docs/KONZEPT.md`, Augen: `docs/KONZEPT_AUGEN.md`, Kalibrierung und Untersuchungen: `docs/KONZEPT_OKULOMOTORIK.md`. Stand und Etappen: `docs/ROADMAP.md`.

@@ -484,3 +484,32 @@ Zwei Kurzläufe in Chrome, MacBook-Kamera, eine Person, wenige Minuten auseinand
 
 **Der Worker verschlechtert die Messung nicht erkennbar.** Rauschen gleich oder knapp besser, Aussetzer ähnlich. Die Aussetzer kommen in beiden Läufen gebündelt in einzelnen Phasen, bei wechselnden Aufgaben: im ersten Lauf Blickfolge 13 und Sprünge 31, im zweiten Ruhe 40 und Blickfolge 17.
 Die Streifen liefen beide Male ohne Lücke. Die Ursache ist offen. Der Worker hat sie nicht beseitigt, die Hauptthread-Erkennung ist also nicht die alleinige Ursache. Die Lücken betragen rund 66 ms, also ein fehlendes Bild.
+
+## 01.11.2026 — Neue Oberfläche, nur Trockenlauf
+
+Chrome ohne Fenster, Trockenlauf und Kunstkamera, kein echtes Gesicht. Module Blickfolge und Sakkaden nacheinander: Maßstabsetappe nur beim ersten Modul, beide landen im Bericht, der Rest steht als nicht untersucht. Die geparkte Kamera in der Seitenleiste lief weiter (19,7–20,0 Analysen/s bei 20 fps), keine Abrufe nach außen. Ein Lauf am echten Gesicht steht aus, ebenso die Prüfung der Maßstabsetappe mit nur sieben Sprüngen.
+
+## 01.11.2026 — Kurze Kalibrierung, Nachrechnung am ausführlichen Lauf
+
+Nachrechnung eines einzigen Laufs vom 31.10., eine Person, Kopf wanderte im Lauf. Neue Ziele: sechs Punkte, die nicht in die Kalibrierung eingingen. Die kurze Fassung wurde aus demselben Lauf herausgeschnitten, nicht echt gemessen.
+
+| Variante | Prüffehler h / v | Neue Ziele RMS h / v | Gain langsam / schnell |
+|---|---:|---:|---:|
+| 8 Lern- und 6 Prüfpunkte, je 2,8 s | 0,95° / 1,31° | 3,48° / 3,34° | 1,01 / 0,99 |
+| 5 Lern- und 3 Prüfpunkte, je 1,1 s | 0,43° / 1,94° | 3,15° / 2,48° | 0,99 / 0,98 |
+| Grober Maßstab aus Sprüngen, ohne Kalibrierung | – | 2,60° / 2,22° | 0,96 / 0,95 |
+
+**Die kurze Fassung ist hier nicht schlechter.** Gebaut sind deshalb 8 Punkte mit rund 18 s statt rund 75 s. Der grobe Maßstab war an neuen Zielen sogar genauer als jede Kalibrierung. Das ist ein Hinweis, kein Beweis: ein Lauf, und der Kopf bewegte sich, was spätere Ziele benachteiligt. Der Prüffehler der kurzen Fassung ruht auf nur drei Punkten. Eine echte Messreihe steht als B7 im Backlog.
+
+## 01.11.2026 — Warum die Blickfolge streng ausfiel
+
+Sitzung 08:46 mit Kalibrierung (Prüffehler horizontal 1,57°), Blickfolge ±15°, 0,2 und 0,4 Hz, Vergleich mit früheren Läufen bei ±10°. Eine Person, Kopf von Bild zu Bild ruhig.
+
+| Lauf | Spitzen­geschwindigkeit | Gain aus Amplitude | glatter Gain | Sakkaden je Zyklus | Rest um den Sinus |
+|---|---:|---:|---:|---:|---:|
+| ±15°, 0,2 Hz | 18,8 °/s | 0,79 | 0,70 | 3,2 | 1,55° |
+| ±15°, 0,4 Hz | 37,7 °/s | 0,83 | 0,68 | 4,3 | 1,65° |
+| ±10°, 0,25 Hz | 15,7 °/s | 1,01 | 0,96 | 1,3 | 0,88° |
+| ±10°, 0,5 Hz | 31,4 °/s | 1,01 | 0,98 | 4,3 | 1,21° |
+
+Die breitere Bahn senkte den Gain deutlich. Ob das Auge wirklich nicht folgte oder die Messung am Rand nachgibt, trennen diese Läufe nicht. Geändert: ±12° bei 0,2 und 0,4 Hz, also 15,1 und 30,2 °/s wie in den guten Läufen. Arbeitsgrenzen großzügiger: Blickfolge Gain 0,7 und 0,5, Sakkaden 4 und 7 je Zyklus; Sakkaden 0,75 bis 1,25 normal, 0,6 bis 1,4 Tendenz. Die Vertikale hatte im alten Lauf nur zwei Sprünge je Richtung, bei drei nötigen, darum „nichts“; das Modul hat nun vier je Richtung, und sie zählt höchstens als Tendenz, solange sie unsicher ist. Ohne Kalibrierung wird die erste Landung bewertet, weil der Maßstab aus den Endlagen stammt.

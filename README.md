@@ -1,4 +1,4 @@
-# Mac Vision
+# Ocumotion
 
 Lokale Okulomotorik-Messung mit der eingebauten Laptop-Kamera. Forschungsprototyp, keine Diagnose.
 
@@ -18,6 +18,7 @@ Nebenprojekte wie iPhone-Brücke und Handtest stehen in [experimente/](experimen
 | [docs/KONZEPT_OKULOMOTORIK.md](docs/KONZEPT_OKULOMOTORIK.md) | Kalibrierung, beide Augen, Okulomotorik-Untersuchung |
 | [docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md](docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md) | Zielbild Bericht und Kurzprofile |
 | [docs/PRODUKTPLAN.md](docs/PRODUKTPLAN.md) | Weg vom Prototyp zur öffentlichen Software |
+| [docs/KONZEPT_OCULYTICS.md](docs/KONZEPT_OCULYTICS.md) | Bericht Oculytics: Einordnung, Abbildungen, Stufen |
 | [docs/ROAD_TO_PUBLIC.md](docs/ROAD_TO_PUBLIC.md) | Fahrplan für die Veröffentlichung |
 | [docs/PROTOKOLLE.md](docs/PROTOKOLLE.md) | Kurzlauf und ausführlicher Lauf |
 | [docs/KONZEPT_OKN_MODUS.md](docs/KONZEPT_OKN_MODUS.md) | Optokinetischer Test H40 |

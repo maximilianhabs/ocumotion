@@ -1,4 +1,4 @@
-# Road to Public — Mac Vision
+# Road to Public — Ocumotion
 
 Stand 31.10.2026. Plan, kein Umschaltauftrag: Das Repo bleibt privat, bis der Nutzer die Sichtbarkeit selbst ändert.
 Aufbau nach den Guides von Anonymisator, NeuroVoice AI und EEG Navigator. Keine Rechtsberatung.
@@ -33,7 +33,7 @@ noch einmal geprüft werden.
 | Upbeat/Downbeat-Sätze | Bleiben Messbeschreibung, nie Hinweis auf eine Ursache |
 | Eigene Messwerte in `MESSUNGEN.md` | Einzige Testperson ist der Autor. Entscheiden: veröffentlichen, oder nur als Muster und Methode |
 | Lokale Pfade und Sitzungsdetails in `FUNDSTELLEN.md`, `UEBERGABE_CODE_REVIEW.md` | Für Public herauslösen oder kürzen; der Benutzername ist kein Geheimnis, gehört aber nicht in die Außendarstellung |
-| Name | „Mac“ ist eine Apple-Marke, und das Projekt soll plattformübergreifend werden. Vor Public über einen eigenen Namen entscheiden |
+| Name | **Entschieden:** App Ocumotion, Bericht Oculytics. Register für Deutschland, EU und USA vor Public prüfen, Repo und Ordner noch umbenennen |
 | Streifenwarnung | Im Eigentest entfernt. Für fremde Personen wieder nötig, dann als Text auf der Karte, nicht als `window.confirm` |
 | Patienten | Bleibt: keine Patientendaten, auch nicht in Issues oder Beispielen. In `CONTRIBUTING.md` als erste Regel |
 
@@ -103,7 +103,7 @@ Die Bau-Etappen stehen in `PRODUKTPLAN.md`.
 
 ## Entscheidungen beim Nutzer
 
-Name, Lizenz, Veröffentlichung eigener Messwerte, Bericht in der öffentlichen Fassung mit oder ohne Ampel, Demo im Netz ja/nein.
+Lizenz, Veröffentlichung eigener Messwerte, Bericht in der öffentlichen Fassung mit oder ohne Ampel, Demo im Netz ja/nein.
 
 ## Quellen
 

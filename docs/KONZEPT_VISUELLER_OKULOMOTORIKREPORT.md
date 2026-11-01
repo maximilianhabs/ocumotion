@@ -25,7 +25,7 @@ Läufen eines gesunden Probanden horizontal nah an der langen Variante; für Pat
 
 ---
 
-# Mac Vision – Visueller Okulomotorikbericht und adaptive Kurzprotokolle
+# Ocumotion – Visueller Okulomotorikbericht und adaptive Kurzprotokolle
 Version 1.0 · 31.10.2026 · Neuer Konzeptentwurf zur Umsetzung durch eine andere KI
 
 **Zielort im Projekt:** docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md  

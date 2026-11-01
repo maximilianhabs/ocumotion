@@ -32,8 +32,8 @@ export const GAZE_HOLD_MS = 4000;
 export const GAZE_RETURN_MS = 1500;
 
 export const PURSUIT_RUNS = [
-  { name: "langsam", amplitude: 10, frequency: 0.25, durationMs: 12000 },
-  { name: "schnell", amplitude: 10, frequency: 0.5, durationMs: 8000 },
+  { name: "langsam", amplitude: 12, frequency: 0.2, durationMs: 15000 },
+  { name: "schnell", amplitude: 12, frequency: 0.4, durationMs: 8000 },
 ];
 
 export const SACCADE_JUMPS = [
@@ -281,7 +281,7 @@ function axisUsable(report, accuracy, fixation, axis) {
 function summarise(report) {
   if (report.calibration?.selfScaled) {
     return {
-      headline: "Kurzlauf ohne Kalibrierung: Muster beurteilt, Grad nur grob",
+      headline: "Ohne Kalibrierung: Muster beurteilt, Grad nur grob",
       lines: [
         "Der Maßstab stammt aus den Sprüngen selbst: horizontal grob brauchbar, vertikal nur als Hinweis.",
         "Zielgenauigkeit und Sakkaden-Metrik sind hier nicht beurteilbar, dafür braucht es den ausführlichen Lauf.",

@@ -1,4 +1,4 @@
-# Mac Vision — Fundstellen
+# Ocumotion — Fundstellen
 
 Für jede KI oder Person, die dieses Projekt übernimmt. Stand 31.10.2026.
 
@@ -29,16 +29,21 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/ROADMAP.md` | Etappen und aktueller Stand |
 | `docs/MESSUNGEN.md` | alle Messergebnisse |
 | `experimente/handtest/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
-| `app/index.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
+| `app/index.html`, `app/styles.css`, `app/app.js` | Oberfläche, Gestaltung und Ablauf der App |
+| `app/messung/sitzung-logik.js` | Sammelt Module einer Sitzung für Oculytics |
+| `serve.py` | Lokaler Server ohne Zwischenspeicher, `make start` |
+| `app/messung/vorab-logik.js` | Note der Kalibrierung, Rückmeldung nach dem Modul |
+| `app/kamera/kalibrierspeicher.js` | Gemerkte Kalibrierungen im Browser |
+| `app/vendor/schriften/` | Manrope und Geist |
 | `app/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
-| `app/auswertung/protokolle.js` | Definition der zwei Untersuchungsprotokolle |
-| `app/auswertung/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
-| `app/auswertung/befund-logik.js` | Ereigniserkennung und Einordnung gegen benannte Grenzen |
-| `app/auswertung/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
+| `app/messung/protokolle.js` | Definition der zwei Untersuchungsprotokolle |
+| `app/messung/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
+| `app/messung/befund-logik.js` | Ereigniserkennung und Einordnung gegen benannte Grenzen |
+| `app/messung/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
 | `app/pruefung/trockenlauf.js` | Simuliertes Gesicht für `?trockenlauf` |
-| `app/auswertung/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
-| `app/auswertung/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
-| `app/auswertung/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
+| `app/messung/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
+| `app/messung/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
+| `app/messung/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
 | `experimente/werkzeuge/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
 | `experimente/werkzeuge/kamera_details.swift` | Belichtung, Fokus und Bildwinkel abfragen, `make kamera-details` |
 | `experimente/werkzeuge/kamera_takt.swift` | Echte Bilder je Sekunde vom iPhone ohne Browser, `make kamera-takt` |
@@ -48,7 +53,7 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `tests/` | Tests, `make test` |
 | `experimente/README.md` | Überblick über alles außerhalb der Hauptsoftware |
 | `.github/workflows/test.yml` | Tests bei jedem Push |
-| `.claude/launch.json` | Startkonfiguration `mac-vision-test`, Port 5600 |
+| `.claude/launch.json` | Startkonfiguration `ocumotion`, Port 5600 |
 
 Start der Testseite: `make start`, dann <http://127.0.0.1:5600>. Für die Kamera einen
 normalen Browser nutzen; das eingebaute Browserfenster der Claude-App verweigert sie.
@@ -60,11 +65,11 @@ normalen Browser nutzen; das eingebaute Browserfenster der Claude-App verweigert
 | `~/.claude/projects/-Users-maximilianhabs-Code-mac-vision/memory/` | Projekt-Memory: Stand, Entscheidungen, offene Freigaben |
 | `~/.claude/projects/-Users-maximilianhabs-Code-mac-vision/460ea22a-50fb-4ee3-ad88-137fafceda5f.jsonl` | Verlauf der Gründungssitzung |
 | `~/.claude/projects/-Users-maximilianhabs-Code-Programme-Claude-Code/memory/MEMORY.md` | nur noch ein Verweis auf dieses Projekt |
-| `~/.claude/projects/-Users-maximilianhabs-Code-Programme-Claude-Code/memory/reference_localhost_ports.md` | Portliste aller Projekte, Mac Vision = 5600 |
+| `~/.claude/projects/-Users-maximilianhabs-Code-Programme-Claude-Code/memory/reference_localhost_ports.md` | Portliste aller Projekte, Ocumotion = 5600 |
 
 ## Verwandte Projekte
 
-Diese Projekte liefern Vorarbeit, gehören aber nicht zu Mac Vision.
+Diese Projekte liefern Vorarbeit, gehören aber nicht zu Ocumotion.
 
 | Ort | Bezug |
 |---|---|
@@ -82,5 +87,5 @@ Diese Projekte liefern Vorarbeit, gehören aber nicht zu Mac Vision.
 ## Nicht ins Repo
 
 Bilder, Videos, Augenausschnitte, Modelle, Messdaten aus `data/` und exportierte Dateien
-`macvision-guetetest-*.json`, `macvision-okn-*.json` und `macvision-lauf-*.json` aus dem Downloads-Ordner. Commits, Pushes und
+`ocumotion-*.json` und ältere `macvision-*.json` aus dem Downloads-Ordner. Commits, Pushes und
 Installationen nur auf ausdrückliche Ansage des Nutzers.

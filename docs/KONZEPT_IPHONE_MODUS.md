@@ -1,4 +1,4 @@
-# Mac Vision — Konzept eigenständiger iPhone-Modus
+# Ocumotion — Konzept eigenständiger iPhone-Modus
 
 Stand 31.10.2026. **Pipeline, nicht begonnen.** Gebaut ist nichts. Der Vorschlag kam von außen und wurde geprüft;
 er ist eine Option für später und ändert die aktuelle Reihenfolge nicht.

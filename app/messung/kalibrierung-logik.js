@@ -43,6 +43,20 @@ export const STEPS = [
   step("Prüfung links unten", -7, -5, "check"),
 ];
 
+// Kurzfassung: fünf Lernpunkte und drei Prüfpunkte. Nachgerechnet am Lauf vom 31.10., siehe MESSUNGEN.md.
+export const QUICK_STEPS = [
+  step("Mitte", 0, 0, "fit"),
+  step("Rechts 15°", 15, 0, "fit"),
+  step("Links 15°", -15, 0, "fit"),
+  step("Oben 10°", 0, 10, "fit"),
+  step("Unten 10°", 0, -10, "fit"),
+  step("Prüfung rechts oben", 7, 5, "check"),
+  step("Prüfung links unten", -7, -5, "check"),
+  step("Prüfung links 7°", -7, 0, "check"),
+];
+export const QUICK_SETTLE_MS = 1000;
+export const QUICK_COLLECT_MS = 1100;
+
 const radians = (degrees) => (degrees * Math.PI) / 180;
 
 export function targetPixels(target, distanceCm, cssWidth, cssHeight, screenWidthCm = SCREEN_WIDTH_CM) {

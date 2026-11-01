@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   ACCURACY_TARGETS, analyseFixation, analysePursuit, analyseRun, analyseSaccades, analyseTargets,
   differenceNoise, grade, PURSUIT_RUNS, toSeries,
-} from "../app/auswertung/guetetest-logik.js";
+} from "../app/messung/guetetest-logik.js";
 
 const near = (actual, expected, tolerance) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
@@ -77,7 +77,7 @@ test("Zielfehler stimmen und benennen das schlechteste Ziel", () => {
 test("Perfekte Blickfolge hat Gain 1 und keine Verzögerung", () => {
   const run = PURSUIT_RUNS[0];
   const points = times(run.durationMs, 1000).map((time) => ({
-    time, h: 10 * Math.sin(2 * Math.PI * run.frequency * ((time - 1000) / 1000)), v: 0,
+    time, h: run.amplitude * Math.sin(2 * Math.PI * run.frequency * ((time - 1000) / 1000)), v: 0,
   }));
   const result = analysePursuit(points, run, 1000);
   near(result.gain, 1, 1e-6);
@@ -90,7 +90,7 @@ test("Bekannter Gain, Verzögerung und Aufholsakkaden werden gefunden", () => {
   const run = PURSUIT_RUNS[0];
   const points = times(run.durationMs).map((time) => {
     const phase = 2 * Math.PI * run.frequency * ((time - 100) / 1000);
-    return { time, h: 8 * Math.sin(phase) + (Math.floor(time / 500) % 2) * 2, v: 0 };
+    return { time, h: 0.8 * run.amplitude * Math.sin(phase) + (Math.floor(time / 500) % 2) * 2, v: 0 };
   });
   const result = analysePursuit(points, run, 0);
   near(result.gain, 0.8, 0.1);

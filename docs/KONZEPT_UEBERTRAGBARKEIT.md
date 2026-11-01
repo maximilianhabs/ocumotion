@@ -1,4 +1,4 @@
-# Mac Vision — Konzept Übertragbarkeit
+# Ocumotion — Konzept Übertragbarkeit
 
 Stand 31.10.2026. Der Browseransatz lässt sich auf andere Geräte übertragen, geprüft ist aber nur ein
 MacBook Pro M1 mit interner Kamera. Alles andere ist Plan.

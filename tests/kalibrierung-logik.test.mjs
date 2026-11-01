@@ -1,7 +1,7 @@
 // Kalibrierung gegen Augen mit bekannter Abbildung. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calibrate, combineEyes, evaluateEye, hasEnoughData, MAX_SIDE_DIFFERENCE, medianFilter, sensitivity, STEPS, targetPixels, targetsFit, toDegrees } from "../app/auswertung/kalibrierung-logik.js";
+import { calibrate, combineEyes, evaluateEye, hasEnoughData, MAX_SIDE_DIFFERENCE, medianFilter, sensitivity, STEPS, targetPixels, targetsFit, toDegrees } from "../app/messung/kalibrierung-logik.js";
 
 const near = (actual, expected, tolerance = 1e-6) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);
