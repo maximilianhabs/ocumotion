@@ -2,16 +2,16 @@
 
 [![Lizenz: Apache 2.0](https://img.shields.io/badge/Lizenz-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.1.0-informational.svg)](CHANGELOG.md)
-[![Status](https://img.shields.io/badge/Status-Forschungsprototyp-orange.svg)](#grenzen)
+[![Status](https://img.shields.io/badge/Status-Proof%20of%20Concept-orange.svg)](#grenzen)
 
-> **English:** A local research and teaching tool that measures eye movements with a laptop's built-in webcam. Modules cover
+> **English:** An experimental proof of concept that measures eye movements with a laptop's built-in webcam. Modules cover
 > fixation, gaze holding, smooth pursuit, saccades and an experimental optokinetic test, and the Oculytics report sets the values against
-> provisional working limits. Everything runs in the browser and no image leaves the device. It is not validated, not a medical device
+> provisional working limits. Everything runs in the browser and no image leaves the device. It is not calibrated against normative data, not a medical device
 > and not for diagnosis. The rest of this README is in German.
 
-Forschungs- und Lehrwerkzeug für Fachpersonen: Ocumotion misst Augenbewegungen mit der eingebauten Laptop-Kamera, direkt im Browser. Kamerabilder verlassen das Gerät nicht und werden nicht gespeichert.
+Experimenteller Proof of Concept: Ocumotion misst Augenbewegungen mit der eingebauten Laptop-Kamera, direkt im Browser. Kamerabilder verlassen das Gerät nicht und werden nicht gespeichert.
 
-**Keine Diagnose, kein Medizinprodukt, nicht für klinische Entscheidungen.** Die Grenzen im Bericht sind vorläufige Arbeitsgrenzen.
+**Noch nicht mit Normkollektiven geeicht. Keine Diagnose, kein Medizinprodukt, nicht für klinische Entscheidungen.** Die Grenzen im Bericht sind vorläufige Arbeitsgrenzen.
 
 ![Werkzeugkasten mit den Modulen](docs/bilder/module.jpg)
 
@@ -66,4 +66,4 @@ Bilder bleiben im Arbeitsspeicher des Browsers. Augenwerte werden nur gespeicher
 
 Fehler und Ideen bitte nach [CONTRIBUTING.md](CONTRIBUTING.md) melden, Sicherheitsfragen nach [SECURITY.md](SECURITY.md). Bitte nie Bilder oder echte Messdateien anhängen.
 
-Code und Dokumente entstanden mit KI-Unterstützung. Verantwortung und fachliche Bewertung liegen beim Autor. Zum Zitieren dient [CITATION.cff](CITATION.cff).
+Ocumotion und Oculytics sind frei gewählte Projektnamen, keine eingetragenen Marken. Code und Dokumente entstanden mit KI-Unterstützung. Verantwortung und fachliche Bewertung liegen beim Autor. Zum Zitieren dient [CITATION.cff](CITATION.cff).

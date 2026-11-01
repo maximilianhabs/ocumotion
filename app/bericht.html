@@ -231,7 +231,7 @@ function render(data) {
     <h1>Oculytics${meta?.protocol ? `: ${escapeHtml(meta.protocol)}` : ""}</h1>
     <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} ·
       ${escapeHtml(meta?.smoothing ?? "")} · ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
-    <div class="banner">Forschungs- und Lehrwerkzeug. Einordnung gegen vorläufige Arbeitsgrenzen, nicht validiert. Kein Befund, keine Diagnose, nicht für klinische Entscheidungen.</div>
+    <div class="banner">Experimenteller Proof of Concept. Einordnung gegen vorläufige Arbeitsgrenzen, noch nicht mit Normkollektiven geeicht. Kein Befund, keine Diagnose, nicht für klinische Entscheidungen.</div>
     <h2>${escapeHtml(summary.headline)}</h2>
     <p class="muted">${escapeHtml(report.condition)}</p>
 

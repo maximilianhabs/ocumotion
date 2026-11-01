@@ -35,14 +35,13 @@ noch einmal geprüft werden.
 
 **Stand 01.11.2026:** Zweck, Lizenz, Wortwahl im Bericht, `LICENSE`, `NOTICE`, `CITATION.cff`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, README und Streifenwarnung auf der Karte sind erledigt. `CLAUDE.md`, `.claude/` und drei interne Dokumente sind aus dem Stand entfernt; in der Historie bleiben sie, enthalten aber keine Geheimnisse.
 
+**Entscheidung des Nutzers am 01.11.2026:** Veröffentlichung als experimenteller Proof of Concept. Keine Markenprüfung; bei Beschwerden wird der Name geändert. Eine letzte Abnahme, zweite Person und fachkundige Durchsicht sind bewusst nicht Voraussetzung.
+
 **Offen vor dem Umschalten:**
 
 | Punkt | Wer |
 |---|---|
-| Fachkundige Durchsicht von Zweck und Bericht | Nutzer |
-| Echter Lauf der aktuellen Fassung, zweite Person, zweites Gerät | Nutzer |
-| Markenregister Deutschland, EU, USA für Ocumotion und Oculytics | Nutzer |
-| Repo und Ordner in `ocumotion` umbenennen, Adresse in `CITATION.cff` anpassen | auf Ansage |
+| Lokalen Ordner in `ocumotion` umbenennen | später, nur lokal |
 | About-Text, Regelsatz für Branches und Tags | beim Umschalten |
 
 ## Stufe 1 — Risiken beseitigen, zwingend vor Public

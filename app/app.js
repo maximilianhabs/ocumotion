@@ -1310,7 +1310,7 @@ async function runExam(protocol, { lenient = false } = {}) {
   showResult(protocol, run, {
     createdAt: new Date().toISOString(),
     protocol: protocol.title,
-    purpose: "Forschungs- und Lehrwerkzeug, keine Diagnose, nicht für klinische Entscheidungen",
+    purpose: "Experimenteller Proof of Concept, nicht mit Normkollektiven geeicht, keine Diagnose",
     effort: effort.value,
     okn: stripes ? { instruction: OKN_INSTRUCTION, speedDegPerS: OKN_SPEED, periodDeg: stripes.periodDeg,
                      stripePairs: field / stripes.periodDeg, fieldDeg: field, colors: [OKN_LIGHT, OKN_DARK] } : null,
