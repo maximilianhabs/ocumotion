@@ -215,7 +215,7 @@ bisher, also braucht es Vergleichsdaten Gesunder je Altersgruppe.
 1. Gütetest mit gespeicherter Datei, Prüffehler und Unruhe protokollieren, Wiederholbarkeit über
    mehrere Läufe messen, Schwellen an diesen Daten festlegen.
 1a. Einmalige Kameramessung aus Abschnitt 2b.
-2. Worker, unabhängige Bildquelle und eigene Irisrandanalyse (`IMPLEMENTIERUNGSNOTIZ_CODEX.md`).
+2. Worker, unabhängige Bildquelle und eigene Irisrandanalyse.
 3. Künstliches Auge und Kopf-Störtest, jetzt auch mit Sakkaden und Blickfolge.
 4. Blickfolge langsam: einfachste Prüfung mit bekanntem Sollsignal.
 5. Sakkaden, dann Primärposition, dann schnelle Blickfolge und Optokinetik.

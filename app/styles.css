@@ -121,7 +121,7 @@ h1 { margin: 0; font: 200 44px/1.08 var(--display); letter-spacing: -.025em; tex
 .report.saved li span { margin-right: auto; }
 .pill.small { padding: 7px 16px; font-size: 13px; }
 .chart { display: flex; gap: 18px; flex-wrap: wrap; }
-.chart svg { flex: 1 1 320px; max-width: 640px; max-height: 350px; background: var(--deep); border-radius: 14px; }
+.chart svg { flex: 1 1 320px; max-width: 640px; max-height: 430px; background: var(--deep); border-radius: 14px; }
 .grade-table { max-width: 420px; margin-bottom: 18px; }
 .note { margin: 10px 0 0; color: var(--faint); font-size: 13px; }
 .field input[type="text"] { width: 220px; }

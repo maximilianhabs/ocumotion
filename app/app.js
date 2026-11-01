@@ -5,7 +5,7 @@ import { calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, targetPix
 import { buildReport } from "./messung/bericht-logik.js";
 import { MODULES, PROTOCOLS, moduleById, sessionProtocol } from "./messung/protokolle.js";
 import { emptySession, mergeRun, needsScale } from "./messung/sitzung-logik.js";
-import { calibrationPoints, gradeCalibration, moduleSummary, outcomeHeadline, TARGET_TOLERANCE_DEG, validShare } from "./messung/vorab-logik.js";
+import { calibrationPoints, cloudSummary, gradeCalibration, moduleSummary, outcomeHeadline, TARGET_ZONE, validShare } from "./messung/vorab-logik.js";
 import { calibrationChart, endpointChart, pursuitChart, restChart, traceChart } from "./vorschau.js";
 import { listSaved, removeCalibration, sameSetting, saveCalibration } from "./kamera/kalibrierspeicher.js";
 import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stagesMs, stepText } from "./messung/etappen-logik.js";
@@ -1169,12 +1169,12 @@ function renderOutcome(protocol, run) {
   pendingCalibration = null;
   if (calibrated) {
     const fitted = calibrate(run.calibration);
-    const graded = gradeCalibration(fitted);
     const points = calibrationPoints(run.calibration, fitted);
-    const checks = points.filter((point) => point.role === "check");
-    $("oChart").innerHTML = calibrationChart(points, TARGET_TOLERANCE_DEG);
+    const cloud = cloudSummary(points.filter((point) => point.role === "check"));
+    const graded = gradeCalibration(fitted, cloud.share);
+    $("oChart").innerHTML = calibrationChart(points, TARGET_ZONE);
     $("oNote").textContent = fitted.mittel.model
-      ? `${checks.filter((point) => point.hit).length} von ${checks.length} Prüfpunkten im Zielbereich von ${TARGET_TOLERANCE_DEG}°. Ringe Soll, Punkte Blick, volle Marken Prüfpunkte.`
+      ? `${cloud.inside} von ${cloud.total} Messungen an den Prüfpunkten (${Math.round(cloud.share * 100)} %) liegen im Zielbereich, ±${TARGET_ZONE.h}° horizontal und ±${TARGET_ZONE.v}° vertikal. Jeder Punkt ist ein Kamerabild, die gestrichelte Ellipse umfasst zwei Standardabweichungen. Blasse Punkte dienten zum Lernen.`
       : "Keine Berechnung möglich, deshalb nur die Sollpunkte.";
     $("oTitle").textContent = `Kalibrierung: ${graded.grade}.`;
     $("oTitle").dataset.tone = graded.tone;
@@ -1310,6 +1310,7 @@ async function runExam(protocol, { lenient = false } = {}) {
   showResult(protocol, run, {
     createdAt: new Date().toISOString(),
     protocol: protocol.title,
+    purpose: "Forschungs- und Lehrwerkzeug, keine Diagnose, nicht für klinische Entscheidungen",
     effort: effort.value,
     okn: stripes ? { instruction: OKN_INSTRUCTION, speedDegPerS: OKN_SPEED, periodDeg: stripes.periodDeg,
                      stripePairs: field / stripes.periodDeg, fieldDeg: field, colors: [OKN_LIGHT, OKN_DARK] } : null,

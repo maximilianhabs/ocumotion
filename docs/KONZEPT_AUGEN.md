@@ -182,7 +182,7 @@ A0 bis A4 brauchen keine Installation. Ein Umzug nach Python bleibt später mög
 belastbaren Messungen wandert die Analyse in einen Web Worker, weil die Erkennung sonst den
 Hauptthread blockiert. Die Testseite nutzt bisher `requestVideoFrameCallback`, der an der
 Darstellung hängt. Vorgesehen ist `MediaStreamTrackProcessor`, der in einem ersten Test ohne
-sichtbares Fenster weiterlieferte. Details stehen in `IMPLEMENTIERUNGSNOTIZ_CODEX.md`.
+sichtbares Fenster weiterlieferte.
 
 **Lichtbedingungen:** Frontal und diffus, Bildschirm hell, keine Fenster oder Lampen als
 Spiegelung im Auge, ohne Brille, Video-Effekte von macOS aus.

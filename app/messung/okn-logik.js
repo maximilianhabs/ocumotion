@@ -126,8 +126,8 @@ export function controlVerdict(moving, control) {
 
 // Die vier Ergebnisse auf die Berichtsfarben: Ausbleiben bedeutet nicht krank.
 export function oknStatus(state) {
-  if (state === OKN_STATE.conform) return "unauffällig";
-  return state === OKN_STATE.uncertain ? "grenzwertig" : "nicht beurteilbar";
+  if (state === OKN_STATE.conform) return "innerhalb";
+  return state === OKN_STATE.uncertain ? "Grenzbereich" : "nicht beurteilbar";
 }
 
 export function directionWord(sign) {

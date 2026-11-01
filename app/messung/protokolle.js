@@ -37,7 +37,7 @@ const OKN_ONLY_JUMPS = [
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 0 },
 ];
 
-const STRIPES_TEXT = "Folgen Sie den Streifen mit den Augen, immer dem nächsten. Kopf ruhig.";
+const STRIPES_TEXT = "Bewegte Streifen. Bei bekannter Anfallsneigung oder Musterempfindlichkeit bitte nicht durchführen, Abbruch mit Esc. Folgen Sie den Streifen mit den Augen, immer dem nächsten. Kopf ruhig.";
 
 export const PROTOCOLS = {
   kurz: {

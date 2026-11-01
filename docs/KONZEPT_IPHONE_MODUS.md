@@ -35,7 +35,7 @@ induziertem OKN korrelierte die langsame Phase mit der VOG (r = 0,98 horizontal,
 iPhone 13 Pro Max). Eine Arbeit von 2025 berichtet dagegen Schwächen bei vertikalen Bewegungen in einer früheren
 ARKit-Prüfung und nennt die Blackbox als Hauptnachteil. Für Patienten mit krankhaftem Nystagmus wurde kein Beleg gefunden.
 
-**Geometrie nachgerechnet:** Dein iPhone 17 Pro Max hat rechnerisch rund 15,9 × 7,3 cm aktive Fläche (6,9 Zoll,
+**Geometrie nachgerechnet:** Ein iPhone 17 Pro Max hat rechnerisch rund 15,9 × 7,3 cm aktive Fläche (6,9 Zoll,
 Annahme 2868 × 1320 Bildpunkte, ohne Sicherheitsrand).
 
 | Abstand | Quer h | Quer v | Vergenz je Auge |

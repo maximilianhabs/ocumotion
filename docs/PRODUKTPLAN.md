@@ -173,14 +173,13 @@ Grenzen mit Herkunft. Das ist keine Rechtsberatung; vor der Veröffentlichung so
 
 | Frage | Empfehlung |
 |---|---|
-| Zielgruppe und Zweck | Forschung und Lehre, Fachpersonen |
-| Ampel im Bericht | öffentlich keine, Grenzen nur als benannte Vergleichswerte |
+| Zielgruppe und Zweck | **Entschieden:** Forschung und Lehre, Fachpersonen |
+| Bericht | **Entschieden:** drei Zonen als innerhalb, Grenzbereich, außerhalb der Arbeitsgrenze; fachkundig gegenzulesen |
 | Name | **Entschieden:** App Ocumotion, Bericht Oculytics. In einer Websuche ohne Treffer, Markenregister für Deutschland, EU und USA noch vor Public prüfen; Repo- und Ordnername heißen noch `mac-vision` |
-| Lizenz | Apache-2.0, wie EDF-Analyzer |
-| Eigene Messwerte | Methode und Kennzahlen öffentlich lassen, Personenbezug benennen; die Rohdateien bleiben privat |
+| Lizenz | **Entschieden:** Apache-2.0 |
+| Eigene Messwerte | **Entschieden:** `MESSUNGEN.md` öffentlich, Rohdateien nicht |
 | Hosting | erst lokal, Pages als eigener Schritt |
 | Hand- und Gestenteil | aus diesem Repo herausnehmen |
-| `CLAUDE.md` und `.claude/` | prüfen, ob sie öffentlich bleiben sollen; sie enthalten nur Arbeitsregeln |
 
 ## Bewusst noch nicht
 

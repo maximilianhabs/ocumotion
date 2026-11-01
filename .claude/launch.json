@@ -1,6 +1,0 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    { "name": "ocumotion", "runtimeExecutable": "make", "runtimeArgs": ["start"], "port": 5600 }
-  ]
-}

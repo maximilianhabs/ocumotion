@@ -7,9 +7,14 @@ macvision-guetetest-*.json
 macvision-okn-*.json
 macvision-lauf-*.json
 ocumotion-*.json
+
+# --- Interne Arbeitsdateien ---
+CLAUDE.md
+.claude/
 *.mp4
 *.mov
 *.jpg
+!docs/bilder/*.jpg
 *.jpeg
 *.png
 

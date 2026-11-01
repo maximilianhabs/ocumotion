@@ -1,13 +1,15 @@
 // Kurze Rückmeldung direkt nach einem Modul. Die Noten der Kalibrierung sind Arbeitsgrenzen dieses Aufbaus, keine Norm.
 
-import { median, toDegrees } from "./kalibrierung-logik.js";
+import { MAX_ERROR_H, MAX_ERROR_V, toDegrees } from "./kalibrierung-logik.js";
 
-export const TARGET_TOLERANCE_DEG = 2;
+// Zielbereich wie die Freigabe der Kalibrierung: horizontal enger als vertikal.
+export const TARGET_ZONE = { h: MAX_ERROR_H, v: MAX_ERROR_V };
 
+// Anteil der Prüfmessungen im Zielbereich. So passt die Note zur Punktwolke.
 const GRADES = [
-  { grade: "Hervorragend", tone: "good", maxError: 1, maxNoise: 0.75 },
-  { grade: "Gut", tone: "good", maxError: 1.5, maxNoise: 1 },
-  { grade: "Mittel", tone: "fair", maxError: Infinity, maxNoise: Infinity },
+  { grade: "Hervorragend", tone: "good", minShare: 0.9 },
+  { grade: "Gut", tone: "good", minShare: 0.7 },
+  { grade: "Mittel", tone: "fair", minShare: 0.4 },
 ];
 
 const number = (value, digits = 1) => (value === null || value === undefined ? "–" : value.toFixed(digits).replace(".", ","));
@@ -20,7 +22,7 @@ const WHY = {
   "Prüffehler zu groß": (eye) => `Die Prüfpunkte lagen im Mittel ${degrees(eye.errorH)} daneben, erlaubt sind 2°. Häufig hat sich der Kopf bewegt.`,
 };
 
-export function gradeCalibration(calibration) {
+export function gradeCalibration(calibration, share) {
   const eye = calibration.mittel;
   const rows = [
     ["Abweichung horizontal", degrees(eye.errorH)],
@@ -34,22 +36,37 @@ export function gradeCalibration(calibration) {
   if (!eye.passedH) {
     return { grade: "Schlecht", tone: "poor", text: `${WHY[eye.reasonH ?? eye.reason]?.(eye) ?? "Die Kalibrierung konnte nicht berechnet werden."} ${axes}`, rows };
   }
-  const match = GRADES.find((item) => eye.errorH <= item.maxError && eye.noiseH <= item.maxNoise);
-  return { grade: match.grade, tone: match.tone, text: `${axes} Im Mittel liegt der Blick ${degrees(eye.errorH)} neben den Prüfpunkten.`, rows };
+  const percent = `${Math.round(share * 100)} % der Prüfmessungen liegen im Zielbereich.`;
+  const match = GRADES.find((item) => share >= item.minShare);
+  if (!match) return { grade: "Schlecht", tone: "poor", text: `Nur ${percent} ${axes}`, rows };
+  return { grade: match.grade, tone: match.tone, text: `${percent} ${axes}`, rows };
 }
 
-// Soll und gemessener Blick je Punkt, für das Punktbild. Ohne Modell bleiben nur die Sollpunkte.
+const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+const spreadOf = (values, center) => Math.sqrt(mean(values.map((value) => (value - center) ** 2)));
+
+// Je Punkt eine Wolke aus allen Einzelbildern. Treffer heißt: Die Messung liegt im Zielbereich um den Sollpunkt.
 export function calibrationPoints(entries, calibration) {
   const model = calibration.mittel?.model;
   return entries.map((entry) => {
+    const base = { h: entry.target.h, v: entry.target.v, role: entry.target.role, cloud: [], meanH: null, meanV: null, sdH: null, sdV: null, inside: 0 };
     const both = entry.samples.filter((sample) => sample.rechts && sample.links);
-    const base = { h: entry.target.h, v: entry.target.v, role: entry.target.role, estH: null, estV: null, hit: false };
     if (!model || both.length < 3) return base;
-    const at = (key) => median(both.map((sample) => (sample.rechts[key] + sample.links[key]) / 2));
-    const estimate = toDegrees(model, at("x"), at("y"));
-    return { ...base, estH: estimate.h, estV: estimate.v,
-             hit: Math.hypot(estimate.h - base.h, estimate.v - base.v) <= TARGET_TOLERANCE_DEG };
+    const cloud = both.map((sample) => {
+      const degrees = toDegrees(model, (sample.rechts.x + sample.links.x) / 2, (sample.rechts.y + sample.links.y) / 2);
+      return { h: degrees.h, v: degrees.v, inside: ((degrees.h - base.h) / TARGET_ZONE.h) ** 2 + ((degrees.v - base.v) / TARGET_ZONE.v) ** 2 <= 1 };
+    });
+    const meanH = mean(cloud.map((point) => point.h));
+    const meanV = mean(cloud.map((point) => point.v));
+    return { ...base, cloud, meanH, meanV, sdH: spreadOf(cloud.map((point) => point.h), meanH), sdV: spreadOf(cloud.map((point) => point.v), meanV),
+             inside: cloud.filter((point) => point.inside).length };
   });
+}
+
+export function cloudSummary(points) {
+  const total = points.reduce((sum, point) => sum + point.cloud.length, 0);
+  const inside = points.reduce((sum, point) => sum + point.inside, 0);
+  return { total, inside, share: total ? inside / total : 0 };
 }
 
 const SAMPLE_PARTS = (run) => [

@@ -123,11 +123,11 @@ test("Zeitpunkte werden zu Spannen zusammengefasst", () => {
 
 test("Der Befund trennt Abschnitte und meldet fehlendes Blickhalten als nicht untersucht", () => {
   const { findings } = buildReport({ run: fullRun(), meta: META });
-  assert.equal(findings.spontaneous.horizontal.status, "unauffällig");
+  assert.equal(findings.spontaneous.horizontal.status, "innerhalb");
   assert.equal(findings.gazeExamined, false);
   assert.equal(findings.gazeStatus, "nicht beurteilbar");
   assert.deepEqual(findings.downbeat, []);
-  assert.equal(findings.pursuit[0].status, "unauffällig");
+  assert.equal(findings.pursuit[0].status, "innerhalb");
 });
 
 test("Blickhalten erkennt Downbeat und nennt die Position", () => {
@@ -147,7 +147,7 @@ test("Blickhalten erkennt Downbeat und nennt die Position", () => {
   assert.equal(findings.gazeExamined, true);
   assert.deepEqual(findings.downbeat, ["unten"]);
   assert.deepEqual(findings.upbeat, []);
-  assert.equal(findings.gaze[0].vertical.status, "unauffällig");
+  assert.equal(findings.gaze[0].vertical.status, "innerhalb");
 });
 
 test("Ohne Kalibrierung gibt der Kurzlauf Muster, aber keine Metrik aus", () => {
@@ -170,8 +170,8 @@ test("Ohne Kalibrierung gibt der Kurzlauf Muster, aber keine Metrik aus", () => 
   assert.equal(report.calibration.selfScaled, true);
   assert.ok(report.summary.headline.startsWith("Ohne Kalibrierung"));
   assert.equal(report.findings.saccades[0].status, "nicht beurteilbar");
-  assert.equal(report.findings.spontaneous.horizontal.status, "unauffällig");
-  assert.equal(report.findings.pursuit[0].status, "unauffällig");
+  assert.equal(report.findings.spontaneous.horizontal.status, "innerhalb");
+  assert.equal(report.findings.pursuit[0].status, "innerhalb");
 });
 
 test("Optokinetik erscheint als eigener Befund mit Kontrolle", () => {

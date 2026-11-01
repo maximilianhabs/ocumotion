@@ -26,11 +26,10 @@ Läufen eines gesunden Probanden horizontal nah an der langen Variante; für Pat
 ---
 
 # Ocumotion – Visueller Okulomotorikbericht und adaptive Kurzprotokolle
-Version 1.0 · 31.10.2026 · Neuer Konzeptentwurf zur Umsetzung durch eine andere KI
+Version 1.0 · 31.10.2026 · Konzeptentwurf
 
 **Zielort im Projekt:** docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md  
 **Status:** Produktspezifikation und Entwicklungsvorschlag; keine implementierte oder klinisch validierte Untersuchung.  
-**Lokale Quelle:** /Users/maximilianhabs/Code/mac-vision. Zuerst CLAUDE.md, dann diesen Entwurf und die aktuellen Messnotizen lesen. Dieser Entwurf ersetzt keine Projektregel.
 
 ## 1. Auftrag und Leitentscheidung
 
@@ -354,7 +353,7 @@ Für Augenvergleich beide Einzelspuren erhalten, auch wenn Fusion ausgesetzt wir
 4. Normquelle und Algorithmusversion im Report verpflichtend.
 5. Ärztliche Korrektur und Freigabe unterstützen; kein Training auf ungeprüften Eigenlabels.
 
-## 11. Abnahmekriterien für die andere KI
+## 11. Abnahmekriterien
 
 - Zeitbudgets addieren sich exakt; kalte Modellladezeit und Pausen werden nicht versteckt.
 - Ein 60-s-Lauf erzeugt keine erfundene vertikale Volluntersuchung.

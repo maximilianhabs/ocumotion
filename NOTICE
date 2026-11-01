@@ -1,0 +1,23 @@
+Ocumotion
+Copyright 2026 Maximilian Habs
+
+Lizenziert unter der Apache License, Version 2.0. Der Lizenztext liegt in der Datei LICENSE.
+
+Dieses Werk enthält unveränderte Komponenten Dritter unter ihren eigenen Lizenzen.
+Herkunft und Prüfsummen stehen unter app/vendor/.
+
+MEDIAPIPE
+---------
+  @mediapipe/tasks-vision 1.2.0, Laufzeit und WebAssembly-Dateien
+  Copyright Google LLC und Mitwirkende, Apache License 2.0
+  https://github.com/google-ai-edge/mediapipe
+
+  Face Landmarker, Fassung 1, FaceMesh und BlazeFace
+  Google LLC, Apache License 2.0 laut Modellkarten
+  Google nennt als Zweck von FaceMesh Unterhaltung mit erweiterter Realität und schließt
+  lebenswichtige Entscheidungen aus.
+
+SCHRIFTEN
+---------
+  Manrope, SIL Open Font License 1.1, siehe app/vendor/schriften/LICENSE-manrope.txt
+  Geist, SIL Open Font License 1.1, siehe app/vendor/schriften/LICENSE-geist.txt

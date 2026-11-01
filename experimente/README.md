@@ -4,6 +4,7 @@ Nicht Teil der Hauptsoftware, ohne Pflege und ohne Prüfung. Die Ergebnisse steh
 
 | Teil | Zweck | Aufruf |
 |---|---|---|
+| `KONZEPT_GESTEN.md` | früherer Entwurf für Gesten und Tracking, nicht mehr verfolgt | lesen |
 | `handtest/` | Hand, Gesten, Gesicht und Körper mit MediaPipe, lädt Code und Modelle aus dem Netz | `make handtest`, dann `http://127.0.0.1:5602` |
 | `werkzeuge/kamera_modi.swift`, `kamera_details.swift` | Kameramodi und Eigenschaften, ohne die Kamera zu öffnen | `make kamera`, `make kamera-details` |
 | `werkzeuge/kamera_takt.swift` | zählt echte Bilder vom iPhone ohne Browser | `make kamera-takt` |

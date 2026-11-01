@@ -173,7 +173,7 @@ function eventChart(timeline) {
 
 const facts = (rows) => `<dl>${rows.map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>`;
 
-const chipClass = { "unauffällig": "unauffaellig", "grenzwertig": "grenzwertig", "auffällig": "auffaellig", "nicht beurteilbar": "nicht" };
+const chipClass = { innerhalb: "unauffaellig", Grenzbereich: "grenzwertig", "außerhalb": "auffaellig", "nicht beurteilbar": "nicht" };
 const chip = (status) => `<span class="chip ${chipClass[status]}">${escapeHtml(status)}</span>`;
 const line = (status, text) => `<div class="row">${chip(status)}<span>${escapeHtml(text)}</span></div>`;
 
@@ -183,8 +183,8 @@ function finding(number_, title, status, body) {
 
 function beatLine(name, places, examined) {
   if (!examined) return line("nicht beurteilbar", `${name}: in diesem Lauf nicht untersucht.`);
-  if (!places.length) return line("unauffällig", `${name}: nein, in den untersuchten Positionen kein Hinweis.`);
-  return line("auffällig", `${name}: Hinweis in ${places.join(", ")}.`);
+  if (!places.length) return line("innerhalb", `${name}: in den untersuchten Positionen kein Muster.`);
+  return line("außerhalb", `${name}: Muster in ${places.join(", ")}.`);
 }
 
 function gazeTable(findings) {
@@ -231,7 +231,7 @@ function render(data) {
     <h1>Oculytics${meta?.protocol ? `: ${escapeHtml(meta.protocol)}` : ""}</h1>
     <p class="muted">${escapeHtml(meta?.createdAt ? new Date(meta.createdAt).toLocaleString("de-DE") : "ohne Datum")} ·
       ${escapeHtml(meta?.smoothing ?? "")} · ${escapeHtml(meta?.mode ?? "")} · Abstand laut Eingabe ${escapeHtml(meta?.distanceCm ?? "–")} cm · ${escapeHtml(report.version)}</p>
-    <div class="banner">Forschungsprototyp. Maschinelle Einordnung gegen vorläufige Grenzen, keine Diagnose, ärztliche Beurteilung erforderlich.</div>
+    <div class="banner">Forschungs- und Lehrwerkzeug. Einordnung gegen vorläufige Arbeitsgrenzen, nicht validiert. Kein Befund, keine Diagnose, nicht für klinische Entscheidungen.</div>
     <h2>${escapeHtml(summary.headline)}</h2>
     <p class="muted">${escapeHtml(report.condition)}</p>
 
@@ -248,8 +248,8 @@ function render(data) {
       <p class="limit">Unter Fixation; ein unterdrückter Nystagmus bleibt unsichtbar. Grenze: ${escapeHtml(limits.nystagmus.source)}.</p>`)}
 
     ${part(examined.gaze, "Blickrichtung", findings.gazeStatus, `
-      ${line(!findings.gazeExamined ? "nicht beurteilbar" : findings.gazeHits ? "auffällig" : "unauffällig",
-        `Blickrichtungsnystagmus: ${!findings.gazeExamined ? "nicht untersucht" : findings.gazeHits ? "Hinweis, siehe Tabelle" : "nein, bis zum geprüften Winkel"}.`)}
+      ${line(!findings.gazeExamined ? "nicht beurteilbar" : findings.gazeHits ? "außerhalb" : "innerhalb",
+        `Blickrichtungsnystagmus: ${!findings.gazeExamined ? "nicht untersucht" : findings.gazeHits ? "Muster, siehe Tabelle" : "kein Muster bis zum geprüften Winkel"}.`)}
       ${beatLine("Downbeat", findings.downbeat, findings.gazeExamined)}
       ${beatLine("Upbeat", findings.upbeat, findings.gazeExamined)}
       ${gazeTable(findings)}
@@ -286,7 +286,7 @@ function render(data) {
       ${facts([["Prüffehler Mittel h / v", eye(calibration.mittel)], ["Rechtes Auge", eye(calibration.rechts)], ["Linkes Auge", eye(calibration.links)]])}
       ${eventChart(report.timeline)}</section>
     <section class="finding"><header><h2>Nicht untersucht</h2>${chip("nicht beurteilbar")}</header><p>${notExamined.map(escapeHtml).join(" · ")}</p></section>
-    <section class="finding review"><header><h2>Ärztliche Einordnung</h2></header><p class="muted">Noch offen. Von Hand zu ergänzen.</p></section>`;
+    <section class="finding review"><header><h2>Notizen</h2></header><p class="muted">Von Hand zu ergänzen.</p></section>`;
   main.hidden = false;
   document.getElementById("message").textContent = "";
 }

@@ -25,6 +25,26 @@ noch einmal geprüft werden.
 
 **Keine öffentliche Schwester hat weniger als:** `LICENSE`, `CITATION.cff`, `SECURITY.md`, `.github`. Hier fehlen alle vier.
 
+## Prüfung vom 01.11.2026
+
+**Sauber:** Historie mit 19 Commits eines Autors, ein Branch, keine Tags. Keine Bilder, Videos, Messdateien, Schlüssel, Server-Adressen oder Klinikbezüge in der Historie. Die beiden Treffer auf API-Key und Token stammen aus dem MediaPipe-Code. Die Git-Adresse des Autors steht wie üblich in den Commits. Die Commits bleiben unverändert.
+
+**Modellkarten FaceMesh und BlazeFace gelesen:** beide Apache-2.0. Vorgesehener Zweck ist Unterhaltung mit erweiterter Realität, ausdrücklich nicht lebenswichtige Entscheidungen. Das Modell gilt nicht als geeignet, wenn weniger als die Hälfte des Gesichts sichtbar ist, das betrifft den Cover-Test. Das README muss den Zweck nennen. Die Blendshape-Karte ist nicht gelesen, das Teilmodell nutzen wir nicht.
+
+**Name:** Websuchen zu Ocumotion und Oculytics ohne Treffer, ähnlich: Ocutrack, Oculogyx, OcuPeye. Register in Deutschland, EU und USA sind noch nicht durchsucht.
+
+**Stand 01.11.2026:** Zweck, Lizenz, Wortwahl im Bericht, `LICENSE`, `NOTICE`, `CITATION.cff`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, README und Streifenwarnung auf der Karte sind erledigt. `CLAUDE.md`, `.claude/` und drei interne Dokumente sind aus dem Stand entfernt; in der Historie bleiben sie, enthalten aber keine Geheimnisse.
+
+**Offen vor dem Umschalten:**
+
+| Punkt | Wer |
+|---|---|
+| Fachkundige Durchsicht von Zweck und Bericht | Nutzer |
+| Echter Lauf der aktuellen Fassung, zweite Person, zweites Gerät | Nutzer |
+| Markenregister Deutschland, EU, USA für Ocumotion und Oculytics | Nutzer |
+| Repo und Ordner in `ocumotion` umbenennen, Adresse in `CITATION.cff` anpassen | auf Ansage |
+| About-Text, Regelsatz für Branches und Tags | beim Umschalten |
+
 ## Stufe 1 — Risiken beseitigen, zwingend vor Public
 
 | Fund | Aufgabe |
@@ -32,7 +52,6 @@ noch einmal geprüft werden.
 | **Zweckbestimmung fehlt.** „Befundbericht“, „auffällig“, „unauffällig“ und die Ampel klingen nach Diagnostik. MDCG 2019-11 stellt auf die Zweckbestimmung ab, einschließlich Bezeichnungen und Werbung. Ein Satz „nur Forschung“ allein genügt vermutlich nicht | Zweckbestimmung im README festlegen. Bericht in „Messbericht“ umbenennen, Einordnungen als Abweichung von Arbeitsgrenzen formulieren oder für die öffentliche Fassung abschalten. Vor Public fachlich klären |
 | Upbeat/Downbeat-Sätze | Bleiben Messbeschreibung, nie Hinweis auf eine Ursache |
 | Eigene Messwerte in `MESSUNGEN.md` | Einzige Testperson ist der Autor. Entscheiden: veröffentlichen, oder nur als Muster und Methode |
-| Lokale Pfade und Sitzungsdetails in `FUNDSTELLEN.md`, `UEBERGABE_CODE_REVIEW.md` | Für Public herauslösen oder kürzen; der Benutzername ist kein Geheimnis, gehört aber nicht in die Außendarstellung |
 | Name | **Entschieden:** App Ocumotion, Bericht Oculytics. Register für Deutschland, EU und USA vor Public prüfen, Repo und Ordner noch umbenennen |
 | Streifenwarnung | Im Eigentest entfernt. Für fremde Personen wieder nötig, dann als Text auf der Karte, nicht als `window.confirm` |
 | Patienten | Bleibt: keine Patientendaten, auch nicht in Issues oder Beispielen. In `CONTRIBUTING.md` als erste Regel |
@@ -71,7 +90,7 @@ Ein Satz im README: Code und Dokumente entstanden mit KI-Unterstützung, Verantw
 
 ## Stufe 7 — Fremde Inhalte
 
-Keine fremden Bilder oder Grafiken im Repo. Die Entwürfe aus anderen KI-Systemen sind unter Prüfvermerk abgelegt;
+Keine fremden Bilder oder Grafiken im Repo. Fremde Entwürfe sind unter Prüfvermerk abgelegt;
 Literatur nur als kurze Angabe, keine langen Zitate. Vor Public einmal durchsehen.
 
 ## Stufe 8 — Gutachterfrage

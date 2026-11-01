@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "Wenn Sie diese Software verwenden, zitieren Sie sie bitte wie folgt."
+title: "Ocumotion: lokale Okulomotorik-Messung mit der Laptop-Kamera"
+abstract: >-
+  Forschungs- und Lehrwerkzeug, das Augenbewegungen mit der eingebauten
+  Laptop-Kamera misst. Module für Fixation, Blickrichtung, Blickfolge,
+  Sakkaden und Optokinetik laufen im Browser, Kamerabilder verlassen das
+  Gerät nicht. Der Bericht Oculytics ordnet Messwerte gegen vorläufige
+  Arbeitsgrenzen ein. Nicht validiert, keine Diagnose.
+type: software
+authors:
+  - family-names: Habs
+    given-names: Maximilian
+repository-code: "https://github.com/maximilianhabs/mac-vision"
+version: "0.1.0"
+license: Apache-2.0
+keywords:
+  - eye movements
+  - oculomotor
+  - webcam
+  - eye tracking
+  - neurology
+  - research software

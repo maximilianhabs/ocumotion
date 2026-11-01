@@ -7,9 +7,9 @@
 import { fitPlane, median } from "./kalibrierung-logik.js";
 
 export const STATUS = {
-  normal: "unauffällig",
-  border: "grenzwertig",
-  abnormal: "auffällig",
+  normal: "innerhalb",
+  border: "Grenzbereich",
+  abnormal: "außerhalb",
   unknown: "nicht beurteilbar",
 };
 
@@ -250,8 +250,8 @@ export function judgeNystagmus(result, key, released) {
   const { spvNormal, spvAbnormal } = LIMITS.nystagmus;
   const speed = result.slowPhase;
   const words = `${NAMES[key][result.direction]}: ${result.beats} Schläge, ${result.rate.toFixed(1).replace(".", ",")}/s, langsame Phase ${speed.toFixed(1).replace(".", ",")} °/s`;
-  if (speed < spvNormal) return { status: STATUS.border, text: `Fraglich. ${words}.` };
-  return { status: speed >= spvAbnormal ? STATUS.abnormal : STATUS.border, text: `Hinweis: ${words}.` };
+  if (speed < spvNormal) return { status: STATUS.border, text: `Schwaches Ruckmuster. ${words}.` };
+  return { status: speed >= spvAbnormal ? STATUS.abnormal : STATUS.border, text: `Ruckmuster. ${words}.` };
 }
 
 export function judgeSwj(result, released) {

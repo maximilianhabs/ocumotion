@@ -10,14 +10,11 @@ Die eingebaute Kamera des MacBook Pro M1 wird zum lokalen Sensor für drei Dinge
 1. **Tracking:** Hand, Gesicht und Körper live als Landmarken.
 2. **Gestensteuerung:** Gesten lösen Aktionen aus, zuerst in der App, später am Mac.
 3. **Analyse:** Bewegung, Mimik und Haltung als Messung mit Gütewert, nach dem Vorbild
-   des Vision Lab auf dem Beelink.
+   eines stationären Messplatzes.
 
 Alles läuft auf dem Gerät. Kein Bild und keine Landmarke verlässt den Mac.
 
-**Abgrenzung zum Vision Lab:** Das Vision Lab bleibt der stationäre Messplatz (C922,
-720p60, Beelink, `homeserver/services/vision-lab/`). Ocumotion ist das interaktive
-Gegenstück: spontan am Arbeitsplatz, mit mehr Rechenleistung, aber schwächerer Kamera.
-Beide Projekte bleiben getrennt.
+**Abgrenzung:** Ein getrennter stationärer Messplatz nutzt eine externe Kamera. Dieser Entwurf ist das interaktive Gegenstück am Arbeitsplatz.
 
 ## 2. Gemessene Ausgangslage
 

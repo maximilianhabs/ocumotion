@@ -513,3 +513,7 @@ Sitzung 08:46 mit Kalibrierung (Prüffehler horizontal 1,57°), Blickfolge ±15�
 | ±10°, 0,5 Hz | 31,4 °/s | 1,01 | 0,98 | 4,3 | 1,21° |
 
 Die breitere Bahn senkte den Gain deutlich. Ob das Auge wirklich nicht folgte oder die Messung am Rand nachgibt, trennen diese Läufe nicht. Geändert: ±12° bei 0,2 und 0,4 Hz, also 15,1 und 30,2 °/s wie in den guten Läufen. Arbeitsgrenzen großzügiger: Blickfolge Gain 0,7 und 0,5, Sakkaden 4 und 7 je Zyklus; Sakkaden 0,75 bis 1,25 normal, 0,6 bis 1,4 Tendenz. Die Vertikale hatte im alten Lauf nur zwei Sprünge je Richtung, bei drei nötigen, darum „nichts“; das Modul hat nun vier je Richtung, und sie zählt höchstens als Tendenz, solange sie unsicher ist. Ohne Kalibrierung wird die erste Landung bewertet, weil der Maßstab aus den Endlagen stammt.
+
+## 01.11.2026 — Kalibrierung als Punktwolke
+
+Jede Bildmessung erscheint als Punkt um ihren Sollpunkt, dazu der Zielbereich der Freigabe, ±2° horizontal und ±3° vertikal, und eine Ellipse über zwei Standardabweichungen. Aus der Sitzung 08:46, noch lange Kalibrierung: 150 von 495 Prüfmessungen (30 %) lagen im Zielbereich, die Note lautet trotzdem Mittel, weil sie nur die horizontale mittlere Abweichung zählt. Die Streuung je Punkt lag bei 0,5–1,2° horizontal und 1,2–3,5° vertikal, die Wolken saßen vertikal teils mehrere Grad neben dem Ziel.

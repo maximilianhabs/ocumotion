@@ -11,22 +11,24 @@ function field(width, height, spanH, spanV) {
 
 const svg = (width, height, label, body) => `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label}">${body}</svg>`;
 
-// Sollpunkte als Ring in Größe des Zielbereichs, Landepunkte als Punkt. Prüfpunkte stehen voll, Lernpunkte blass.
-export function calibrationChart(points, toleranceDeg) {
-  const width = 520;
-  const height = 350;
+// Zielscheibe je Punkt: Kreuz am Sollpunkt, Zielbereich, jede Einzelmessung als Punkt, Ellipse über zwei Standardabweichungen.
+export function calibrationChart(points, zone) {
+  const width = 640;
+  const height = 430;
   const spanH = 19;
   const spanV = spanH * (height / width);
   const { x, y, axes } = field(width, height, spanH, spanV);
-  const radius = (toleranceDeg / spanH) * (width / 2);
+  const perDegree = (width / 2) / spanH;
   const marks = points.map((point) => {
-    const faded = point.role === "fit" ? ' opacity=".55"' : "";
-    const ring = `<circle cx="${fixed(x(point.h))}" cy="${fixed(y(point.v))}" r="${fixed(radius)}" fill="none" stroke="var(--dim)"${faded}/>`;
-    if (point.estH === null) return ring;
-    const color = point.hit ? "var(--ok)" : "var(--warn)";
-    return `<g${faded}>${ring}<line x1="${fixed(x(point.h))}" y1="${fixed(y(point.v))}" x2="${fixed(x(point.estH))}" y2="${fixed(y(point.estV))}" stroke="${color}"/><circle cx="${fixed(x(point.estH))}" cy="${fixed(y(point.estV))}" r="5" fill="${color}"/></g>`;
+    const px = x(point.h);
+    const py = y(point.v);
+    const target = `<ellipse cx="${fixed(px)}" cy="${fixed(py)}" rx="${fixed(zone.h * perDegree)}" ry="${fixed(zone.v * perDegree)}" fill="rgb(248 247 245 / .05)" stroke="var(--dim)"/>
+      <path d="M${fixed(px - 6)} ${fixed(py)}h12M${fixed(px)} ${fixed(py - 6)}v12" stroke="var(--white)"/>`;
+    const dots = point.cloud.map((dot) => `<circle cx="${fixed(x(dot.h))}" cy="${fixed(y(dot.v))}" r="1.7" fill="${dot.inside ? "var(--ok)" : "var(--warn)"}" fill-opacity=".7"/>`).join("");
+    const ellipse = point.meanH === null ? "" : `<ellipse cx="${fixed(x(point.meanH))}" cy="${fixed(y(point.meanV))}" rx="${fixed(Math.max(2 * point.sdH * perDegree, 1))}" ry="${fixed(Math.max(2 * point.sdV * perDegree, 1))}" fill="none" stroke="var(--white)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
+    return `<g${point.role === "fit" ? ' opacity=".6"' : ""}>${target}${dots}${ellipse}</g>`;
   }).join("");
-  return svg(width, height, "Sollpunkte als Ringe, gemessene Blickpunkte als Punkte", axes + marks);
+  return svg(width, height, "Sollpunkte mit Zielkreis und allen Einzelmessungen", axes + marks);
 }
 
 export function restChart(points) {

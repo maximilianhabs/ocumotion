@@ -2,23 +2,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { listSaved, removeCalibration, sameSetting, saveCalibration } from "../app/kamera/kalibrierspeicher.js";
-import { calibrationPoints, gradeCalibration, moduleSummary, outcomeHeadline, validShare } from "../app/messung/vorab-logik.js";
+import { calibrationPoints, cloudSummary, gradeCalibration, moduleSummary, outcomeHeadline, validShare } from "../app/messung/vorab-logik.js";
 
 const eye = (over) => ({ passedH: true, passedV: false, errorH: 0.9, errorV: 3.2, noiseH: 0.5, noiseV: 1, maxError: 2, validShare: 0.98, ...over });
 
-test("Kalibrierung: Noten nach Abweichung und Unruhe", () => {
-  assert.equal(gradeCalibration({ mittel: eye() }).grade, "Hervorragend");
-  assert.equal(gradeCalibration({ mittel: eye({ errorH: 1.4, noiseH: 0.9 }) }).grade, "Gut");
-  assert.equal(gradeCalibration({ mittel: eye({ errorH: 0.8, noiseH: 1.2 }) }).grade, "Mittel");
-  assert.equal(gradeCalibration({ mittel: eye({ errorH: 1.9 }) }).grade, "Mittel");
-  assert.equal(gradeCalibration({ mittel: eye({ passedH: false, errorH: 3 }) }).grade, "Schlecht");
+test("Kalibrierung: Noten nach dem Anteil im Zielbereich", () => {
+  assert.equal(gradeCalibration({ mittel: eye() }, 0.95).grade, "Hervorragend");
+  assert.equal(gradeCalibration({ mittel: eye() }, 0.75).grade, "Gut");
+  assert.equal(gradeCalibration({ mittel: eye() }, 0.5).grade, "Mittel");
+  assert.equal(gradeCalibration({ mittel: eye() }, 0.3).grade, "Schlecht");
+  assert.match(gradeCalibration({ mittel: eye() }, 0.3).text, /Nur 30 %/);
+  assert.equal(gradeCalibration({ mittel: eye({ passedH: false, errorH: 3 }) }, 0.95).grade, "Schlecht");
 });
 
 test("Kalibrierung ohne Modell bleibt lesbar und zeigt Striche", () => {
   const result = gradeCalibration({ mittel: { passedH: false, passedV: false, errorH: null, errorV: null } });
   assert.equal(result.grade, "Schlecht");
   assert.equal(result.rows[0][1], "–");
-  assert.match(gradeCalibration({ mittel: eye() }).rows[0][1], /^0,9°$/);
+  assert.match(gradeCalibration({ mittel: eye() }, 1).rows[0][1], /^0,9°$/);
 });
 
 test("Schlechte Kalibrierung nennt den Grund", () => {
@@ -28,14 +29,17 @@ test("Schlechte Kalibrierung nennt den Grund", () => {
   assert.match(text({ reasonH: "zu wenige gültige Bilder" }), /Licht und Position/);
 });
 
-test("Punktbild: Treffer gelten innerhalb von 2°, ohne Modell nur Sollpunkte", () => {
+test("Punktwolke: jedes Bild zählt, Mittel und Streuung stimmen, ohne Modell keine Wolke", () => {
   const model = { h: [0, 10, 0], v: [0, 0, 10] };
   const point = (x, y) => ({ rechts: { x, y }, links: { x, y } });
-  const entry = (h, v, x, y) => ({ target: { h, v, role: "check" }, samples: [point(x, y), point(x, y), point(x, y)] });
-  const points = calibrationPoints([entry(1, 0, 0.1, 0), entry(5, 0, 0.1, 0)], { mittel: { model } });
-  assert.equal(points[0].hit, true);
-  assert.equal(points[1].hit, false);
-  assert.equal(calibrationPoints([entry(1, 0, 0.1, 0)], { mittel: { model: null } })[0].estH, null);
+  const entry = (h, v) => ({ target: { h, v, role: "check" }, samples: [point(0, 0), point(0.2, 0), point(0.4, 0), point(0.4, 0), { rechts: null, links: null }] });
+  const [near] = calibrationPoints([entry(1, 0)], { mittel: { model } });
+  assert.equal(near.cloud.length, 4);
+  assert.equal(near.meanH, 2.5);
+  assert.ok(Math.abs(near.sdH - Math.sqrt(2.75)) < 1e-9);
+  assert.equal(near.inside, 2);
+  assert.deepEqual(cloudSummary([near]), { total: 4, inside: 2, share: 0.5 });
+  assert.equal(calibrationPoints([entry(1, 0)], { mittel: { model: null } })[0].cloud.length, 0);
 });
 
 test("Gültige Bilder zählen über alle Teile des Laufs", () => {
@@ -51,8 +55,8 @@ test("Der Kopfsatz folgt dem Anteil gültiger Bilder", () => {
 });
 
 test("Modulzeilen übernehmen die Einordnung", () => {
-  const findings = { pursuit: [{ name: "langsam", status: "unauffällig", text: "glatt" }] };
-  assert.deepEqual(moduleSummary("blickfolge", findings), [{ status: "unauffällig", text: "langsam: glatt" }]);
+  const findings = { pursuit: [{ name: "langsam", status: "innerhalb", text: "glatt" }] };
+  assert.deepEqual(moduleSummary("blickfolge", findings), [{ status: "innerhalb", text: "langsam: glatt" }]);
   assert.deepEqual(moduleSummary("kalibrierung", findings), []);
 });
 

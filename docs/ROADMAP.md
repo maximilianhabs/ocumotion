@@ -1,6 +1,6 @@
 # Ocumotion — Fahrplan
 
-Stand 31.10.2026. Begründungen stehen in `KONZEPT.md`. Jede Etappe endet mit einer
+Stand 01.11.2026. Der aktuelle Plan steht in `PRODUKTPLAN.md`, die Etappen E0 bis E8 stammen aus dem früheren Gestenentwurf `experimente/KONZEPT_GESTEN.md`. Jede Etappe endet mit einer
 Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 
 | Etappe | Inhalt | Fertig, wenn | Stand |
@@ -8,7 +8,7 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 | E0 | Projekt, Konzept, Kameramodi | `make kamera` läuft, Konzept steht | **erledigt** |
 | E1 | Livebild, Handmodell, Overlay, Machbarkeit | Analyserate mit Hand im Bild ist gemessen | als Nächstes |
 | E2 | Hand, Gesicht und Körper zusammen | Tabelle: Rate und Auslastung je Kombination | offen |
-| E3 | Statische Gesten in der App | Erster Test: Fehlauslöser in 10 min Arbeit; Abnahme siehe `KONZEPT.md` Abschnitt 7 | offen |
+| E3 | Statische Gesten in der App | Erster Test: Fehlauslöser in 10 min Arbeit; Abnahme siehe `experimente/KONZEPT_GESTEN.md` Abschnitt 7 | offen |
 | E4 | Wischgesten und eigene Gesten | eigene Geste mit wenigen Beispielen angelernt | offen |
 | E5 | Steuerung des Mac | Freigabeliste, Not-Aus, sichtbarer Zustand laufen | offen |
 | E6 | Messen, Güte, Speichern | Taktgeber-Kalibrierung intern und iPhone liegt vor | offen |
@@ -30,7 +30,7 @@ iPhone als Kamera, siehe `KONZEPT_UEBERTRAGBARKEIT.md`.
 1. Testseite als Messwerkzeug: getrennte Statistik je Modell, Bildzeit und Sitzungszustände. **Erledigt.**
 2. Augenmodus mit Rohkurven und Gültigkeitsanzeige (A1). **Erste Fassung steht:** `app/index.html`, auf Wunsch vor dem Worker gebaut, nur mit MediaPipe-Irispunkten.
    Individuelle Kalibrierung und gewichteter Mittelwert sind vorgezogen; mit echtem Gesicht ungeprüft.
-3. Vortest, dann Bildquelle und Analyse in Web Worker umstellen (siehe `IMPLEMENTIERUNGSNOTIZ_CODEX.md`); eigene Irisrandanalyse ergänzen.
+3. Vortest, dann Bildquelle und Analyse in Web Worker umstellen; eigene Irisrandanalyse ergänzen.
 4. Künstliches Auge und Kopf-Störtest.
 5. Verfahren bei mehreren Abständen und Lichtbedingungen vergleichen.
 6. Früher Vergleich mit VOG.
@@ -137,4 +137,4 @@ Punkt 7 ist vorgezogen: Die Testseite `experimente/handtest/index.html` steht (`
 `http://127.0.0.1:5602`) und zeigt je Modell Treffer/s, vorläufige Obergrenze, Dauer und längste Lücke.
 
 Ergebnisse kommen nach `docs/MESSUNGEN.md`. Hält keiner der Wege annähernd die Kamerarate,
-wird die Architekturentscheidung aus `KONZEPT.md` Abschnitt 4 neu getroffen.
+wird die Architekturentscheidung aus `experimente/KONZEPT_GESTEN.md` Abschnitt 4 neu getroffen.
