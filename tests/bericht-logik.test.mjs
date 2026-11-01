@@ -1,9 +1,9 @@
 // Berichtsmodell gegen einen konstruierten Lauf. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ACCURACY_TARGETS, PURSUIT_RUNS } from "./guetetest-logik.js";
-import { STEPS } from "./kalibrierung-logik.js";
-import { buildReport, NOT_EXAMINED, toSpans } from "./bericht-logik.js";
+import { ACCURACY_TARGETS, PURSUIT_RUNS } from "../app/auswertung/guetetest-logik.js";
+import { STEPS } from "../app/auswertung/kalibrierung-logik.js";
+import { buildReport, NOT_EXAMINED, toSpans } from "../app/auswertung/bericht-logik.js";
 
 const FRAME_MS = 1000 / 30;
 const eyeAt = (h, v) => ({ x: 0.04 + 0.018 * h, y: 0.018 * v, aperture: 0.36 });

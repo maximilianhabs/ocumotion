@@ -1,9 +1,15 @@
 # Mac Vision
 
-Lokale Bewegungs-, Gesichts- und Gestenerkennung mit der eingebauten Kamera des
-MacBook Pro M1. Schwesterprojekt des Vision Lab auf dem Beelink.
+Lokale Okulomotorik-Messung mit der eingebauten Laptop-Kamera. Forschungsprototyp, keine Diagnose.
 
-**Stand:** Testseite im Browser läuft, das Python-Programm ist noch nicht gebaut.
+**Stand:** Die App läuft im Browser, ohne Abrufe aus dem Netz. Der Umbau zur öffentlichen Software folgt `docs/PRODUKTPLAN.md`.
+
+```bash
+make start
+```
+
+Danach `http://127.0.0.1:5600` öffnen. Kamerabilder bleiben im Browser. `make test` prüft die Rechenlogik und die Fremddateien.
+Nebenprojekte wie iPhone-Brücke und Handtest stehen in [experimente/](experimente/README.md).
 
 | Dokument | Inhalt |
 |---|---|
@@ -11,6 +17,7 @@ MacBook Pro M1. Schwesterprojekt des Vision Lab auf dem Beelink.
 | [docs/KONZEPT_AUGEN.md](docs/KONZEPT_AUGEN.md) | Blickrichtung, Irismitte, Nystagmus |
 | [docs/KONZEPT_OKULOMOTORIK.md](docs/KONZEPT_OKULOMOTORIK.md) | Kalibrierung, beide Augen, Okulomotorik-Untersuchung |
 | [docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md](docs/KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md) | Zielbild Bericht und Kurzprofile |
+| [docs/PRODUKTPLAN.md](docs/PRODUKTPLAN.md) | Weg vom Prototyp zur öffentlichen Software |
 | [docs/ROAD_TO_PUBLIC.md](docs/ROAD_TO_PUBLIC.md) | Fahrplan für die Veröffentlichung |
 | [docs/PROTOKOLLE.md](docs/PROTOKOLLE.md) | Kurzlauf und ausführlicher Lauf |
 | [docs/KONZEPT_OKN_MODUS.md](docs/KONZEPT_OKN_MODUS.md) | Optokinetischer Test H40 |
@@ -23,16 +30,3 @@ MacBook Pro M1. Schwesterprojekt des Vision Lab auf dem Beelink.
 | [docs/MESSUNGEN.md](docs/MESSUNGEN.md) | Messprotokoll |
 | [docs/FUNDSTELLEN.md](docs/FUNDSTELLEN.md) | Wo alle Projekteinträge liegen, auch außerhalb des Repos |
 
-```bash
-make kamera
-```
-
-Listet die verfügbaren Kameramodi auf, ohne die Kamera zu öffnen.
-
-```bash
-make test-web
-```
-
-Startet die Testseite auf `http://127.0.0.1:5600`. Sie lädt Programmcode und Modelle aus
-dem Netz; Kamerabilder bleiben im Browser. Die Augenmessung liegt unter
-`http://127.0.0.1:5600/augen.html`, ihre Rechenlogik prüft `make test`.

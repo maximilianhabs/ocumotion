@@ -5,7 +5,7 @@ gilt der Vermerk, darüber `CLAUDE.md`.
 
 ## Prüfvermerk
 
-**Gebaut:** horizontaler Test H40 mit Kontrollblock, rund 48 s, in `testseite/augen.html` und `okn-logik.js`.
+**Gebaut:** horizontaler Test H40 mit Kontrollblock, rund 48 s, in `app/index.html` und `okn-logik.js`.
 Vertikal, 12°/s und HV73 sind zurückgestellt.
 
 **Zweck zuerst:** Erste Prüfung der Erkennung an einem echten Nystagmus mit unabhängig bekannter Richtung.

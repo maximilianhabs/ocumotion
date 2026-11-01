@@ -28,25 +28,29 @@ GitHub: <https://github.com/maximilianhabs/mac-vision> (privat, Branch `main`)
 | `docs/IMPLEMENTIERUNGSNOTIZ_CODEX.md` | technischer Bauplan für den Messplatz, mit Prüfvermerk und Abweichungen |
 | `docs/ROADMAP.md` | Etappen und aktueller Stand |
 | `docs/MESSUNGEN.md` | alle Messergebnisse |
-| `testseite/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
-| `testseite/augen.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
-| `testseite/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
-| `testseite/protokolle.js` | Definition der zwei Untersuchungsprotokolle |
-| `testseite/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
-| `testseite/befund-logik.js` | Ereigniserkennung und Einordnung gegen benannte Grenzen |
-| `testseite/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
-| `testseite/trockenlauf.js` | Simuliertes Gesicht für `augen.html?trockenlauf` |
-| `testseite/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
-| `testseite/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
-| `testseite/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
-| `tools/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
-| `tools/kamera_details.swift` | Belichtung, Fokus und Bildwinkel abfragen, `make kamera-details` |
-| `tools/kamera_takt.swift` | Echte Bilder je Sekunde vom iPhone ohne Browser, `make kamera-takt` |
-| `tools/kamera_bruecke.swift` | iPhone mit 60 fps an die Testseite, nur `127.0.0.1:5601`, `make kamera-bruecke` |
-| `testseite/bruecke.js` | Bildquelle der Seite für die Kamerabrücke |
+| `experimente/handtest/index.html` | Testseite für Hand, Gesten, Gesicht und Körper |
+| `app/index.html` | Augenmessung: Blickrichtung, Kurven, Kalibrierablauf |
+| `app/bericht.html`, `bericht-logik.js` | Visueller Bericht aus einer Gütetest-Datei |
+| `app/auswertung/protokolle.js` | Definition der zwei Untersuchungsprotokolle |
+| `app/auswertung/okn-logik.js` | OKN-Reiz, Blöcke und Auswertung |
+| `app/auswertung/befund-logik.js` | Ereigniserkennung und Einordnung gegen benannte Grenzen |
+| `app/auswertung/guetetest-logik.js` | Ablauf und Auswertung des Gütetests |
+| `app/pruefung/trockenlauf.js` | Simuliertes Gesicht für `?trockenlauf` |
+| `app/auswertung/positionierung-logik.js` | Zielrahmen, Hinweise, persönliche Referenz, relativer Abstand |
+| `app/auswertung/kalibrierung-logik.js` | Blickziele, Modellanpassung, Bewertung je Auge, gewichteter Mittelwert |
+| `app/auswertung/augen-logik.js` | Rechenlogik der Augenmessung, Tests mit `make test` |
+| `experimente/werkzeuge/kamera_modi.swift` | Kameramodi auflesen, `make kamera` |
+| `experimente/werkzeuge/kamera_details.swift` | Belichtung, Fokus und Bildwinkel abfragen, `make kamera-details` |
+| `experimente/werkzeuge/kamera_takt.swift` | Echte Bilder je Sekunde vom iPhone ohne Browser, `make kamera-takt` |
+| `experimente/werkzeuge/kamera_bruecke.swift` | iPhone mit 60 fps an die Testseite, nur `127.0.0.1:5601`, `make kamera-bruecke` |
+| `app/kamera/bruecke.js` | Bildquelle der Seite für die Kamerabrücke, nur mit `?experimente` |
+| `app/vendor/mediapipe/` | Laufzeit und Modell mit Herkunft und Prüfsummen |
+| `tests/` | Tests, `make test` |
+| `experimente/README.md` | Überblick über alles außerhalb der Hauptsoftware |
+| `.github/workflows/test.yml` | Tests bei jedem Push |
 | `.claude/launch.json` | Startkonfiguration `mac-vision-test`, Port 5600 |
 
-Start der Testseite: `make test-web`, dann <http://127.0.0.1:5600>. Für die Kamera einen
+Start der Testseite: `make start`, dann <http://127.0.0.1:5600>. Für die Kamera einen
 normalen Browser nutzen; das eingebaute Browserfenster der Claude-App verweigert sie.
 
 ## Außerhalb des Repos

@@ -1,31 +1,34 @@
-.PHONY: kamera kamera-details kamera-takt kamera-bruecke kamera-bruecke-test test test-web
+.PHONY: start test handtest kamera kamera-details kamera-takt kamera-bruecke kamera-bruecke-test
 
-# Augen- und Kalibrierlogik gegen konstruierte Daten pruefen
+PYTHON ?= /opt/homebrew/bin/python3.13
+WERKZEUGE = experimente/werkzeuge
+
+# App im Browser, nur lokal erreichbar: http://127.0.0.1:5600
+start:
+	$(PYTHON) -m http.server 5600 --bind 127.0.0.1 --directory app
+
+# Rechenlogik gegen konstruierte Daten, dazu die Pruefung auf Fremdabrufe
 test:
-	node --test testseite/*.test.mjs
+	node --test tests/*.test.mjs
 
-# Kameramodi auflisten, ohne die Kamera zu oeffnen
+# Experimente, siehe experimente/README.md
+handtest:
+	$(PYTHON) -m http.server 5602 --bind 127.0.0.1 --directory experimente/handtest
+
 kamera:
-	swift tools/kamera_modi.swift
+	swift $(WERKZEUGE)/kamera_modi.swift
 
-# Belichtung, Fokus und Bildwinkel abfragen, ohne die Kamera zu oeffnen
 kamera-details:
-	swift tools/kamera_details.swift
+	swift $(WERKZEUGE)/kamera_details.swift
 
-# iPhone 6 Sekunden oeffnen und echte Bilder zaehlen, ohne Browser und ohne Bilder zu speichern
 kamera-takt:
-	swift tools/kamera_takt.swift
+	swift $(WERKZEUGE)/kamera_takt.swift
 
-# iPhone mit 60 fps an die Testseite reichen, nur ueber 127.0.0.1, ohne Bilder zu speichern
 kamera-bruecke:
-	swiftc -O tools/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
+	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
 	"$(TMPDIR)mac-vision-bruecke"
 
 # Wie kamera-bruecke, aber mit Kunstbild ohne Kamera
 kamera-bruecke-test:
-	swiftc -O tools/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
+	swiftc -O $(WERKZEUGE)/kamera_bruecke.swift -o "$(TMPDIR)mac-vision-bruecke"
 	"$(TMPDIR)mac-vision-bruecke" --testbild
-
-# Testseite im Browser, nur lokal erreichbar: http://127.0.0.1:5600
-test-web:
-	/opt/homebrew/bin/python3.13 -m http.server 5600 --bind 127.0.0.1 --directory testseite

@@ -1,8 +1,8 @@
 // Positionierungshilfe gegen konstruierte Gesichter. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { EYES } from "./augen-logik.js";
-import { analysePose, assess, canResume, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor } from "./positionierung-logik.js";
+import { EYES } from "../app/auswertung/augen-logik.js";
+import { analysePose, assess, canResume, estimateDistance, isStable, makeReference, medianPose, positionDrift, targetFor } from "../app/auswertung/positionierung-logik.js";
 
 const WIDTH = 1280;
 const HEIGHT = 720;

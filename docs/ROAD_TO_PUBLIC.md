@@ -11,7 +11,7 @@ soll in fünf Minuten erkennen: saubere, ehrliche Forschungsarbeit. Dafür gibt 
 | Ebene | Was | Wie |
 |---|---|---|
 | Lesen | Code und alle Markdown-Dokumente | öffentliches GitHub-Repo; GitHub stellt Markdown lesbar dar |
-| Ausprobieren | laufende Seite im Browser | GitHub Pages aus `testseite/`, HTTPS, kein Server nötig |
+| Ausprobieren | laufende Seite im Browser | GitHub Pages aus `app/`, HTTPS, kein Server nötig |
 
 Pages ist für die zweite Ebene passend: Die Kamera braucht einen sicheren Kontext, und die Verarbeitung bleibt im
 Browser. Pages protokolliert laut GitHub Besucher-IP-Adressen. Eine Demo im Netz ist ein eigener Schritt und erhöht
@@ -53,11 +53,11 @@ noch einmal geprüft werden.
 
 ## Stufe 4 — Gepflegt und reproduzierbar
 
-- `.github/workflows`: `make test` bei jedem Push.
+- `.github/workflows`: `make test` bei jedem Push. **Angelegt**, läuft nach dem nächsten Push.
 - Versionsnummer und Änderungsprotokoll.
-- Laufzeit fest, Modelle nicht mehr über `latest`: Bei Public sollten Version und Prüfsumme feststehen.
+- Laufzeit fest, Modell nicht mehr über `latest`. **Erledigt:** Version und Prüfsumme stehen in `app/vendor/mediapipe/`, `make test` prüft sie.
 - Branch- und Tag-Schutz wie bei EDF-Analyzer und NeuroVoice AI.
-- Klarheit über externe Abrufe: jsDelivr und Google Storage liefern Code und Modell, Bilder gehen nirgends hin.
+- Keine externen Abrufe in der App. **Erledigt:** Die Seiten verbieten sie per Content-Security-Policy, nur `experimente/handtest` lädt noch aus dem Netz.
 
 ## Stufe 5 — Lizenz
 
@@ -91,7 +91,9 @@ von MediaPipe kann ändern, Schwellen sind nicht validiert. Die Antwort darf im 
 
 ## Reihenfolge
 
-1. Technik abschließen, was vor Public sinnvoll ist: echte Läufe, feste Modellversion.
+Die Bau-Etappen stehen in `PRODUKTPLAN.md`.
+
+1. Software fertigstellen nach `PRODUKTPLAN.md`, Etappen 1 bis 5.
 2. Stufe 1 entscheiden: Name, Zweckbestimmung, eigene Messwerte.
 3. Stufen 2 bis 7 umsetzen, Repo bleibt privat.
 4. Abschlussprüfung: `git log --all --diff-filter=A --name-only`, Suche nach Geheimnissen, Trockenlauf aus frischem Klon.

@@ -4,7 +4,7 @@
 Experimentell. Kleines Bild-zu-Bild-Rauschen belegt bei aktiver Glättung keine hohe Präzision, und der
 Vergleich mit der idealen Geometrie ist nur eine Näherung, kein Maß für eine Modelldämpfung.
 
-Aufruf: python3.13 tools/guetetest_auswertung.py ~/Downloads/macvision-guetetest-….json
+Aufruf: python3.13 experimente/werkzeuge/guetetest_auswertung.py ~/Downloads/macvision-guetetest-….json
 Die Datei ist personenbezogen und gehört nicht ins Repo.
 """
 import json

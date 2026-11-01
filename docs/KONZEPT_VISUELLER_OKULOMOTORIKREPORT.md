@@ -5,7 +5,7 @@ Zielbild, kein Bauauftrag. Bei Widerspruch gilt der Vermerk, darüber `CLAUDE.md
 
 ## Prüfvermerk
 
-**Gebaut:** `testseite/bericht.html` mit `bericht-logik.js`, Etappe A in schlanker Form. Sie rechnet aus den
+**Gebaut:** `app/bericht.html` mit `bericht-logik.js`, Etappe A in schlanker Form. Sie rechnet aus den
 Rohdaten neu und zeigt Fixationsspur, neue Ziele, Sakkaden-Endlagen, Blickfolge, Ereignisstreifen und graue
 Karten für alles Fehlende. Ausgabe als Entwicklungsdaten.
 

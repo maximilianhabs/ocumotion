@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   analyseNystagmus, analyseSaccadeMetrics, analyseSmoothPursuit, analyseSwj, detectJumps, inBothEyes, judgeNystagmus,
   judgePursuit, judgeSaccades, judgeSwj, STATUS, withoutLidEvents,
-} from "./befund-logik.js";
+} from "../app/auswertung/befund-logik.js";
 
 const FRAME_MS = 1000 / 30;
 const times = (durationMs) => Array.from({ length: Math.floor(durationMs / FRAME_MS) }, (_, i) => i * FRAME_MS);

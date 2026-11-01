@@ -1,7 +1,7 @@
 # Mac Vision — Konzept Kalibrierung und Okulomotorik-Untersuchung
 
 Stand 31.10.2026. Baut auf `KONZEPT_AUGEN.md` auf. Gebaut ist nur die Kalibrierung in
-`testseite/augen.html`, mit echtem Gesicht noch unbestätigt. Die Untersuchungen aus Abschnitt 4
+`app/index.html`, mit echtem Gesicht noch unbestätigt. Die Untersuchungen aus Abschnitt 4
 sind Plan. Alle Schwellen sind vorläufig. Forschungsprototyp, keine Diagnose.
 
 ## 1. Ziel

@@ -1,7 +1,7 @@
 // Konstruierte Gesichtspunkte mit bekannter Antwort. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { direction, EYES, measureEye, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
+import { direction, EYES, measureEye, measureFrame, meanX, standardDeviation } from "../app/auswertung/augen-logik.js";
 
 const WIDTH = 1280;
 const HEIGHT = 720;

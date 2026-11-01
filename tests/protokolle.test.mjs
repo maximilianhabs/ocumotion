@@ -1,9 +1,9 @@
 // Protokolle als Etappen: Reihenfolge, Dauer und Inhalt. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { stageMs } from "./etappen-logik.js";
-import { STEPS } from "./kalibrierung-logik.js";
-import { plannedMs, PROTOCOLS } from "./protokolle.js";
+import { stageMs } from "../app/auswertung/etappen-logik.js";
+import { STEPS } from "../app/auswertung/kalibrierung-logik.js";
+import { plannedMs, PROTOCOLS } from "../app/auswertung/protokolle.js";
 
 const ids = (protocol) => protocol.stages.map((stage) => stage.id);
 const parts = (protocol, kind) => protocol.stages.flatMap((stage) => stage.parts).filter((part) => part.kind === kind);

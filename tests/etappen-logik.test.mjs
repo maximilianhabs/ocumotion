@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, MAX_REPEATS, MIN_CARD_MS, partMs, stageMs,
-         stagesMs, stepText } from "./etappen-logik.js";
+         stagesMs, stepText } from "../app/auswertung/etappen-logik.js";
 
 test("Die Messdauer eines Teils folgt seinen Zeiten", () => {
   assert.equal(partMs({ kind: "fixation", durationMs: 16000 }), 16000);

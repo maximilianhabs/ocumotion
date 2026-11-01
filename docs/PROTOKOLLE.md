@@ -1,7 +1,7 @@
 # Mac Vision — Untersuchungsprotokolle
 
-Stand 31.10.2026. Drei Protokolle mit je einem Start-Button in `testseite/augen.html`, definiert in
-`testseite/protokolle.js`. Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
+Stand 31.10.2026. Drei Protokolle mit je einem Start-Button in `app/index.html`, definiert in
+`app/auswertung/protokolle.js`. Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
 
 | Baustein | Kurzlauf, rund 1,5 min | Ausführlich, rund 3,5 min | Optokinetik, rund 1,5 min |
 |---|---|---|---|
@@ -19,8 +19,8 @@ Der ausführliche Lauf wurde nach dem Lauf vom 31.10. gekürzt, Begründung in `
 Läufe rechts begannen.
 
 Jede Etappe beginnt mit einer Karte in der Bildmitte und läuft erst nach Leertaste oder Klick, siehe `KONZEPT_PROBANDENFUEHRUNG.md`. Die
-Zeiten im Kopf enthalten rund 5 s je Karte; die Person bestimmt das Tempo. Prüfen ohne Kamera: `augen.html?trockenlauf`, mit echter Taste
-`augen.html?trockenlauf&tasten`.
+Zeiten im Kopf enthalten rund 5 s je Karte; die Person bestimmt das Tempo. Prüfen ohne Kamera: `?trockenlauf`, mit echter Taste
+`?trockenlauf&tasten`.
 
 ## Was jeder Lauf aussagen kann
 

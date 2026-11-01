@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   ACCURACY_TARGETS, analyseFixation, analysePursuit, analyseRun, analyseSaccades, analyseTargets,
   differenceNoise, grade, PURSUIT_RUNS, toSeries,
-} from "./guetetest-logik.js";
+} from "../app/auswertung/guetetest-logik.js";
 
 const near = (actual, expected, tolerance) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} statt ${expected}`);

@@ -2,7 +2,7 @@
 // Ein simuliertes Gesicht folgt dem Punkt exakt, mit etwas Rauschen. So laesst sich der
 // ganze Ablauf mit bekannter Antwort pruefen. Das Ergebnis sagt nichts ueber echte Augen.
 
-import { EYES } from "./augen-logik.js";
+import { EYES } from "../auswertung/augen-logik.js";
 
 const WIDTH = 1280;
 const HEIGHT = 720;

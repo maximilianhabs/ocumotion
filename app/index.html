@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:5601; base-uri 'none'; form-action 'none'">
 <title>Mac Vision Augen</title>
 <style>
   :root {
@@ -102,7 +103,7 @@
 <main>
   <header>
     <h1>Mac Vision Augen</h1>
-    <p>Stufe A1: Irismitte aus MediaPipe, horizontale Rohkurve. <a href="index.html">Zur allgemeinen Testseite</a></p>
+    <p>Lokale Okulomotorik-Messung mit der Laptop-Kamera. Forschungsprototyp, keine Diagnose.</p>
   </header>
 
   <div>
@@ -140,7 +141,7 @@
       <button id="runShort" class="primary" disabled>Kurzlauf, rund 1,5 Minuten</button>
       <button id="runLong" class="second" disabled>Ausführlicher Lauf, rund 3,5 Minuten</button>
       <button id="runOkn" class="second" disabled>Optokinetik, rund 1,5 Minuten</button>
-      <button id="runPhone" class="second" disabled>iPhone-Test Optokinetik, ohne Kopfprüfung</button>
+      <button id="runPhone" class="second" disabled hidden>iPhone-Test Optokinetik, ohne Kopfprüfung</button>
       <div class="legend">Kurzlauf und Optokinetik enthalten bewegte Streifen. Jeder Lauf besteht aus Etappen; vor jeder erscheint eine Karte, das Tempo bestimmen Sie mit der Leertaste. Kurzlauf und Optokinetik brauchen keine Kalibrierung und messen keine Metrik. Kopf aufstützen, nur den Augen folgen.</div>
     </section>
     <section id="report" hidden>
@@ -163,7 +164,7 @@
     </section>
     <section>
       <h2>Steuerung</h2>
-      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option><option value="bruecke">iPhone über Brücke, 60 fps</option></select>
+      <select id="camera" aria-label="Kamera"><option value="">Standardkamera</option></select>
       <select id="cameraMode" aria-label="Kamera-Modus">
         <option value="1280x720x30">1280×720, 30 fps</option>
         <option value="1280x720x60">1280×720, 60 fps</option>
@@ -254,23 +255,24 @@
 
 <script type="module">
 import { FilesetResolver, FaceLandmarker }
-  from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs";
-import { direction, EYES, measureFrame, meanX, standardDeviation } from "./augen-logik.js";
+  from "./vendor/mediapipe/vision_bundle.mjs";
+import { direction, EYES, measureFrame, meanX, standardDeviation } from "./auswertung/augen-logik.js";
 import { CAL_COLLECT_MS, CAL_SETTLE_MS, calibrate, combineEyes, median, SCREEN_WIDTH_CM, sensitivity, STEPS, targetPixels, targetsFit, toDegrees }
-  from "./kalibrierung-logik.js";
-import { buildReport } from "./bericht-logik.js";
-import { PROTOCOLS } from "./protokolle.js";
-import { openBridge } from "./bruecke.js";
-import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stepText } from "./etappen-logik.js";
-import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./okn-logik.js";
+  from "./auswertung/kalibrierung-logik.js";
+import { buildReport } from "./auswertung/bericht-logik.js";
+import { PROTOCOLS } from "./auswertung/protokolle.js";
+import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stepText } from "./auswertung/etappen-logik.js";
+import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./auswertung/okn-logik.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
-         canResume, medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./positionierung-logik.js";
+         canResume, medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./auswertung/positionierung-logik.js";
 
 const DRY_RUN = new URLSearchParams(window.location.search).has("trockenlauf");
 // Mit ?trockenlauf&tasten warten die Karten auf die echte Taste, damit sich die Bedienung ohne Kamera prüfen lässt.
 const DRY_KEYS = new URLSearchParams(window.location.search).has("tasten");
-const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm";
-const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task";
+// Mit ?experimente erscheinen iPhone-Brücke und iPhone-Test. Sie gehören nicht zur Hauptsoftware.
+const EXPERIMENTS = new URLSearchParams(window.location.search).has("experimente");
+const WASM = new URL("./vendor/mediapipe/wasm", import.meta.url).href;
+const MODEL = new URL("./vendor/mediapipe/face_landmarker.task", import.meta.url).href;
 const WINDOW_MS = 3000;
 const CURVE_MS = 10000;
 const IRIS_RANGE = 0.6;
@@ -346,7 +348,7 @@ function setStatus(text, warn = false) {
 
 async function createLandmarker() {
   if (DRY_RUN) {
-    const { fakeLandmarker } = await import("./trockenlauf.js");
+    const { fakeLandmarker } = await import("./pruefung/trockenlauf.js");
     landmarker = fakeLandmarker(() => currentTarget);
     return;
   }
@@ -1553,6 +1555,7 @@ async function start() {
       await createLandmarker();
     }
     if (viaBridge) {
+      const { openBridge } = await import("./kamera/bruecke.js");
       source = await openBridge($("bridgeView"), () => {
         if (!running) return;
         stop();
@@ -1566,7 +1569,7 @@ async function start() {
                  ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
       });
       // Safari bleibt beim iPhone mit ideal bei 30 fps. Erst fest verlangen, sonst so viel wie möglich.
-      stream = DRY_RUN ? (await import("./trockenlauf.js")).fakeStream()
+      stream = DRY_RUN ? (await import("./pruefung/trockenlauf.js")).fakeStream()
         : await open({ exact: wishFps }).catch(() => open({ ideal: wishFps }));
       video.srcObject = stream;
       await video.play();
@@ -1640,14 +1643,18 @@ function stop() {
   setStatus("Kamera aus.");
 }
 
+function addBridgeOption() {
+  if (EXPERIMENTS) $("camera").add(new Option("iPhone über Brücke, 60 fps", "bruecke"));
+}
+
 async function listCameras() {
   const select = $("camera");
   const current = select.value;
   const devices = (await navigator.mediaDevices.enumerateDevices())
     .filter((device) => device.kind === "videoinput" && device.label);
   if (!devices.length) return;
-  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)),
-                         new Option("iPhone über Brücke, 60 fps", "bruecke"));
+  select.replaceChildren(...devices.map((device) => new Option(device.label, device.deviceId)));
+  addBridgeOption();
   if (current) select.value = current;
 }
 
@@ -1670,6 +1677,8 @@ $("remember").addEventListener("click", rememberPosition);
 $("runShort").addEventListener("click", () => runExam(PROTOCOLS.kurz));
 $("runLong").addEventListener("click", () => runExam(PROTOCOLS.lang));
 $("runOkn").addEventListener("click", () => runExam(PROTOCOLS.okn));
+$("runPhone").hidden = !EXPERIMENTS;
+addBridgeOption();
 $("runPhone").addEventListener("click", () => {
   runExam({ ...PROTOCOLS.okn, title: "iPhone-Test Optokinetik" }, { lenient: true }).catch((error) => {
     abortCalibration(`iPhone-Test abgebrochen: ${error.message}`);

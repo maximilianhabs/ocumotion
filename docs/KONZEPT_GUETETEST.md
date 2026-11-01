@@ -1,6 +1,6 @@
 # Mac Vision — Konzept Gütetest
 
-Stand 31.10.2026. Gebaut in `testseite/augen.html` und `testseite/guetetest-logik.js`, mit echtem
+Stand 31.10.2026. Gebaut in `app/index.html` und `app/auswertung/guetetest-logik.js`, mit echtem
 Gesicht noch nicht gelaufen. Alle Bewertungsgrenzen sind experimentell.
 
 ## Ziel
@@ -79,7 +79,7 @@ vor dem Verlassen oder einem neuen Lauf, wenn noch nicht gespeichert wurde:
 
 ## Trockenlauf
 
-`augen.html?trockenlauf` ersetzt Kamera und Modell durch ein simuliertes Gesicht, das dem Punkt exakt
+`?trockenlauf` ersetzt Kamera und Modell durch ein simuliertes Gesicht, das dem Punkt exakt
 folgt. So lässt sich der Ablauf mit bekannter Antwort prüfen. Ergebnisse daraus sagen nichts über echte Augen.
 
 ## Stand der Auswertung

@@ -429,3 +429,24 @@ kein validierter Ausschluss.
 10 s), aber SWJ nicht beurteilbar. Blickhalten 4 statt 7 s ändert nichts. Blickfolge 8 statt 16 s kippt auf grenzwertig. Die
 horizontalen Sakkaden bleiben mit den ersten acht Sprüngen gleich. Kalibrierfenster 2,0 statt 2,8 s: Prüffehler 0,98°/1,41°, vertikal
 keine Freigabe mehr, also nicht kürzen. Gültig nur für diesen einen Lauf ohne Nystagmus.
+
+## 01.11.2026 — Erster Lauf der App aus `app/`, MacBook-Kamera
+
+Kurzlauf in Chrome, FaceTime HD, nach Etappe 1 des Produktplans. Eingestellt 40 cm, Abstand nicht gemessen. Eine Person, Vergleich mit den Kurzläufen vom 31.10.
+
+| Kennwert | 31.10., zwei Läufe | 01.11. |
+|---|---:|---:|
+| Ausgehandelt | 1280×720, 30 fps | 1280×720, 30 fps |
+| Bildabstand, Median | 33,3 ms | 33,3 ms |
+| Bildabstand, Spanne der mittleren 90 % | 31,5–35,2 ms | 32,5–34,5 ms |
+| Bilder mit beiden Augen | 100 % | 99,9 % |
+| Irisdurchmesser | 30–35 px | 32 px |
+| Rauschen je Bild, Irisdurchmesser | 0,0048–0,0061 | 0,0051 |
+| Rauschen je Bild, grob horizontal, vertikal | 0,45–0,52°, 0,69–0,82° | 0,42°, 0,77° |
+| Bildwiederholungen | 0 | 0 |
+
+**Der Umbau ändert die Messung sichtbar nicht.** Das Server-Protokoll zeigt Laufzeit und Modell aus `vendor/`; einziger Fehler ist das fehlende Seitensymbol. Der Bericht rechnet ohne Fehler, Blickfolge glatt
+mit Gain 1,06 und 1,2 Sakkaden je Zyklus.
+
+**Etappen erstmals am echten Gesicht:** 5 Etappen, keine Wiederholung, Wartezeit auf den Karten 2–5 s. Der Kopf wanderte von 0,7 auf 2,5 Irisdurchmesser, mit einer Kopfmarke, aber ohne Abbruch.
+Die Frage nach der Anstrengung wurde übersprungen.

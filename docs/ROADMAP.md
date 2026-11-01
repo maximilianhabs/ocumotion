@@ -21,14 +21,14 @@ Messung oder einer sichtbaren Funktion, nicht mit Code allein.
 A0 bis A4 laufen im Browser und brauchen keine Installation, also auch kein E1 in Python.
 
 **Nächster Schritt:** je ein echter Lauf der Protokolle mit Etappen, siehe `PROTOKOLLE.md` und `KONZEPT_PROBANDENFUEHRUNG.md`. Danach Stufe B1 aus dem Backlog unten.
-Der visuelle Bericht liegt unter `testseite/bericht.html`, Zielbild in `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`.
+Der visuelle Bericht liegt unter `app/bericht.html`, Zielbild in `KONZEPT_VISUELLER_OKULOMOTORIKREPORT.md`.
 Danach die einmalige Kameramessung, siehe `KONZEPT_OKULOMOTORIK.md` Abschnitt 2b, und der Vergleich mit dem
 iPhone als Kamera, siehe `KONZEPT_UEBERTRAGBARKEIT.md`.
 
 ## Reihenfolge
 
 1. Testseite als Messwerkzeug: getrennte Statistik je Modell, Bildzeit und Sitzungszustände. **Erledigt.**
-2. Augenmodus mit Rohkurven und Gültigkeitsanzeige (A1). **Erste Fassung steht:** `testseite/augen.html`, auf Wunsch vor dem Worker gebaut, nur mit MediaPipe-Irispunkten.
+2. Augenmodus mit Rohkurven und Gültigkeitsanzeige (A1). **Erste Fassung steht:** `app/index.html`, auf Wunsch vor dem Worker gebaut, nur mit MediaPipe-Irispunkten.
    Individuelle Kalibrierung und gewichteter Mittelwert sind vorgezogen; mit echtem Gesicht ungeprüft.
 3. Vortest, dann Bildquelle und Analyse in Web Worker umstellen (siehe `IMPLEMENTIERUNGSNOTIZ_CODEX.md`); eigene Irisrandanalyse ergänzen.
 4. Künstliches Auge und Kopf-Störtest.
@@ -82,6 +82,10 @@ Sakkaden und Blickfolge; Optokinetik ist Ergänzung, Antisakkaden gehören nicht
 - Referenzwerte nur passend zu Aufgabe, Gerät und Alter; fremde Intervalle nicht auf diesen Aufbau übertragen.
 - Reproduzierbarkeit und VOG-Vergleich ersetzt keine Literatur.
 
+### B4 — Ideen für eigene Projekte, nicht Teil dieses Plans
+
+- **Pupillenreaktion mit dem iPhone:** Rückkamera und Lampe messen je Auge Größe und Reaktion, Tonsignal für Abstand und erkanntes Auge. Offen: Kontrast bei dunkler Iris im sichtbaren Licht, Augensicherheit der Lampe, Vergleichbarkeit einzeln gemessener Augen, Zweckbestimmung. Braucht eine native App.
+
 ### Quellen, noch nicht im Original gelesen
 
 British Society of Audiology, Recommended Procedure Vestibular Assessment – Eye Movement Recordings (2015) · Kullmann et al., PLOS ONE 2021
@@ -97,8 +101,8 @@ und Laryngoscope Investigative Otolaryngology 2021 · Demian et al., Clinical Sa
 6. Messen: Analysen/s **mit** Hand im Bild, ms je Durchlauf, CPU, RAM und Akku-Verbrauch.
 7. Zum Vergleich dieselbe Messung in MediaPipe Web als einfache Testseite.
 
-Punkt 7 ist vorgezogen: Die Testseite `testseite/index.html` steht (`make test-web`,
-`http://127.0.0.1:5600`) und zeigt je Modell Treffer/s, vorläufige Obergrenze, Dauer und längste Lücke.
+Punkt 7 ist vorgezogen: Die Testseite `experimente/handtest/index.html` steht (`make handtest`,
+`http://127.0.0.1:5602`) und zeigt je Modell Treffer/s, vorläufige Obergrenze, Dauer und längste Lücke.
 
 Ergebnisse kommen nach `docs/MESSUNGEN.md`. Hält keiner der Wege annähernd die Kamerarate,
 wird die Architekturentscheidung aus `KONZEPT.md` Abschnitt 4 neu getroffen.
