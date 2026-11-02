@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:5601; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:5601; base-uri 'none'; form-action 'none'">
 <title>Ocumotion</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="./styles.css?v=3">
+<link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
 <div class="app" id="app">
@@ -201,10 +201,10 @@
   <div class="axis">Vertikal: oben = nach oben</div>
   <canvas id="curveV" class="curve"></canvas>
   <div class="legend">
-    <span style="--c:var(--mean)">Mittelwert</span>
-    <span style="--c:var(--right)">rechtes Auge, roh</span>
-    <span style="--c:var(--left)">linkes Auge, roh</span>
-    <span style="--c:var(--head)">Kopf</span>
+    <span class="key-mean">Mittelwert</span>
+    <span class="key-right">rechtes Auge, roh</span>
+    <span class="key-left">linkes Auge, roh</span>
+    <span class="key-head">Kopf</span>
     <span id="unit">Irisdurchmesser, Lücken = ungültig</span>
   </div>
   <div class="dialog-actions">

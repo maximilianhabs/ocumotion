@@ -7,6 +7,7 @@ Ocumotion verarbeitet Kamerabilder eines Gesichts und daraus abgeleitete Augenwe
 - ein Weg, wie Kamerabilder oder Augenwerte das Gerät verlassen
 - ein Weg, wie die App entgegen der Zusage Bilder speichert
 - eine Lücke in der Content-Security-Policy, die fremden Code ausführbar macht
+- eine präparierte Messdatei, die beim Öffnen im Bericht Code ausführt oder Markup einschleust
 - die lokale Kamerabrücke unter `experimente/` nimmt Verbindungen fremder Webseiten an
 
 Eine ungenaue Messung ist kein Sicherheitsproblem, sondern ein Fehler für ein normales Issue.

@@ -9,7 +9,11 @@ import { calibrationPoints, cloudSummary, gradeCalibration, moduleSummary, outco
 import { calibrationChart, endpointChart, pursuitChart, restChart, traceChart } from "./vorschau.js";
 import { listSaved, removeCalibration, sameSetting, saveCalibration } from "./kamera/kalibrierspeicher.js";
 import { canContinue, canRepeat, cardDuration, effortFromKey, hasPart, LEAD_MS, stageMs, stagesMs, stepText } from "./messung/etappen-logik.js";
-import { fieldDegrees, OKN_SPEED, stripeOn, stripePeriod } from "./messung/okn-logik.js";
+import { fieldDegrees, OKN_SPEED } from "./messung/okn-logik.js";
+import { drawEyeCrop, drawEyeMarks } from "./ansicht/augenbild.js";
+import { fillCardFields, waitForInput } from "./ansicht/karten.js";
+import { OKN_DARK, OKN_LIGHT, drawStripes, prepareStripes } from "./ansicht/okn-streifen.js";
+import { clearGuide, drawGuide } from "./ansicht/position.js";
 import { analysePose, assess, estimateDistance, isStable, makeReference, MARK_DISTANCE_CHANGE, MARK_HEAD_SHIFT,
          canResume, medianPose, positionDrift, STOP_DISTANCE_CHANGE, STOP_HEAD_SHIFT, targetFor } from "./messung/positionierung-logik.js";
 
@@ -143,45 +147,6 @@ function taskStamp(frameMs) {
   clockOffset ??= lastStamp + 1000 - frameMs;
   lastStamp = Math.max(lastStamp + 1, Math.round(frameMs + clockOffset));
   return lastStamp;
-}
-
-function drawEyeMarks(points, eye, color) {
-  const px = (index) => ({ x: points[index].x * overlay.width, y: points[index].y * overlay.height });
-  const center = px(eye.center);
-  const rim = px(eye.rimA);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, Math.hypot(rim.x - center.x, rim.y - center.y), 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fillStyle = color;
-  for (const point of [center, px(eye.imageLeft), px(eye.imageRight)]) {
-    ctx.fillRect(point.x - 2, point.y - 2, 4, 4);
-  }
-}
-
-// Vergroesserter Ausschnitt nur zur Anzeige; er wird nirgends abgelegt.
-function drawEyeCrop(points, eye, canvas, color) {
-  const target = canvas.getContext("2d");
-  const w = source.videoWidth;
-  const h = source.videoHeight;
-  const a = points[eye.imageLeft];
-  const b = points[eye.imageRight];
-  const spanX = Math.hypot((b.x - a.x) * w, (b.y - a.y) * h) * 1.7;
-  const spanY = spanX / 2;
-  const sx = ((a.x + b.x) / 2) * w - spanX / 2;
-  const sy = ((a.y + b.y) / 2) * h - spanY / 2;
-  target.drawImage(source.image ?? video, sx, sy, spanX, spanY, 0, 0, canvas.width, canvas.height);
-  const scale = canvas.width / spanX;
-  const cx = (points[eye.center].x * w - sx) * scale;
-  const cy = (points[eye.center].y * h - sy) * scale;
-  const rim = points[eye.rimA];
-  const radius = Math.hypot((rim.x - points[eye.center].x) * w, (rim.y - points[eye.center].y) * h) * scale;
-  target.strokeStyle = color;
-  target.lineWidth = 2;
-  target.beginPath();
-  target.arc(cx, cy, radius, 0, Math.PI * 2);
-  target.stroke();
 }
 
 function drawCurve(id, keys) {
@@ -349,10 +314,10 @@ async function analyse(id, callbackMs, frameMs, stamp, captureMs) {
     const style = getComputedStyle(document.documentElement);
     const right = style.getPropertyValue("--right");
     const left = style.getPropertyValue("--left");
-    drawEyeMarks(faces[0], EYES.rechts, right);
-    drawEyeMarks(faces[0], EYES.links, left);
-    drawEyeCrop(faces[0], EYES.rechts, $("eyeRechts"), right);
-    drawEyeCrop(faces[0], EYES.links, $("eyeLinks"), left);
+    drawEyeMarks(ctx, overlay.width, overlay.height, faces[0], EYES.rechts, right);
+    drawEyeMarks(ctx, overlay.width, overlay.height, faces[0], EYES.links, left);
+    drawEyeCrop(source.image ?? video, source.videoWidth, source.videoHeight, faces[0], EYES.rechts, $("eyeRechts"), right);
+    drawEyeCrop(source.image ?? video, source.videoWidth, source.videoHeight, faces[0], EYES.links, $("eyeLinks"), left);
   }
   recordFrame({ at: callbackMs, frameMs, captureMs, analysisStart, analysisEnd, ms: result.ms, roundMs: analysisEnd - analysisStart },
               faces, target, probe);
@@ -451,38 +416,6 @@ function updateButtons() {
   $("stage").classList.toggle("off", !running);
 }
 
-function clearGuide() {
-  const canvas = $("guide");
-  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
-  $("guideHint").hidden = true;
-}
-
-// Der Zielbereich bleibt stehen und folgt dem Gesicht nicht.
-function drawGuide(target, ok) {
-  const canvas = $("guide");
-  const context = canvas.getContext("2d");
-  if (canvas.width !== source.videoWidth || canvas.height !== source.videoHeight) {
-    canvas.width = source.videoWidth;
-    canvas.height = source.videoHeight;
-  }
-  const { width, height } = canvas;
-  context.clearRect(0, 0, width, height);
-  const color = ok ? "rgba(34, 197, 94, .95)" : "rgba(250, 250, 249, .7)";
-  const eyeY = target.y * height;
-  const band = target.tolerance.y * height;
-  const radiusX = target.span * width * 0.72;
-  const radiusY = radiusX * 1.38;
-  context.fillStyle = ok ? "rgba(34, 197, 94, .12)" : "rgba(250, 250, 249, .08)";
-  context.fillRect(target.x * width - radiusX, eyeY - band, radiusX * 2, band * 2);
-  context.strokeStyle = color;
-  context.lineWidth = 3;
-  context.beginPath();
-  context.ellipse(target.x * width, eyeY + radiusY * 0.28, radiusX, radiusY, 0, 0, Math.PI * 2);
-  context.moveTo(target.x * width, eyeY - band);
-  context.lineTo(target.x * width, eyeY + band);
-  context.stroke();
-}
-
 function showHint(text, ok) {
   $("guideHint").textContent = text;
   $("guideHint").classList.toggle("ok", ok);
@@ -491,7 +424,7 @@ function showHint(text, ok) {
 
 function updateGuide(now) {
   if (calibrating || calibration) {
-    clearGuide();
+    clearGuide($("guide"), $("guideHint"));
     return;
   }
   const roughFrame = /facetime|standardkamera/i.test($("camera").selectedOptions[0]?.textContent ?? "");
@@ -501,14 +434,14 @@ function updateGuide(now) {
   faceVisible = poses.length > 0;
   if (!faceVisible) {
     positionOk = false;
-    drawGuide(target, false);
+    drawGuide($("guide"), source.videoWidth, source.videoHeight, target, false);
     showHint("Kein Gesicht im Bild", false);
     updateButtons();
     return;
   }
   const result = assess(medianPose(poses), target, positionOk);
   positionOk = result.ok;
-  drawGuide(target, result.ok);
+  drawGuide($("guide"), source.videoWidth, source.videoHeight, target, result.ok);
   showHint(result.hint, result.ok);
   updateButtons();
 }
@@ -605,7 +538,7 @@ async function enterFullscreen(id, lenient = false) {
   calibrating = true;
   for (const control of calControls) $(control).disabled = true;
   updateButtons();
-  clearGuide();
+  clearGuide($("guide"), $("guideHint"));
   invalidateCalibration("läuft");
   try {
     await Promise.race([
@@ -771,55 +704,22 @@ const PAUSE_PROBE_FRAMES = 15;
 const CARD_KEY = "Weiter mit Leertaste";
 const REPEAT_NOTICE = "Der Kopf hat sich bewegt. Diese Etappe wird wiederholt.";
 
-function fillCard({ step = "", title, text, duration = "", notice = "", key = "" }) {
+function fillCard(fields) {
   collecting = null;
-  $("calDot").hidden = true;
-  $("calStripes").hidden = true;
-  $("calText").textContent = "";
-  const set = (name, value) => {
-    $(name).textContent = value;
-    $(name).hidden = !value;
-  };
-  set("cardStep", step);
-  set("cardTitle", title);
-  set("cardText", text);
-  set("cardDuration", duration);
-  set("cardNotice", notice);
-  set("cardKey", key);
-  $("cardHead").hidden = true;
-  $("calCard").hidden = false;
+  fillCardFields({ dot: $("calDot"), stripes: $("calStripes"), calText: $("calText"), step: $("cardStep"),
+    title: $("cardTitle"), text: $("cardText"), duration: $("cardDuration"), notice: $("cardNotice"),
+    key: $("cardKey"), head: $("cardHead"), card: $("calCard") }, fields);
 }
 
-// Wartet auf Eingabe. Bei Abbruch (Lauf gewechselt, Esc, Vollbildende) löst sie mit null auf und entfernt
-// in jedem Fall beide Listener und die Zeitgeber. Im Trockenlauf läuft sie nach dryMs von selbst weiter.
+// Die Wartelogik liegt in ansicht/karten.js; hier hängen nur die geteilten Zustände dran.
 function awaitInput(id, { onKey, onClick, onTick, dryMs, dryValue }) {
-  return new Promise((resolve) => {
-    let timer = null;
-    const keyListener = (event) => {
-      if (!event.repeat) onKey?.(event, finish);
-    };
-    const clickListener = (event) => onClick?.(event, finish);
-    function finish(value) {
-      clearInterval(timer);
-      clearTimeout(timer);
-      document.removeEventListener("keydown", keyListener);
-      document.removeEventListener("click", clickListener);
-      pauseProbe = null;
-      cancelCard = null;
-      resolve(value);
-    }
-    cancelCard = () => finish(null);
-    if (DRY_RUN && !DRY_KEYS) {
-      timer = setTimeout(() => finish(id === calRun ? dryValue() : null), dryMs);
-      return;
-    }
-    document.addEventListener("keydown", keyListener);
-    document.addEventListener("click", clickListener);
-    timer = setInterval(() => {
-      if (id !== calRun) finish(null);
-      else onTick?.();
-    }, CARD_POLL_MS);
-    onTick?.();
+  return waitForInput({
+    current: () => id === calRun,
+    dry: DRY_RUN && !DRY_KEYS,
+    pollMs: CARD_POLL_MS,
+    register: (cancel) => { cancelCard = cancel; },
+    onDone: () => { pauseProbe = null; cancelCard = null; },
+    onKey, onClick, onTick, dryMs, dryValue,
   });
 }
 
@@ -886,34 +786,9 @@ async function leadPhase(id) {
   return id === calRun ? entry.samples : null;
 }
 
-const OKN_LIGHT = "#c8c8c8";
-const OKN_DARK = "#303030";
 const OKN_INSTRUCTION = "Streifen verfolgen, dann den nächsten nehmen. Kopf ruhig.";
 const DRY_BEAT_S = 0.6;
 const DRY_SLOW_SPEED = 6;
-
-// Streifen im Winkelraum: jede Bildspalte bekommt ihren Winkel zur Bildschirmmitte.
-function prepareStripes() {
-  const canvas = $("calStripes");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const distance = Number($("distance").value);
-  const cmPerPx = screenWidthCm() / window.innerWidth;
-  const center = window.innerWidth / 2;
-  const angles = Array.from({ length: Math.ceil(window.innerWidth / 2) }, (_, index) =>
-    Math.atan(((index * 2 + 1 - center) * cmPerPx) / distance) * (180 / Math.PI));
-  return { canvas, context: canvas.getContext("2d"), angles, periodDeg: stripePeriod(fieldDegrees(screenWidthCm(), distance)) };
-}
-
-function drawStripes(stripes, seconds, direction) {
-  const { canvas, context, angles, periodDeg } = stripes;
-  context.fillStyle = OKN_DARK;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = OKN_LIGHT;
-  angles.forEach((theta, index) => {
-    if (stripeOn(theta, seconds, direction, periodDeg)) context.fillRect(index * 2, 0, 2, canvas.height);
-  });
-}
 
 function oknBlock(id, block, stripes) {
   return new Promise((resolve) => {
@@ -1298,7 +1173,10 @@ async function runExam(protocol, { lenient = false } = {}) {
   if (!await entered) return;
   const fullscreen = Boolean(document.fullscreenElement);
   $("calText").textContent = "";
-  const stripes = hasPart(protocol, "okn") ? prepareStripes() : null;
+  const stripes = hasPart(protocol, "okn")
+    ? prepareStripes({ canvas: $("calStripes"), width: window.innerWidth, height: window.innerHeight,
+                       distance: Number($("distance").value), screenCm: screenWidthCm() })
+    : null;
   const run = await examPhases(id, protocol, stripes);
   if (!run) return;
   if (protocol.scaleOnly && run.saccades) run.saccades.scaleOnly = true;
@@ -1532,7 +1410,7 @@ function stop() {
   $("hint").hidden = false;
   $("zero").disabled = true;
   clearReference();
-  clearGuide();
+  clearGuide($("guide"), $("guideHint"));
   $("toggle").textContent = "Kamera starten";
   $("toggle").classList.remove("ghost");
   $("cameraNext").hidden = true;

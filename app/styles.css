@@ -167,3 +167,7 @@ dd { margin: 0; font: 13px var(--data); font-variant-numeric: tabular-nums; text
   .eyes { grid-template-columns: 1fr 1fr; height: 120px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.key-mean { --c: var(--mean); }
+.key-right { --c: var(--right); }
+.key-left { --c: var(--left); }
+.key-head { --c: var(--head); }

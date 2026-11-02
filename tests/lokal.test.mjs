@@ -27,6 +27,14 @@ test("jede Seite verbietet Fremdabrufe", () => {
   }
 });
 
+test("Keine Seite erlaubt eingebetteten Code", () => {
+  for (const page of ["index.html", "bericht.html"]) {
+    const html = readFileSync(join(APP, page), "utf8");
+    assert.doesNotMatch(html.match(/Content-Security-Policy[^>]*/)[0], /unsafe-inline/, page);
+    assert.doesNotMatch(html, /<script(?![^>]*\ssrc=)|<style|\sstyle="|\son[a-z]+="/i, page);
+  }
+});
+
 test("Fremddateien stimmen mit ihren Prüfsummen überein", () => {
   const lines = readFileSync(join(VENDOR, "PRUEFSUMMEN.txt"), "utf8").trim().split("\n");
   assert.equal(lines.length, 4);

@@ -250,7 +250,7 @@ function stageFindings(run, meta, calibration) {
       h: pick(points, "h"),
       v: pick(points, "v"),
       waitMs: stage.waitMs ?? null,
-      repeats: stage.repeats ?? 0,
+      repeats: Number.isInteger(stage.repeats) ? stage.repeats : 0,
       headShift: stage.headShift ?? null,
     };
   });
@@ -262,10 +262,11 @@ function stageFindings(run, meta, calibration) {
   };
 }
 
-// Anstrengung: fehlt in alten Dateien (absent), null = übersprungen.
+// Anstrengung: fehlt in alten Dateien (absent), null = übersprungen. Alles außer 1 bis 5 gilt als fehlend.
 function effortOf(meta) {
-  if (meta?.effort === undefined) return { state: "absent", value: null };
-  return meta.effort === null ? { state: "skipped", value: null } : { state: "value", value: meta.effort };
+  if (meta?.effort === null) return { state: "skipped", value: null };
+  return Number.isInteger(meta?.effort) && meta.effort >= 1 && meta.effort <= 5
+    ? { state: "value", value: meta.effort } : { state: "absent", value: null };
 }
 
 function section(id, title, status, extra = {}) {
