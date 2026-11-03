@@ -1,6 +1,6 @@
 // Die drei Untersuchungsprotokolle als Etappen. Alle Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
 
-import { ACCURACY_TARGETS, GAZE_HOLDS, GAZE_HOLD_MS, GAZE_RETURN_MS, GAZE_SETTLE_MS, FIXATION_MS, PURSUIT_RUNS,
+import { ACCURACY_TARGETS, GAZE_HOLDS, GAZE_HOLD_MS, GAZE_HOLD_V_MS, GAZE_RETURN_MS, GAZE_SETTLE_MS, FIXATION_MS, PURSUIT_RUNS,
          SACCADE_JUMPS, SACCADE_MAX_MS, SACCADE_MIN_MS, TARGET_COLLECT_MS, TARGET_SETTLE_MS } from "./guetetest-logik.js";
 import { OKN_BLOCKS } from "./okn-logik.js";
 import { CAL_COLLECT_MS, CAL_SETTLE_MS, QUICK_COLLECT_MS, QUICK_SETTLE_MS, QUICK_STEPS, STEPS } from "./kalibrierung-logik.js";
@@ -49,7 +49,7 @@ export const PROTOCOLS = {
             gaze(GAZE_HOLDS, 800, 3200, 800)),
       stage("folge", "Blickfolge", "Verfolgen Sie den Punkt mit den Augen.",
             pursuit({ name: "langsam", amplitude: 10, frequency: 0.25, durationMs: 8000 })),
-      stage("sprünge", "Sprünge", "Der Punkt springt. Schauen Sie sofort zum neuen Punkt.", saccades(SHORT_JUMPS, 900, 1300)),
+      stage("sprünge", "Sprünge", "Der Punkt springt. Schauen Sie sofort zum neuen Punkt.", saccades(SHORT_JUMPS, SACCADE_MIN_MS, SACCADE_MAX_MS)),
       stage("streifen", "Streifen", STRIPES_TEXT, okn(...SHORT_OKN)),
     ],
   },
@@ -62,10 +62,13 @@ export const PROTOCOLS = {
       stage("ziele", "Neue Punkte", "Schauen Sie jeweils auf den neuen Punkt.",
             { kind: "accuracy", targets: ACCURACY_TARGETS, settleMs: TARGET_SETTLE_MS, collectMs: TARGET_COLLECT_MS }),
       stage("ruhe", "Ruhe", "Schauen Sie ruhig auf den Punkt. Blinzeln ist erlaubt.", fixation(FIXATION_MS)),
-      stage("blick-seite", "Blick zur Seite", "Folgen Sie dem Punkt und halten Sie den Blick dort.",
-            gaze(holds("rechts", "links"), GAZE_SETTLE_MS, GAZE_HOLD_MS, GAZE_RETURN_MS)),
+      // Je Seite eine Etappe: 20 s Halten, dazwischen eine Karte als Pause.
+      stage("blick-rechts", "Blick nach rechts", "Folgen Sie dem Punkt und halten Sie den Blick dort, bis er zurückkommt.",
+            gaze(holds("rechts"), GAZE_SETTLE_MS, GAZE_HOLD_MS, GAZE_RETURN_MS)),
+      stage("blick-links", "Blick nach links", "Folgen Sie dem Punkt und halten Sie den Blick dort, bis er zurückkommt.",
+            gaze(holds("links"), GAZE_SETTLE_MS, GAZE_HOLD_MS, GAZE_RETURN_MS)),
       stage("blick-vertikal", "Blick nach oben und unten", "Folgen Sie dem Punkt und halten Sie den Blick dort.",
-            gaze(holds("oben", "unten"), GAZE_SETTLE_MS, GAZE_HOLD_MS, GAZE_RETURN_MS)),
+            gaze(holds("oben", "unten"), GAZE_SETTLE_MS, GAZE_HOLD_V_MS, GAZE_RETURN_MS)),
       stage("folge-langsam", "Blickfolge langsam", "Verfolgen Sie den Punkt mit den Augen.", pursuit(PURSUIT_RUNS[0])),
       stage("folge-schnell", "Blickfolge schnell", "Verfolgen Sie den Punkt, er ist jetzt schneller.", pursuit(PURSUIT_RUNS[1])),
       stage("sprünge", "Sprünge", "Der Punkt springt. Schauen Sie sofort zum neuen Punkt.",
@@ -78,7 +81,7 @@ export const PROTOCOLS = {
     // Links zuerst: Alle bisherigen Läufe begannen rechts, so lässt sich ein Reihenfolge-Effekt prüfen.
     stages: [
       stage("start", "Beginn", `${SUPPORT}Schauen Sie ruhig auf den Punkt. Danach springt er: Schauen Sie sofort zum neuen Punkt.`,
-            fixation(3000), saccades(OKN_ONLY_JUMPS, 900, 1300)),
+            fixation(3000), saccades(OKN_ONLY_JUMPS, SACCADE_MIN_MS, SACCADE_MAX_MS)),
       stage("streifen", "Streifen", STRIPES_TEXT,
             okn(...["basis", "links", "pause", "rechts", "erholung"].map((id) => ({ ...byId(id) })))),
       stage("kontrolle", "Kontrolle", "Schauen Sie jetzt nur auf den Punkt und folgen Sie den Streifen nicht.",
@@ -104,7 +107,7 @@ const SCALE_JUMPS = [
   { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 0 },
 ];
 export const SCALE_STAGE = stage("massstab", "Kurze Einstellung", `${SUPPORT}Der Punkt springt. Schauen Sie jeweils sofort zum neuen Punkt.`,
-                                 saccades(SCALE_JUMPS, 900, 1300));
+                                 saccades(SCALE_JUMPS, SACCADE_MIN_MS, SACCADE_MAX_MS));
 
 const fromLong = (...ids) => ids.map((id) => PROTOCOLS.lang.stages.find((item) => item.id === id));
 const fromOkn = (...ids) => ids.map((id) => PROTOCOLS.okn.stages.find((item) => item.id === id));
@@ -114,7 +117,7 @@ export const MODULES = [
   { id: "kalibrierung", theme: "Vorbereitung", title: "Kalibrierung",
     stages: [stage("kalibrierung", "Kalibrierung", `${SUPPORT}Schauen Sie auf jeden neuen Punkt, nur mit den Augen.`,
                    { kind: "calibration", targets: QUICK_STEPS, settleMs: QUICK_SETTLE_MS, collectMs: QUICK_COLLECT_MS })] },
-  { id: "nystagmus", theme: "Augen in Ruhe", title: "Spontan- und Blickrichtungsnystagmus", stages: fromLong("ruhe", "blick-seite", "blick-vertikal") },
+  { id: "nystagmus", theme: "Augen in Ruhe", title: "Spontan- und Blickrichtungsnystagmus", stages: fromLong("ruhe", "blick-rechts", "blick-links", "blick-vertikal") },
   { id: "blickfolge", theme: "Folgebewegungen", title: "Blickfolge", stages: fromLong("folge-langsam", "folge-schnell") },
   { id: "sakkaden", theme: "Schnelle Bewegungen", title: "Sakkaden",
     stages: [stage("sprünge", "Sakkaden", "Der Punkt springt. Schauen Sie sofort zum neuen Punkt.", saccades(MODULE_JUMPS, SACCADE_MIN_MS, SACCADE_MAX_MS))] },

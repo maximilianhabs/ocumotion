@@ -6,7 +6,9 @@
 
 import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, midpoint, spread, toDegrees } from "./kalibrierung-logik.js";
 
-export const FIXATION_MS = 16000;
+// Taktung als Arbeitswerte nach klinischer Praxis, siehe docs/KONZEPT_VERBESSERUNG.md 2.6a.
+// Ruhe mindestens 20 s je Position, wie der Spontantest der VNG-Norm.
+export const FIXATION_MS = 20000;
 export const TARGET_SETTLE_MS = 1200;
 export const TARGET_COLLECT_MS = 1800;
 export const PAUSE_MS = 2000;
@@ -28,8 +30,11 @@ export const GAZE_HOLDS = [
   { name: "unten", h: 0, v: -10 },
 ];
 export const GAZE_SETTLE_MS = 1000;
-export const GAZE_HOLD_MS = 4000;
-export const GAZE_RETURN_MS = 1500;
+// Horizontal 20 s je Seite, wie in der klinischen Praxis üblich. Vertikal kürzer, weil die Achse nicht freigegeben ist.
+export const GAZE_HOLD_MS = 20000;
+export const GAZE_HOLD_V_MS = 4000;
+// Rückkehr zur Mitte, zugleich kurze Erholung.
+export const GAZE_RETURN_MS = 2000;
 
 export const PURSUIT_RUNS = [
   { name: "langsam", amplitude: 12, frequency: 0.2, durationMs: 15000 },
@@ -41,8 +46,9 @@ export const SACCADE_JUMPS = [
   { axis: "h", to: 10 }, { axis: "h", to: -10 }, { axis: "h", to: 10 }, { axis: "h", to: 0 },
   { axis: "v", to: 8 }, { axis: "v", to: -8 }, { axis: "v", to: 8 }, { axis: "v", to: 0 },
 ];
-export const SACCADE_MIN_MS = 1200;
-export const SACCADE_MAX_MS = 1800;
+// Zufällige Abstände 1,5 bis 3 s; im VNG-Sakkadentest bleibt das Ziel 1 bis 4 s stehen.
+export const SACCADE_MIN_MS = 1500;
+export const SACCADE_MAX_MS = 3000;
 
 const SACCADE_VELOCITY = 50;
 const SACCADE_EARLIEST_MS = 80;

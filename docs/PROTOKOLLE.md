@@ -1,17 +1,17 @@
 # Ocumotion — Untersuchungsprotokolle
 
-Stand 01.11.2026. Die App startet einzelne Module aus `MODULES`, die Etappen stammen aus diesen Protokollen. Fehlt der Maßstab, kommt eine kurze Sprung-Etappe davor. Blickfolge seit dem 01.11. ±12° mit 0,2 und 0,4 Hz. Definiert in
-`app/messung/protokolle.js`. Zeiten sind Entwürfe, keine normierten Untersuchungsdauern.
+Stand 03.11.2026. Die App startet einzelne Module aus `MODULES`, die Etappen stammen aus diesen Protokollen. Fehlt der Maßstab, kommt eine kurze Sprung-Etappe davor. Blickfolge seit dem 01.11. ±12° mit 0,2 und 0,4 Hz. Definiert in
+`app/messung/protokolle.js`. Zeiten sind Arbeitswerte, keine normierten Untersuchungsdauern. Seit dem 03.11. nach klinischer Praxis getaktet: 20 s Ruhe, 20 s Blickhalten je Seite, Sprünge alle 1,5 bis 3 s; Herleitung in `KONZEPT_VERBESSERUNG.md` 2.6a.
 
-| Baustein | Kurzlauf, rund 1,5 min | Ausführlich, rund 3,5 min | Optokinetik, rund 1,5 min |
+| Baustein | Kurzlauf, rund 2 min | Ausführlich, rund 4,5 min | Optokinetik, rund 1,5 min |
 |---|---|---|---|
 | Kalibrierung | keine | 14 Punkte in zwei Etappen, 56 s | keine |
 | Neue Ziele | keine | 6 Punkte, direkt nach der Kalibrierung | keine |
-| Primärposition | 16 s | 16 s | 3 s |
-| Blickhalten rechts, links, oben, unten | je 4 s | je 5 s mit Einschwingen | keine |
+| Primärposition | 16 s | 20 s | 3 s |
+| Blickhalten rechts, links, oben, unten | je 3,2 s | rechts und links je 20 s, oben und unten je 4 s, dazu 1 s Einschwingen und 2 s Rückkehr | keine |
 | Blickfolge | langsam, 8 s | langsam 12 s, schnell 8 s | keine |
-| Sakkaden | 7 horizontal, 4 vertikal | 8 horizontal, 4 vertikal | 7 horizontal, nur als Maßstab |
-| Etappen | 5 | 9, längste 32 s | 3 |
+| Sakkaden, Abstand 1,5–3 s | 7 horizontal, 4 vertikal | 8 horizontal, 4 vertikal | 7 horizontal, nur als Maßstab |
+| Etappen | 5 | 10, längste 32 s | 3 |
 | Optokinetik | je Richtung 7 s, 8°/s | keine | je Richtung 12 s, 8°/s, links zuerst |
 | Kontrolle mit Fixationspunkt | keine | keine | 8 s |
 
@@ -27,7 +27,7 @@ Zeiten im Kopf enthalten rund 5 s je Karte; die Person bestimmt das Tempo. Prüf
 | Frage | Kurzlauf | Ausführlich |
 |---|---|---|
 | Spontannystagmus, Blickrichtung, Up-/Downbeat | ja, als Muster | ja |
-| Square-Wave-Jerks | nur grob, 16 s | nur grob, 16 s |
+| Square-Wave-Jerks | nur grob, 16 s | nur grob, 20 s |
 | Blickfolge glatt oder sakkadiert | ja, Gain grob | ja, langsam und schnell |
 | Optokinetik reizkonform | ja, ohne Kontrolle | nein, eigener Knopf mit Kontrolle |
 | Sakkaden metrisch, hypo- oder hypermetrisch | **nein** | ja, horizontal; vertikal nur bei freigegebener Achse |

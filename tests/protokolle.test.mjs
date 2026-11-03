@@ -9,8 +9,8 @@ const ids = (protocol) => protocol.stages.map((stage) => stage.id);
 const parts = (protocol, kind) => protocol.stages.flatMap((stage) => stage.parts).filter((part) => part.kind === kind);
 
 test("Der ausführliche Lauf hat neun Etappen in der festgelegten Reihenfolge", () => {
-  assert.deepEqual(ids(PROTOCOLS.lang), ["kalibrierung-1", "kalibrierung-2", "ziele", "ruhe", "blick-seite",
-    "blick-vertikal", "folge-langsam", "folge-schnell", "sprünge"]);
+  assert.deepEqual(ids(PROTOCOLS.lang), ["kalibrierung-1", "kalibrierung-2", "ziele", "ruhe", "blick-rechts",
+    "blick-links", "blick-vertikal", "folge-langsam", "folge-schnell", "sprünge"]);
 });
 
 test("Die beiden Kalibrierteile ergeben zusammen genau die Kalibrierpunkte", () => {
@@ -72,9 +72,10 @@ test("Der Optokinetik-Lauf beginnt in Ausgangslage, startet links und trennt die
 });
 
 test("Die geplante Dauer zählt Messung und Hinführung, nicht die Karten", () => {
-  assert.equal(plannedMs(PROTOCOLS.kurz), 76600);
-  assert.equal(plannedMs(PROTOCOLS.lang), 167800);
-  assert.equal(plannedMs(PROTOCOLS.okn), 63000);
-  assert.ok(plannedMs(PROTOCOLS.lang) <= 180000);
+  assert.equal(plannedMs(PROTOCOLS.kurz), 90950);
+  assert.equal(plannedMs(PROTOCOLS.lang), 217000);
+  assert.equal(plannedMs(PROTOCOLS.okn), 72750);
+  // Seit der Taktung nach klinischer Praxis (20 s Blickhalten, 1,5 bis 3 s je Sprung) bis 4 min.
+  assert.ok(plannedMs(PROTOCOLS.lang) <= 240000);
   assert.ok(plannedMs(PROTOCOLS.okn) <= 75000);
 });
