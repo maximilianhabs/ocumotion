@@ -46,12 +46,7 @@ Reihenfolge nach Wirkung und Risiko. Jedes Paket ist für sich abschließbar und
 
 ### 2.3 Kalibriernote und Einordnungen fachlich ehrlich machen (P1)
 
-Nachgerechnet an zwei Läufen einer Person: Die Wolken sind kompakt, um ihre eigene Mitte liegen meist 80–96 % der Bilder im Zielbereich. Die Note fällt trotzdem auf „Mittel“ und „Schlecht“, weil sie vertikalen Versatz von 2,6–6,9° mit der guten Horizontalen verrechnet und rohe statt gefilterter Einzelbilder zählt.
-
-| Lauf | Note heute | nur horizontal | nur vertikal | beide |
-|---|---|---:|---:|---:|
-| 31.10., ausführlich | Mittel | 90 % | 84 % | 69 % |
-| 01.11., Sitzung 08:46 | Schlecht | 73 % | 52 % | 30 % |
+Nachgerechnet an zwei Läufen einer Person, die Werte stehen lokal (Abschnitt 2.5): Die Wolken sind kompakt, um ihre eigene Mitte liegt der größte Teil der Bilder im Zielbereich. Die Note fällt trotzdem ab, weil sie den vertikalen Versatz der Wolken mit der guten Horizontalen verrechnet und rohe statt gefilterter Einzelbilder zählt. Horizontal allein wäre die Note in beiden Läufen deutlich besser gewesen.
 
 - **Note je Achse.** Die Horizontale trägt die Hauptmessungen und bekommt die Hauptnote. Die Vertikale bekommt eine eigene Angabe und zieht die Horizontale nicht mehr herunter.
 - **Zwei Kennwerte statt Einzelbild-Anteil:**
@@ -60,7 +55,7 @@ Nachgerechnet an zwei Läufen einer Person: Die Wolken sind kompakt, um ihre eig
 - **Modell aus allen Punkten, geprüft mit herausgenommenem Punkt.** Die Prüfpunkte gehen ins endgültige Modell ein; der Prüffehler entsteht reihum mit je einem herausgenommenen Punkt. Vorher an den beiden Läufen nachrechnen, ob der systematische Versatz sinkt. Bringt es nichts, entfällt dieser Punkt.
 - **Einordnungen im Bericht:** „innerhalb/außerhalb“ wird zu „innerhalb/außerhalb der Arbeitsgrenze“, jede Grenze mit Herkunft und Zahl der Personen und Geräte, an denen sie gemessen ist. Messwert und Datenqualität stehen vor der Einordnung. Der Bericht zeigt oben, auf wie vielen Personen die Grenzen beruhen (derzeit 1).
 - **Grenzen versionieren:** Alle Schwellen in eine Tabelle mit Version, Herkunft und Datum (`messung/grenzen.js`), die Version geht in jeden Export und Bericht. So bleibt nachvollziehbar, mit welchen Grenzen ein alter Bericht entstand.
-- **Fertig, wenn** beide Läufe nachgerechnet in `MESSUNGEN.md` stehen, die neue Note an ihnen erklärt ist und der Bericht keine Einordnung ohne Herkunft mehr zeigt.
+- **Fertig, wenn** beide Läufe nachgerechnet in der lokalen Datei stehen, in `MESSUNGEN.md` nur der Befund ohne Augenwerte, die neue Note an ihnen erklärt ist und der Bericht keine Einordnung ohne Herkunft mehr zeigt.
 
 Was dieses Paket **nicht** leistet: Gültigkeit für andere Menschen. Dafür braucht es Abschnitt 2.6.
 
