@@ -1,16 +1,15 @@
 // Protokolle als Etappen: Reihenfolge, Dauer und Inhalt. Aufruf: make test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { stageMs } from "../app/messung/etappen-logik.js";
+import { stageMs, stagesMs } from "../app/messung/etappen-logik.js";
 import { STEPS } from "../app/messung/kalibrierung-logik.js";
-import { plannedMs, PROTOCOLS } from "../app/messung/protokolle.js";
+import { moduleById, plannedMs, PROTOCOLS } from "../app/messung/protokolle.js";
 
 const ids = (protocol) => protocol.stages.map((stage) => stage.id);
 const parts = (protocol, kind) => protocol.stages.flatMap((stage) => stage.parts).filter((part) => part.kind === kind);
 
 test("Der ausführliche Lauf hat neun Etappen in der festgelegten Reihenfolge", () => {
-  assert.deepEqual(ids(PROTOCOLS.lang), ["kalibrierung-1", "kalibrierung-2", "ziele", "ruhe", "blick-rechts",
-    "blick-links", "blick-vertikal", "folge-langsam", "folge-schnell", "sprünge"]);
+  assert.deepEqual(ids(PROTOCOLS.lang), ["kalibrierung-1", "kalibrierung-2", "ziele", "ruhe", "blick", "folge-langsam", "folge-schnell", "sprünge"]);
 });
 
 test("Die beiden Kalibrierteile ergeben zusammen genau die Kalibrierpunkte", () => {
@@ -33,6 +32,10 @@ test("Jede Etappe hat Titel, Text und mindestens einen Messteil", () => {
     }
     assert.ok(protocol.stages[0].text.includes("Stützen Sie den Kopf an"), protocol.id);
   }
+});
+
+test("Spontan- und Blickrichtungsnystagmus dauert höchstens 45 Sekunden", () => {
+  assert.ok(stagesMs(moduleById("nystagmus").stages) <= 45000);
 });
 
 test("Die längste Etappe des ausführlichen Laufs dauert höchstens 35 Sekunden", () => {
@@ -73,9 +76,8 @@ test("Der Optokinetik-Lauf beginnt in Ausgangslage, startet links und trennt die
 
 test("Die geplante Dauer zählt Messung und Hinführung, nicht die Karten", () => {
   assert.equal(plannedMs(PROTOCOLS.kurz), 90950);
-  assert.equal(plannedMs(PROTOCOLS.lang), 217000);
+  assert.equal(plannedMs(PROTOCOLS.lang), 173000);
   assert.equal(plannedMs(PROTOCOLS.okn), 72750);
-  // Seit der Taktung nach klinischer Praxis (20 s Blickhalten, 1,5 bis 3 s je Sprung) bis 4 min.
-  assert.ok(plannedMs(PROTOCOLS.lang) <= 240000);
+  assert.ok(plannedMs(PROTOCOLS.lang) <= 180000);
   assert.ok(plannedMs(PROTOCOLS.okn) <= 75000);
 });

@@ -2,7 +2,7 @@
 
 ## Unveröffentlicht
 
-Taktung nach klinischer Praxis: Sprünge kommen in allen Modulen zufällig alle 1,5 bis 3 s statt alle 0,9 bis 1,8 s. Blickhalten dauert horizontal 20 s je Seite statt 4 s, jede Seite als eigene Etappe mit Karte davor, Ruhe 20 s statt 16 s, Rückkehr zur Mitte 2 s. Vertikal bleibt es bei 4 s. Das Nystagmus-Modul dauert damit rund 85 s, das Sakkaden-Modul rund 40 s. Alle Werte sind Arbeitswerte, Herleitung in `docs/KONZEPT_VERBESSERUNG.md`.
+Taktung: Sprünge kommen in allen Modulen zufällig alle 1,5 bis 3 s statt alle 0,9 bis 1,8 s, wie im VNG-Sakkadentest üblich; das Sakkaden-Modul dauert rund 40 s. Das Modul Spontan- und Blickrichtungsnystagmus dauert rund 40 s statt rund 50 s: Ruhe 10 s, danach alle vier Blickrichtungen in einer Etappe ohne Karte dazwischen, horizontal je 6 s, vertikal je 4 s. Ein Versuch mit 20 s je Seite nach klinischer Praxis war im Test zu lang. Alle Werte sind Arbeitswerte, Herleitung in `docs/KONZEPT_VERBESSERUNG.md`.
 
 Sicherheit: Eine präparierte Messdatei konnte im Bericht Code ausführen, der unter dem Ursprung der App lief. Alle Dateiwerte werden jetzt entschärft, Anstrengung und Wiederholungen nur noch als gültige Zahlen übernommen. Beide Seiten verbieten eingebetteten Code und eingebettete Stile per Content-Security-Policy, der Bericht zusätzlich Bilder, Medien, Worker und Netzabrufe. Der lokale Auslieferer lehnt fremde Hostnamen ab, lässt sich nicht einbetten und sendet keinen Referrer.
 

@@ -7,8 +7,8 @@
 import { combineEyes, fitPlane, hasEnoughData, median, medianFilter, midpoint, spread, toDegrees } from "./kalibrierung-logik.js";
 
 // Taktung als Arbeitswerte nach klinischer Praxis, siehe docs/KONZEPT_VERBESSERUNG.md 2.6a.
-// Ruhe mindestens 20 s je Position, wie der Spontantest der VNG-Norm.
-export const FIXATION_MS = 20000;
+// Ruhe 10 s statt der 20 s der VNG-Norm: Der Test vom 03.11. war sonst zu lang. Square-Wave-Jerks je Minute sind damit grob.
+export const FIXATION_MS = 10000;
 export const TARGET_SETTLE_MS = 1200;
 export const TARGET_COLLECT_MS = 1800;
 export const PAUSE_MS = 2000;
@@ -30,11 +30,10 @@ export const GAZE_HOLDS = [
   { name: "unten", h: 0, v: -10 },
 ];
 export const GAZE_SETTLE_MS = 1000;
-// Horizontal 20 s je Seite, wie in der klinischen Praxis üblich. Vertikal kürzer, weil die Achse nicht freigegeben ist.
-export const GAZE_HOLD_MS = 20000;
+// Horizontal 6 s je Seite, klinisch üblich sind 20 s; gekürzt nach dem Test vom 03.11. Vertikal kürzer, die Achse ist nicht freigegeben.
+export const GAZE_HOLD_MS = 6000;
 export const GAZE_HOLD_V_MS = 4000;
-// Rückkehr zur Mitte, zugleich kurze Erholung.
-export const GAZE_RETURN_MS = 2000;
+export const GAZE_RETURN_MS = 1000;
 
 export const PURSUIT_RUNS = [
   { name: "langsam", amplitude: 12, frequency: 0.2, durationMs: 15000 },

@@ -103,6 +103,8 @@ Vorschlag, alle Werte als Arbeitswerte:
 - **Kalibrierung:** unverändert lassen; prüfen, ob Weiterschalten nach stabiler Fixation (wie VNG) später die feste Zeit ersetzt.
 - **Fertig, wenn** die neuen Zeiten im Code stehen, die angezeigten Dauern stimmen und ein echter Lauf sich nicht mehr gehetzt anfühlt. Das ist eine Rückmeldung, keine Messung; in `MESSUNGEN.md` steht nur, dass die Taktung geändert wurde.
 
+**Nachtrag 03.11.2026, umgesetzt:** Die Sprünge mit 1,5–3 s passen im Test. Das Nystagmus-Modul mit 20 s je Seite war im Test viel zu lang und ist auf rund 40 s gekürzt: Ruhe 10 s, alle vier Blickrichtungen in einer Etappe, horizontal je 6 s, vertikal je 4 s, Rückkehr 1 s. Das liegt bewusst unter der klinischen Praxis. Folgen: Ein Blickrichtungsnystagmus, der erst nach einigen Sekunden einsetzt oder abklingt, kann übersehen werden; Square-Wave-Jerks je Minute beruhen auf 10 s und sind grob. Beides steht im Bericht als Grenze, nicht als Befund.
+
 Quellen: [Interacoustics, Gaze Stability](https://www.interacoustics.com/academy/balance-testing-training/videonystagmography/vng-gaze-testing-with-fixation), [Dizziness Depot, Saccades](https://hearinghealthmatters.org/dizziness-depot/2013/saccades), [Interacoustics, Kalibrierung](https://interacoustics.com/balance-testing-equipment/visualeyes/support/calibration-procedures), [NASA, Blickhalten 20 s](https://ntrs.nasa.gov/citations/20080026117), [ANSI/ASA S3.45-2009, Auszug](https://lindseyresearch.com/wp-content/uploads/2021/01/NHTSA-2020-0102-0005-Attachment_2_ANSI.pdf).
 
 ### 2.6 Validierung (P1, ausserhalb des Codes)
